@@ -13,7 +13,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   GripVertical, Trash2, Plus, Search, Music2, ChevronUp, ChevronDown,
-  Save, Eye, Pencil,
+  Save, Eye, Pencil, Sparkles,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -28,6 +28,7 @@ import { Separator } from '@/components/ui/separator'
 import { formatHms } from '@/lib/rivendell/format'
 import { rockTracks } from '@/lib/rivendell/mock-data'
 import type { ScheduleShow, LogLine, Transition } from '@/lib/rivendell/types'
+import { VoiceTrackDialog } from '@/components/rivendell/voice-track-dialog'
 import { cn } from '@/lib/utils'
 
 interface LogEditorDialogProps {
@@ -50,6 +51,8 @@ export function LogEditorDialog({ show, open, onOpenChange }: LogEditorDialogPro
   const [search, setSearch] = useState('')
   const [dirty, setDirty] = useState(false)
   const [initialized, setInitialized] = useState(false)
+  const [vtOpen, setVtOpen] = useState(false)
+  const [vtContext, setVtContext] = useState<{ prev: { title: string; artist: string } | null; next: { title: string; artist: string } | null }>({ prev: null, next: null })
 
   // Initialize lines when show changes (keyed remount pattern)
   if (show && !initialized) {
@@ -94,6 +97,32 @@ export function LogEditorDialog({ show, open, onOpenChange }: LogEditorDialogPro
       const reordered = arrayMove(items, oldIndex, newIndex)
       return reordered.map((l, i) => ({ ...l, line: i + 1 }))
     })
+    setDirty(true)
+  }
+
+  const openVoiceTrack = (afterIdx: number) => {
+    const prev = lines[afterIdx]
+    const next = lines[afterIdx + 1]
+    setVtContext({
+      prev: prev ? { title: prev.title ?? '', artist: prev.artist ?? '' } : null,
+      next: next ? { title: next.title ?? '', artist: next.artist ?? '' } : null,
+    })
+    setVtOpen(true)
+  }
+
+  const insertVoiceTrack = (script: string) => {
+    // Find insertion point — after the first music track, or at end
+    const insertAfter = lines.length > 0 ? lines.length : 0
+    const newLine: LogLine = {
+      line: insertAfter + 1,
+      type: 'voice-track',
+      title: script,
+      artist: 'AI Voice Track',
+      length: 15000, // 15s estimated
+      transition: 'segue',
+      status: 'scheduled',
+    }
+    setLines((prev) => [...prev.slice(0, insertAfter), newLine, ...prev.slice(insertAfter)].map((l, i) => ({ ...l, line: i + 1 })))
     setDirty(true)
   }
 
@@ -177,6 +206,18 @@ export function LogEditorDialog({ show, open, onOpenChange }: LogEditorDialogPro
               <Pencil className="mr-1.5 h-3.5 w-3.5" />Edit
             </Button>
           </div>
+          {mode === 'edit' && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => openVoiceTrack(Math.max(0, lines.length - 1))}
+              className="h-8 border-primary/40 text-primary hover:bg-primary/10"
+            >
+              <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+              AI Voice Track
+            </Button>
+          )}
           <div className="ml-auto flex items-center gap-2">
             <span className="font-mono text-xs text-muted-foreground">{lines.length} lines · {formatHms(totalLength)}</span>
             {dirty && <Badge variant="outline" className="border-amber-500/40 text-[10px] text-amber-400">unsaved</Badge>}
@@ -266,6 +307,13 @@ export function LogEditorDialog({ show, open, onOpenChange }: LogEditorDialogPro
           </div>
         )}
       </DialogContent>
+      <VoiceTrackDialog
+        open={vtOpen}
+        onOpenChange={setVtOpen}
+        prevTrack={vtContext.prev}
+        nextTrack={vtContext.next}
+        onInsert={insertVoiceTrack}
+      />
     </Dialog>
   )
 }
