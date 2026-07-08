@@ -452,3 +452,37 @@ Stage Summary:
 - #1 vrzel iz analize (AI Voice Tracking) — DONE
 - Repo improvements: README, LICENSE, PR template, branch protection
 - 8 zavihkov + AI Voice Track Generator
+
+---
+Task ID: listener-requests
+Agent: lead
+Task: Listener Requests panel — #2 gap from analysis
+
+Work Log:
+- /api/rivendell/requests (GET + POST):
+  - GET: list vseh zahtevkov (sorted by requestedAt)
+  - POST submit: nov zahtevek (trackId, listenerName, listenerMessage)
+  - POST approve/reject/played: posodobi status
+  - 5 mock zahtevkov (3 pending, 1 approved, 1 played)
+- Hooks: useRequests (30s refetch), useUpdateRequest, useSubmitRequest
+- RequestsPanel komponenta (~160 vrstic):
+  - Album art thumbnaili
+  - Listener ime, sporočilo, timestamp (relative)
+  - Status badge-i (PENDING/APPROVED/REJECTED/PLAYED)
+  - Approve (✓) / Reject (✗) gumbi za pending
+  - Play gumb za approved
+  - Framer-motion animirani entry/exit
+  - Auto-refresh vsakih 30s
+  - Pending count badge v header
+- Dashboard: 3-column grid (Recently Played + Top Tracks + Requests)
+- Lint: čist
+- Agent Browser validacija:
+  - API: 5 zahtevkov, 3 pending ✓
+  - Panel: "Listener Requests" z pending count
+  - Requests: Bohemian Rhapsody, Smells Like Teen Spirit, Back in Black
+  - Approve gumb: klik deluje, toast "Request approved"
+  - 0 napak
+
+Stage Summary:
+- #2 vrzel (Listener Requests) — DONE
+- Dashboard sedaj 3-column: Recently Played + Top Tracks + Listener Requests
