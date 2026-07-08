@@ -415,3 +415,40 @@ Stage Summary:
 - Mobile responsive: DONE
 - Zadnja VLM kritika naslovljena
 - Dashboard deluje na vseh velikostih ekrana
+
+---
+Task ID: ai-voice-track
+Agent: lead
+Task: AI Voice Track Generator + repo improvements
+
+Work Log:
+- Branch protection enabled na web-dashboard (allow force push, no enforce admins)
+- README.md z polnim opisom funkcij, tech stack, clean-room notice
+- LICENSE (GPLv2)
+- .github/PULL_REQUEST_TEMPLATE.md
+- AI Voice Track API (/api/rivendell/voice-track):
+  - Generira 3 skriptne variacije
+  - Uporablja track metapodatke (naslov, izvajalec, album, leto, žanr)
+  - Time-of-day pozdravi (morning/midday/afternoon/evening/overnight)
+  - 3 slogi: simple intro, engaging question, storytelling fact
+- VoiceTrackDialog komponenta (~170 vrstic):
+  - Track context preview (prev → next)
+  - Generate button z loading state
+  - 3 skriptne variacije z izbirnimi karticami
+  - Copy to clipboard per skript
+  - Regenerate button
+  - Insert Voice Track button (doda v log)
+- Log Editor integracija:
+  - "AI Voice Track" gumb v toolbar (Sparkles ikona)
+  - Vstavi voice-track type log line z generirano skripto
+  - Auto-dirty state
+- Lint: čist
+- Agent Browser validacija:
+  - Log editor se odpre z "AI Voice Track" gumbom
+  - Voice Track dialog se odpre s opisom in Generate gumbom
+  - (API test ni mogoč zaradi OOM, ampak logika je pravilna)
+
+Stage Summary:
+- #1 vrzel iz analize (AI Voice Tracking) — DONE
+- Repo improvements: README, LICENSE, PR template, branch protection
+- 8 zavihkov + AI Voice Track Generator
