@@ -383,3 +383,35 @@ Stage Summary:
 - 7 zavihkov + Command Palette (Cmd+K)
 - Professional power-user feature (Linear/Notion/Raycast style)
 - Real-time track search z album art thumbnaili
+
+---
+Task ID: mobile-responsive
+Agent: lead
+Task: Mobile responsive sidebar z drawer navigation
+
+Work Log:
+- Sidebar predelan z mobile drawer podporo:
+  - Desktop (md+): permanent sidebar (nezvezno)
+  - Mobile (<md): hamburger gumb (fixed, top-left) odpre slide-in drawer
+    - Framer Motion animirana overlay + slide-in (x: -280 → 0)
+    - Close (X) gumb v drawerju
+    - Klik zunaj zapre drawer
+    - Auto-close ob izbiri zavihka
+    - Branding kartica na dnu drawerja
+  - Skupen NavItem komponenta za desktop in mobile
+- Main content dobi top padding na mobilu (pt-12 md:pt-0)
+- Lint: čist
+- Agent Browser validacija:
+  - Desktop: permanent sidebar prisoten
+  - Mobile (375x812): hamburger gumb viden
+  - Drawer se odpre z vsemi 7 zavihki
+  - Close (X) zapre drawer
+  - Desktop restore: permanent sidebar nazaj
+  - 0 napak
+
+VLM kritika naslovljena: "Not clear how this would adapt to different screen sizes"
+
+Stage Summary:
+- Mobile responsive: DONE
+- Zadnja VLM kritika naslovljena
+- Dashboard deluje na vseh velikostih ekrana
