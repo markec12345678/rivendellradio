@@ -70,6 +70,7 @@ export function LibraryTab() {
               <Table>
                 <TableHeader className="sticky top-0 z-10 bg-card">
                   <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="w-20">Art</TableHead>
                     <TableHead className="w-16">ID</TableHead>
                     <TableHead>Title</TableHead>
                     <TableHead className="hidden md:table-cell">Artist</TableHead>
@@ -85,7 +86,7 @@ export function LibraryTab() {
                   {tracks.isLoading ? (
                     Array.from({ length: 8 }).map((_, i) => (
                       <TableRow key={`sk-${i}`} className="border-border">
-                        <TableCell colSpan={9}><Skeleton className="h-7 w-full" /></TableCell>
+                        <TableCell colSpan={10}><Skeleton className="h-7 w-full" /></TableCell>
                       </TableRow>
                     ))
                   ) : tracks.data && tracks.data.tracks.length > 0 ? (
@@ -95,6 +96,16 @@ export function LibraryTab() {
                         className="cursor-pointer border-border transition-colors hover:bg-secondary/40"
                         onClick={() => toast.info(track.title, { description: `${track.artist} · ${formatHms(track.length)}` })}
                       >
+                        <TableCell>
+                          <div className="h-10 w-10 shrink-0 overflow-hidden rounded">
+                            <img
+                              src={track.albumArt ?? '/album-art/rock-1.png'}
+                              alt=""
+                              className="h-full w-full object-cover"
+                              onError={(e) => { ;(e.target as HTMLImageElement).style.opacity = '0' }}
+                            />
+                          </div>
+                        </TableCell>
                         <TableCell className="font-mono text-[10px] text-muted-foreground">{track.id}</TableCell>
                         <TableCell className="font-medium text-foreground">
                           <div className="flex items-center gap-1.5">
@@ -117,7 +128,7 @@ export function LibraryTab() {
                     ))
                   ) : (
                     <TableRow className="border-border">
-                      <TableCell colSpan={9} className="py-12 text-center text-sm text-muted-foreground">
+                      <TableCell colSpan={10} className="py-12 text-center text-sm text-muted-foreground">
                         No tracks found.
                       </TableCell>
                     </TableRow>

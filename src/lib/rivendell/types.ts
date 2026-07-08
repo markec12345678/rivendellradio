@@ -20,6 +20,7 @@ export interface Track {
   filePath?: string
   lastPlayed?: string | null
   playCount: number
+  albumArt?: string // path to album art image
 }
 
 export interface Station {

@@ -3,7 +3,8 @@
 import { motion } from 'framer-motion'
 import { Disc3, Music2, Clock, Radio, Users, Activity, Play, Square, Pause } from 'lucide-react'
 import { useLiveStore } from '@/lib/stores/live'
-import { useSchedule, useStations } from '@/lib/rivendell/api'
+import { useSchedule, useStations, useSendRml } from '@/lib/rivendell/api'
+import { rockTracks } from '@/lib/rivendell/mock-data'
 import { formatHms, formatClock, formatNumber } from '@/lib/rivendell/format'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -11,7 +12,6 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useSendRml } from '@/lib/rivendell/api'
 import { WaveformDisplay } from '@/components/rivendell/waveform-display'
 import { SoundpanelGrid } from '@/components/rivendell/soundpanel-grid'
 import { toast } from 'sonner'
@@ -24,6 +24,12 @@ export function DashboardTab() {
   const listeners = useLiveStore((s) => s.listeners)
   const schedule = useSchedule()
   const stations = useStations()
+
+  // Find the album art for the currently playing track
+  const currentTrack = nowPlaying?.trackId
+    ? rockTracks.find((t) => t.id === nowPlaying.trackId)
+    : null
+  const albumArt = currentTrack?.albumArt ?? '/album-art/rock-1.png'
 
   const liveShow = schedule.data?.shows.find((s) => s.status === 'live')
   const progress = nowPlaying ? (nowPlaying.elapsed / nowPlaying.length) * 100 : 0
@@ -47,13 +53,31 @@ export function DashboardTab() {
               initial={{ scale: 0.9, rotate: -4 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: 'spring', stiffness: 220, damping: 18 }}
-              className="flex h-24 w-24 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/30 sm:h-28 sm:w-28"
+              className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-primary/15 ring-1 ring-primary/30 sm:h-28 sm:w-28"
             >
-              <Disc3
-                className={nowPlaying ? 'h-12 w-12 animate-spin' : 'h-12 w-12'}
-                style={nowPlaying ? { animationDuration: '4s' } : undefined}
-                aria-hidden="true"
-              />
+              {nowPlaying ? (
+                <img
+                  src={albumArt}
+                  alt={`Album art for ${nowPlaying.title}`}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    ;(e.target as HTMLImageElement).style.display = 'none'
+                  }}
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-primary">
+                  <Disc3 className="h-12 w-12" aria-hidden="true" />
+                </div>
+              )}
+              {nowPlaying && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                  <Disc3
+                    className="h-10 w-10 animate-spin text-white/90 drop-shadow-lg"
+                    style={{ animationDuration: '4s' }}
+                    aria-hidden="true"
+                  />
+                </div>
+              )}
             </motion.div>
 
             <div className="min-w-0 flex-1">
@@ -134,13 +158,11 @@ export function DashboardTab() {
         <StatCard icon={Activity} label="Schedule Shows" value={String(schedule.data?.count ?? 0)} />
       </div>
 
-      {/* Real-time waveform + Soundpanel */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <WaveformDisplay height={140} />
-        </div>
-        <SoundpanelGrid />
-      </div>
+      {/* Real-time waveform (full width) */}
+      <WaveformDisplay height={160} />
+
+      {/* Soundpanel */}
+      <SoundpanelGrid />
 
       {/* Split layout: Live show log + Station listeners */}
       <div className="grid gap-4 lg:grid-cols-3">
