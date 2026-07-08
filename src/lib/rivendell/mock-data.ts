@@ -83,6 +83,70 @@ export const stations: Station[] = [
 ]
 
 // ============================================================================
+// WEEKLY SCHEDULE — 7-day grid for timetable view (AzuraCast pattern)
+// ============================================================================
+
+export interface WeeklyShowSlot {
+  day: number // 0=Sun..6=Sat
+  startTime: string // HH:mm
+  endTime: string
+  name: string
+  host: string
+  color: string
+}
+
+export const weeklySchedule: WeeklyShowSlot[] = [
+  // Sunday (0)
+  { day: 0, startTime: '06:00', endTime: '10:00', name: 'Sunday Morning Rock', host: 'DJ Mike', color: 'amber' },
+  { day: 0, startTime: '10:00', endTime: '14:00', name: 'Gospel Hour', host: 'DJ Sarah', color: 'emerald' },
+  { day: 0, startTime: '14:00', endTime: '18:00', name: 'Sunday Drive', host: 'DJ Alex', color: 'blue' },
+  { day: 0, startTime: '18:00', endTime: '22:00', name: 'Classic Album Side', host: 'DJ Chris', color: 'purple' },
+  { day: 0, startTime: '22:00', endTime: '06:00', name: 'Late Night Rock', host: 'Auto DJ', color: 'gray' },
+
+  // Monday (1)
+  { day: 1, startTime: '06:00', endTime: '10:00', name: 'Morning Drive', host: 'DJ Mike', color: 'amber' },
+  { day: 1, startTime: '10:00', endTime: '14:00', name: 'Midday Rock', host: 'DJ Sarah', color: 'amber' },
+  { day: 1, startTime: '14:00', endTime: '18:00', name: 'Afternoon Drive', host: 'DJ Alex', color: 'amber' },
+  { day: 1, startTime: '18:00', endTime: '22:00', name: 'Evening Rock', host: 'DJ Chris', color: 'blue' },
+  { day: 1, startTime: '22:00', endTime: '06:00', name: 'Late Night Rock', host: 'Auto DJ', color: 'gray' },
+
+  // Tuesday (2)
+  { day: 2, startTime: '06:00', endTime: '10:00', name: 'Morning Drive', host: 'DJ Mike', color: 'amber' },
+  { day: 2, startTime: '10:00', endTime: '14:00', name: 'Midday Rock', host: 'DJ Sarah', color: 'amber' },
+  { day: 2, startTime: '14:00', endTime: '18:00', name: 'Afternoon Drive', host: 'DJ Alex', color: 'amber' },
+  { day: 2, startTime: '18:00', endTime: '22:00', name: 'New Music Tuesday', host: 'DJ Chris', color: 'purple' },
+  { day: 2, startTime: '22:00', endTime: '06:00', name: 'Late Night Rock', host: 'Auto DJ', color: 'gray' },
+
+  // Wednesday (3)
+  { day: 3, startTime: '06:00', endTime: '10:00', name: 'Morning Drive', host: 'DJ Mike', color: 'amber' },
+  { day: 3, startTime: '10:00', endTime: '14:00', name: 'Midday Rock', host: 'DJ Sarah', color: 'amber' },
+  { day: 3, startTime: '14:00', endTime: '18:00', name: 'Afternoon Drive', host: 'DJ Alex', color: 'amber' },
+  { day: 3, startTime: '18:00', endTime: '22:00', name: 'Hump Day Rock', host: 'DJ Chris', color: 'blue' },
+  { day: 3, startTime: '22:00', endTime: '06:00', name: 'Late Night Rock', host: 'Auto DJ', color: 'gray' },
+
+  // Thursday (4)
+  { day: 4, startTime: '06:00', endTime: '10:00', name: 'Morning Drive', host: 'DJ Mike', color: 'amber' },
+  { day: 4, startTime: '10:00', endTime: '14:00', name: 'Midday Rock', host: 'DJ Sarah', color: 'amber' },
+  { day: 4, startTime: '14:00', endTime: '18:00', name: 'Afternoon Drive', host: 'DJ Alex', color: 'amber' },
+  { day: 4, startTime: '18:00', endTime: '22:00', name: 'Throwback Thursday', host: 'DJ Chris', color: 'purple' },
+  { day: 4, startTime: '22:00', endTime: '06:00', name: 'Late Night Rock', host: 'Auto DJ', color: 'gray' },
+
+  // Friday (5)
+  { day: 5, startTime: '06:00', endTime: '10:00', name: 'Morning Drive', host: 'DJ Mike', color: 'amber' },
+  { day: 5, startTime: '10:00', endTime: '14:00', name: 'Midday Rock', host: 'DJ Sarah', color: 'amber' },
+  { day: 5, startTime: '14:00', endTime: '18:00', name: 'Afternoon Drive', host: 'DJ Alex', color: 'amber' },
+  { day: 5, startTime: '18:00', endTime: '22:00', name: 'Friday Night Rock Show', host: 'DJ Chris', color: 'red' },
+  { day: 5, startTime: '22:00', endTime: '06:00', name: 'Weekend Warmup', host: 'Auto DJ', color: 'gray' },
+
+  // Saturday (6)
+  { day: 6, startTime: '06:00', endTime: '10:00', name: 'Weekend Morning', host: 'DJ Mike', color: 'blue' },
+  { day: 6, startTime: '10:00', endTime: '14:00', name: 'Saturday Rock', host: 'DJ Sarah', color: 'amber' },
+  { day: 6, startTime: '14:00', endTime: '18:00', name: 'Sports Rock Live', host: 'DJ Alex', color: 'red' },
+  { day: 6, startTime: '18:00', endTime: '22:00', name: 'Saturday Night Live', host: 'DJ Chris', color: 'purple' },
+  { day: 6, startTime: '22:00', endTime: '06:00', name: 'Syndicated Jazz', host: 'PRX Network', color: 'emerald' },
+]
+
+// ============================================================================
 // DAEMONS
 // ============================================================================
 

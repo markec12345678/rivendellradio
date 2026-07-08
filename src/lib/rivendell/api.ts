@@ -134,3 +134,22 @@ export function useReports() {
     queryFn: () => fetchJson<ReportsResponse>('/api/rivendell/reports'),
   })
 }
+
+export interface WeeklyShowSlot {
+  day: number
+  startTime: string
+  endTime: string
+  name: string
+  host: string
+  color: string
+}
+export interface WeeklyScheduleResponse {
+  count: number
+  schedule: WeeklyShowSlot[]
+}
+export function useWeeklySchedule() {
+  return useQuery<WeeklyScheduleResponse>({
+    queryKey: ['rv', 'weekly-schedule'] as const,
+    queryFn: () => fetchJson<WeeklyScheduleResponse>('/api/rivendell/weekly-schedule'),
+  })
+}
