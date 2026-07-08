@@ -119,6 +119,22 @@ export function DashboardTab() {
                   <p className="text-sm text-muted-foreground">Waiting for broadcast feed…</p>
                 </div>
               )}
+
+              {/* Up Next preview */}
+              {liveShow && (() => {
+                const playingIdx = liveShow.logLines.findIndex((l) => l.status === 'playing')
+                const nextLine = playingIdx >= 0 ? liveShow.logLines[playingIdx + 1] : liveShow.logLines.find((l) => l.status === 'scheduled')
+                if (!nextLine) return null
+                return (
+                  <div className="mt-3 flex items-center gap-2 rounded-md border border-border/60 bg-background/40 px-3 py-1.5">
+                    <Badge variant="outline" className="shrink-0 border-blue-500/40 bg-blue-500/10 text-[9px] text-blue-400">
+                      UP NEXT
+                    </Badge>
+                    <span className="truncate text-xs text-foreground">{nextLine.title}</span>
+                    {nextLine.artist && <span className="truncate text-[10px] text-muted-foreground">— {nextLine.artist}</span>}
+                  </div>
+                )
+              })()}
             </div>
 
             {/* VU Meter */}
@@ -150,12 +166,12 @@ export function DashboardTab() {
         </CardContent>
       </Card>
 
-      {/* Stats row */}
+      {/* Stats row — color-coded per VLM feedback (not all amber) */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard icon={Clock} label="Station Time" value={formatClock(now)} />
-        <StatCard icon={Users} label="Total Listeners" value={formatNumber(totalListeners)} />
-        <StatCard icon={Radio} label="Active Stations" value={String(stations.data?.count ?? 0)} />
-        <StatCard icon={Activity} label="Schedule Shows" value={String(schedule.data?.count ?? 0)} />
+        <StatCard icon={Clock} label="Station Time" value={formatClock(now)} color="amber" />
+        <StatCard icon={Users} label="Total Listeners" value={formatNumber(totalListeners)} color="emerald" />
+        <StatCard icon={Radio} label="Active Stations" value={String(stations.data?.count ?? 0)} color="blue" />
+        <StatCard icon={Activity} label="Schedule Shows" value={String(schedule.data?.count ?? 0)} color="purple" />
       </div>
 
       {/* Real-time waveform (full width) */}
@@ -270,11 +286,17 @@ export function DashboardTab() {
   )
 }
 
-function StatCard({ icon: Icon, label, value }: { icon: typeof Clock; label: string; value: string }) {
+function StatCard({ icon: Icon, label, value, color = 'amber' }: { icon: typeof Clock; label: string; value: string; color?: 'amber' | 'emerald' | 'blue' | 'purple' }) {
+  const colorMap = {
+    amber: 'bg-amber-500/10 text-amber-400',
+    emerald: 'bg-emerald-500/10 text-emerald-400',
+    blue: 'bg-blue-500/10 text-blue-400',
+    purple: 'bg-purple-500/10 text-purple-400',
+  }
   return (
     <Card className="border-border bg-card/80">
       <CardContent className="flex items-center gap-3 p-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
+        <div className={cn('flex h-9 w-9 items-center justify-center rounded-md', colorMap[color])}>
           <Icon className="h-4 w-4" aria-hidden="true" />
         </div>
         <div className="min-w-0">
