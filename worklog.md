@@ -353,3 +353,33 @@ Stage Summary:
 - 7 zavihkov: Dashboard, Library, Schedule, Streams, Reports, System, Settings
 - Studio Clock (Zetta signature feature) implementiran
 - Real-time daemons monitoring z WebSocket
+
+---
+Task ID: command-palette
+Agent: lead
+Task: Command Palette (Cmd+K) — professional power-user feature
+
+Work Log:
+- CommandPalette komponenta (~180 vrstic, cmdk library):
+  - Cmd+K / Ctrl+K za odpiranje/zapiranje
+  - 3 kategorije: Navigate, Tracks, Actions
+  - Navigate: 7 zavihkov z ikonami in opisi
+  - Tracks: real-time iskanje po naslov/izvajalec/album
+    - Album art thumbnaili v rezultatih
+    - Klik na pesem → RML PL 0! (queue track)
+  - Actions: Play Main, Emergency Stop
+  - Footer z navigacijskimi hint-i (arrows + Enter)
+  - Key remount pattern za auto-reset search
+- Keyboard help dialog posodobljen:
+  - Nova "Command" kategorija z ⌘K shortcut
+- Lint: čist
+- Agent Browser validacija:
+  - Cmd+K odpre palette z 7 zavihki
+  - Iskanje "Thunder" → najde Thunderstruck z album art
+  - Cmd+K ponovno zapre palette
+  - 0 napak
+
+Stage Summary:
+- 7 zavihkov + Command Palette (Cmd+K)
+- Professional power-user feature (Linear/Notion/Raycast style)
+- Real-time track search z album art thumbnaili
