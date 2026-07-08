@@ -1,12 +1,15 @@
 'use client'
 
-import { Calendar, Clock, User, Play } from 'lucide-react'
+import { useState } from 'react'
+import { Calendar, Clock, User, Play, Pencil } from 'lucide-react'
 import { useSchedule } from '@/lib/rivendell/api'
 import { formatHms } from '@/lib/rivendell/format'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { LogEditorDialog } from '@/components/rivendell/log-editor-dialog'
+import type { ScheduleShow } from '@/lib/rivendell/types'
 import { cn } from '@/lib/utils'
 
 const statusConfig = {
@@ -18,6 +21,13 @@ const statusConfig = {
 
 export function ScheduleTab() {
   const schedule = useSchedule()
+  const [selectedShow, setSelectedShow] = useState<ScheduleShow | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
+
+  const openEditor = (show: ScheduleShow) => {
+    setSelectedShow(show)
+    setDialogOpen(true)
+  }
 
   return (
     <div className="p-4 sm:p-6">
@@ -39,7 +49,11 @@ export function ScheduleTab() {
             const st = statusConfig[show.status]
             const totalLength = show.logLines.reduce((a, l) => a + l.length, 0)
             return (
-              <Card key={show.id} className={cn('border-border bg-card/80', show.status === 'live' && 'border-emerald-500/40')}>
+              <Card
+                key={show.id}
+                className={cn('cursor-pointer border-border bg-card/80 transition-colors hover:border-primary/40', show.status === 'live' && 'border-emerald-500/40')}
+                onClick={() => openEditor(show)}
+              >
                 <CardHeader className="border-b border-border/60 px-4 py-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-3">
@@ -56,6 +70,7 @@ export function ScheduleTab() {
                               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
                             </span>
                           )}
+                          <Pencil className="h-3 w-3 text-muted-foreground" aria-label="Edit show" />
                         </CardTitle>
                         <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
                           <span className="flex items-center gap-1"><User className="h-3 w-3" />{show.host}</span>
@@ -108,6 +123,8 @@ export function ScheduleTab() {
           })
         )}
       </div>
+
+      <LogEditorDialog show={selectedShow} open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>
   )
 }
