@@ -174,3 +174,32 @@ Stage Summary:
 - Večji waveform: DONE (VLM potrjeno)
 - Library thumbnails: DONE (38 thumbnailov)
 - VLM ocena: "more professional" kot prej
+
+---
+Task ID: weekly-timetable
+Agent: lead
+Task: Weekly Timetable view (7-day grid, AzuraCast pattern)
+
+Work Log:
+- weeklySchedule mock podatki: 35 show slot-ov (5 na dan × 7 dni)
+- weekly-schedule API ruta
+- useWeeklySchedule hook
+- ScheduleTab razširjen z Today/Week toggle:
+  - Today: list view (obstoječi show kartice z log editor)
+  - Week: 7-dnevni grid timetable
+    - 24-urna vertikalna mreža × 7 dnevnih stolpcev
+    - Barvno kodirani show slot-i (amber/emerald/blue/purple/red/gray)
+    - LIVE indikator na trenutno predvajanem show-u
+    - Trenutna ura highlighted
+    - Horizontal scroll za ozke ekrane
+    - Legend bar na dnu
+- Lint: čist
+- Agent Browser validacija:
+  - Today view: show kartice prisotne
+  - Week view: "Weekly Timetable" z dnevi Sun-Sat, show-i prikazani
+  - "Sunday Morning Rock", "Sunday Drive" vidni v gridu
+
+Stage Summary:
+- VLM prioriteta #2 (Weekly Timetable) — DONE
+- 6 zavihkov, ~4500 vrstic
+- Memory limit 768MB za stabilnost
