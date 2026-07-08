@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { WaveformDisplay } from '@/components/rivendell/waveform-display'
 import { SoundpanelGrid } from '@/components/rivendell/soundpanel-grid'
 import { NowPlayingDialog } from '@/components/rivendell/now-playing-dialog'
+import { RequestsPanel } from '@/components/rivendell/requests-panel'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -293,8 +294,8 @@ export function DashboardTab() {
         </div>
       </div>
 
-      {/* Recently Played + Top Tracks (information density boost) */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      {/* Recently Played + Top Tracks + Listener Requests */}
+      <div className="grid gap-4 lg:grid-cols-3">
         {/* Recently Played */}
         <Card className="border-border bg-card/80">
           <CardHeader className="border-b border-border/60 px-4 py-3">
@@ -383,6 +384,9 @@ export function DashboardTab() {
             </ScrollArea>
           </CardContent>
         </Card>
+
+        {/* Listener Requests */}
+        <RequestsPanel />
       </div>
 
       {/* Now Playing detail dialog */}

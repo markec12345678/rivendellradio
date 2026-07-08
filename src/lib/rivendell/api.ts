@@ -182,3 +182,57 @@ export function useRecent() {
     queryFn: () => fetchJson<RecentResponse>('/api/rivendell/recent'),
   })
 }
+
+export interface ListenerRequest {
+  id: string
+  trackId: string
+  title: string
+  artist: string
+  albumArt?: string
+  listenerName: string
+  listenerMessage?: string
+  requestedAt: string
+  status: 'pending' | 'approved' | 'rejected' | 'played'
+}
+export interface RequestsResponse {
+  count: number
+  pending: number
+  requests: ListenerRequest[]
+}
+export function useRequests() {
+  return useQuery<RequestsResponse>({
+    queryKey: ['rv', 'requests'] as const,
+    queryFn: () => fetchJson<RequestsResponse>('/api/rivendell/requests'),
+    refetchInterval: 30_000,
+  })
+}
+export function useUpdateRequest() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: { requestId: string; action: 'approved' | 'rejected' | 'played' }) => {
+      const res = await fetch('/api/rivendell/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error('Failed')
+      return res.json()
+    },
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['rv', 'requests'] as const }) },
+  })
+}
+export function useSubmitRequest() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: { trackId: string; listenerName?: string; listenerMessage?: string }) => {
+      const res = await fetch('/api/rivendell/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'submit', ...payload }),
+      })
+      if (!res.ok) throw new Error('Submit failed')
+      return res.json()
+    },
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['rv', 'requests'] as const }) },
+  })
+}
