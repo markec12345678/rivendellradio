@@ -322,3 +322,34 @@ Stage Summary:
 - 2 novi dialog komponenti (NowPlaying + KeyboardHelp)
 - Dashboard hero je sedaj interaktiven (klik odpre podrobnosti)
 - ? tipka odpre professional help overlay
+
+---
+Task ID: system-tab
+Agent: lead
+Task: System zavihek — Studio Clock + daemons grid + feed status
+
+Work Log:
+- SystemTab komponenta (~250 vrstic):
+  - Studio Clock: circular clock z ON AIR indikatorjem (Zetta signature)
+  - System overview: 6 stat kartic (version, schema, uptime, daemons, tracks, stations)
+  - Daemons grid: 6 daemonov z real-time CPU/memory iz WebSocket
+    - caed, ripcd, rdcatchd, rdpadengined, rdrepld, rdrssd
+    - Status badges (RUNNING/STOPPED/FAULTED)
+    - CPU progress bar, memory MB, PID, uptime
+  - WebSocket Feed status card (connected/disconnected)
+  - Detached Playout protection card
+- Sidebar: dodan 'system' zavihek (Cpu ikona)
+- Page.tsx: 7 zavihkov
+- Lint: čist
+- Agent Browser validacija:
+  - System Status: ONLINE
+  - Studio Clock: prikazuje uro
+  - Daemons: 5 RUNNING + 1 STOPPED (rdrepld)
+  - WebSocket Feed: prisoten
+  - Detached Playout: prisoten
+  - 0 napak
+
+Stage Summary:
+- 7 zavihkov: Dashboard, Library, Schedule, Streams, Reports, System, Settings
+- Studio Clock (Zetta signature feature) implementiran
+- Real-time daemons monitoring z WebSocket
