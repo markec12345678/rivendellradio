@@ -12,6 +12,8 @@ import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSendRml } from '@/lib/rivendell/api'
+import { WaveformDisplay } from '@/components/rivendell/waveform-display'
+import { SoundpanelGrid } from '@/components/rivendell/soundpanel-grid'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -130,6 +132,14 @@ export function DashboardTab() {
         <StatCard icon={Users} label="Total Listeners" value={formatNumber(totalListeners)} />
         <StatCard icon={Radio} label="Active Stations" value={String(stations.data?.count ?? 0)} />
         <StatCard icon={Activity} label="Schedule Shows" value={String(schedule.data?.count ?? 0)} />
+      </div>
+
+      {/* Real-time waveform + Soundpanel */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <WaveformDisplay height={140} />
+        </div>
+        <SoundpanelGrid />
       </div>
 
       {/* Split layout: Live show log + Station listeners */}

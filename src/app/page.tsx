@@ -10,10 +10,12 @@ import { ScheduleTab } from '@/components/rivendell/tabs/schedule'
 import { StreamsTab } from '@/components/rivendell/tabs/streams'
 import { SettingsTab } from '@/components/rivendell/tabs/settings'
 import { useBroadcastFeed } from '@/hooks/use-broadcast-feed'
+import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts'
 
 export default function HomePage() {
   const [tab, setTab] = useState<TabId>('dashboard')
   useBroadcastFeed()
+  useKeyboardShortcuts({ onSwitchTab: (id) => setTab(id as TabId) })
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
