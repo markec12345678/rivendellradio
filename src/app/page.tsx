@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Header } from '@/components/rivendell/header'
 import { Sidebar, type TabId } from '@/components/rivendell/sidebar'
 import { FooterRml } from '@/components/rivendell/footer'
@@ -12,17 +12,31 @@ import { ReportsTab } from '@/components/rivendell/tabs/reports'
 import { SystemTab } from '@/components/rivendell/tabs/system'
 import { SettingsTab } from '@/components/rivendell/tabs/settings'
 import { KeyboardHelpDialog } from '@/components/rivendell/keyboard-help-dialog'
+import { CommandPalette } from '@/components/rivendell/command-palette'
 import { useBroadcastFeed } from '@/hooks/use-broadcast-feed'
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts'
 
 export default function HomePage() {
   const [tab, setTab] = useState<TabId>('dashboard')
   const [helpOpen, setHelpOpen] = useState(false)
+  const [paletteOpen, setPaletteOpen] = useState(false)
   useBroadcastFeed()
   useKeyboardShortcuts({
     onSwitchTab: (id) => setTab(id as TabId),
     onShowHelp: () => setHelpOpen(true),
   })
+
+  // Cmd+K / Ctrl+K to open command palette
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setPaletteOpen((prev) => !prev)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -41,6 +55,7 @@ export default function HomePage() {
       </div>
       <FooterRml />
       <KeyboardHelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+      <CommandPalette key={paletteOpen ? 'open' : 'closed'} open={paletteOpen} onOpenChange={setPaletteOpen} onSwitchTab={(id) => setTab(id as TabId)} />
     </div>
   )
 }

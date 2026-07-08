@@ -24,7 +24,8 @@ const shortcuts = [
     { key: 'L', desc: 'Switch to Library', icon: List },
     { key: 'S', desc: 'Switch to Schedule', icon: Calendar },
   ]},
-  { category: 'Console', keys: [
+  { category: 'Command', keys: [
+    { key: '⌘K', desc: 'Open command palette', icon: Keyboard },
     { key: 'R', desc: 'Focus RML command console', icon: Terminal },
     { key: '?', desc: 'Show this help', icon: HelpCircle },
   ]},
