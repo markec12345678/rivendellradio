@@ -290,3 +290,35 @@ Stage Summary:
 - Information density: 7→9/10 (cilj dosežen)
 - AzuraCast: vseh 5 kriterijev nižje od nas
 - VLM: "clearly superior", "thoughtful design tailored to radio station needs"
+
+---
+Task ID: dialogs
+Agent: lead
+Task: Now Playing detail dialog + Keyboard help dialog
+
+Work Log:
+- NowPlayingDialog komponenta (~100 vrstic):
+  - Klik na Now Playing hero odpre dialog
+  - Full-size album art (192x192) z spinning Disc3 overlay
+  - Vsi metapodatki: BPM, ISRC, leto, žanr, dolžina, play count
+  - Sched codes, group, origin badges
+  - Last played timestamp (formatRelative)
+  - Play Now gumb (pošlje RML PL 0!)
+  - Close gumb
+- KeyboardHelpDialog komponenta (~65 vrstic):
+  - ? tipka odpre modal z vsemi shortcuts-i
+  - 4 kategorije: Soundpanel, Transport, Navigation, Console
+  - Kbd styling za vsako tipko
+  - Ikone za vsako kategorijo
+- useKeyboardShortcuts posodobljen z onShowHelp callback
+- page.tsx: dodan KeyboardHelpDialog + helpOpen state
+- Lint: čist
+- Agent Browser validacija:
+  - Now Playing dialog: odprt s klikom na hero, "Thunderstruck" + album art + metapodatki vidni
+  - Keyboard help: odprt s ? tipko, "Keyboard Shortcuts" + 4 kategorije + F1-F8/Space/Esc vidni
+  - 0 napak v brskalniku
+
+Stage Summary:
+- 2 novi dialog komponenti (NowPlaying + KeyboardHelp)
+- Dashboard hero je sedaj interaktiven (klik odpre podrobnosti)
+- ? tipka odpre professional help overlay
