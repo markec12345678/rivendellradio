@@ -1,10 +1,10 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { LayoutDashboard, Library, Calendar, Radio, Settings, BarChart3, type LucideIcon } from 'lucide-react'
+import { LayoutDashboard, Library, Calendar, Radio, Settings, BarChart3, Cpu, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export type TabId = 'dashboard' | 'library' | 'schedule' | 'streams' | 'reports' | 'settings'
+export type TabId = 'dashboard' | 'library' | 'schedule' | 'streams' | 'reports' | 'system' | 'settings'
 
 const items: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -12,6 +12,7 @@ const items: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: 'schedule', label: 'Schedule', icon: Calendar },
   { id: 'streams', label: 'Streams', icon: Radio },
   { id: 'reports', label: 'Reports', icon: BarChart3 },
+  { id: 'system', label: 'System', icon: Cpu },
   { id: 'settings', label: 'Settings', icon: Settings },
 ]
 
