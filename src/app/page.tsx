@@ -10,13 +10,18 @@ import { ScheduleTab } from '@/components/rivendell/tabs/schedule'
 import { StreamsTab } from '@/components/rivendell/tabs/streams'
 import { ReportsTab } from '@/components/rivendell/tabs/reports'
 import { SettingsTab } from '@/components/rivendell/tabs/settings'
+import { KeyboardHelpDialog } from '@/components/rivendell/keyboard-help-dialog'
 import { useBroadcastFeed } from '@/hooks/use-broadcast-feed'
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts'
 
 export default function HomePage() {
   const [tab, setTab] = useState<TabId>('dashboard')
+  const [helpOpen, setHelpOpen] = useState(false)
   useBroadcastFeed()
-  useKeyboardShortcuts({ onSwitchTab: (id) => setTab(id as TabId) })
+  useKeyboardShortcuts({
+    onSwitchTab: (id) => setTab(id as TabId),
+    onShowHelp: () => setHelpOpen(true),
+  })
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -33,6 +38,7 @@ export default function HomePage() {
         </main>
       </div>
       <FooterRml />
+      <KeyboardHelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
     </div>
   )
 }

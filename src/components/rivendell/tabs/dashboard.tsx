@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Disc3, Music2, Clock, Radio, Users, Activity, Play, Square, Pause, History, Crown } from 'lucide-react'
 import { useLiveStore } from '@/lib/stores/live'
@@ -14,6 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { WaveformDisplay } from '@/components/rivendell/waveform-display'
 import { SoundpanelGrid } from '@/components/rivendell/soundpanel-grid'
+import { NowPlayingDialog } from '@/components/rivendell/now-playing-dialog'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -25,6 +27,7 @@ export function DashboardTab() {
   const schedule = useSchedule()
   const stations = useStations()
   const recent = useRecent()
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   // Find the album art for the currently playing track
   const currentTrack = nowPlaying?.trackId
@@ -39,7 +42,13 @@ export function DashboardTab() {
   return (
     <div className="space-y-4 p-4 sm:p-6">
       {/* Now Playing Hero */}
-      <Card className="relative overflow-hidden border-border bg-gradient-to-br from-card via-card to-secondary/30">
+      <Card
+        className={cn(
+          'relative overflow-hidden border-border bg-gradient-to-br from-card via-card to-secondary/30',
+          currentTrack && 'cursor-pointer hover:border-primary/40 transition-colors',
+        )}
+        onClick={() => currentTrack && setDialogOpen(true)}
+      >
         <div
           className="pointer-events-none absolute inset-0 opacity-30"
           style={{
@@ -375,6 +384,9 @@ export function DashboardTab() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Now Playing detail dialog */}
+      <NowPlayingDialog track={currentTrack ?? null} open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>
   )
 }

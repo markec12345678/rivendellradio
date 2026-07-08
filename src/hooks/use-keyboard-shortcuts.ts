@@ -19,6 +19,7 @@ const soundpanelButtons: SoundpanelBtn[] = [
 
 interface KeyboardShortcutOptions {
   onSwitchTab?: (id: string) => void
+  onShowHelp?: () => void
 }
 
 /**
@@ -32,7 +33,7 @@ interface KeyboardShortcutOptions {
  * R      : Focus RML command console (footer)
  * ?      : Show keyboard help
  */
-export function useKeyboardShortcuts({ onSwitchTab }: KeyboardShortcutOptions = {}) {
+export function useKeyboardShortcuts({ onSwitchTab, onShowHelp }: KeyboardShortcutOptions = {}) {
   const sendRml = useSendRml()
 
   useEffect(() => {
@@ -96,10 +97,14 @@ export function useKeyboardShortcuts({ onSwitchTab }: KeyboardShortcutOptions = 
         }
         case '?': {
           e.preventDefault()
-          toast.info('Keyboard shortcuts', {
-            description: 'F1-F8 soundpanel · Space play · Esc stop all · D/L/S tabs · R RML console',
-            duration: 6000,
-          })
+          if (onShowHelp) {
+            onShowHelp()
+          } else {
+            toast.info('Keyboard shortcuts', {
+              description: 'F1-F8 soundpanel · Space play · Esc stop all · D/L/S tabs · R RML console',
+              duration: 6000,
+            })
+          }
           break
         }
       }
@@ -107,5 +112,5 @@ export function useKeyboardShortcuts({ onSwitchTab }: KeyboardShortcutOptions = 
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [sendRml, onSwitchTab])
+  }, [sendRml, onSwitchTab, onShowHelp])
 }
