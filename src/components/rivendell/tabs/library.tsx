@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, Music, Plus } from 'lucide-react'
+import { Search, Music, Plus, Palette } from 'lucide-react'
 import { useTracks } from '@/lib/rivendell/api'
+import { useAppearanceStyle, useRowHighlightStyle } from '@/lib/stores/ui'
 import { formatHms, formatRelative } from '@/lib/rivendell/format'
 import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
@@ -27,6 +28,8 @@ export function LibraryTab() {
   const [search, setSearch] = useState('')
   const [group, setGroup] = useState('ALL')
   const tracks = useTracks(search, group)
+  const appearanceStyle = useAppearanceStyle()
+  const rowHighlightStyle = useRowHighlightStyle()
 
   const groups = ['ALL', 'MUSIC', 'JINGLES', 'ADS', 'PROMOS']
 
@@ -90,42 +93,49 @@ export function LibraryTab() {
                       </TableRow>
                     ))
                   ) : tracks.data && tracks.data.tracks.length > 0 ? (
-                    tracks.data.tracks.map((track) => (
-                      <TableRow
-                        key={track.id}
-                        className="cursor-pointer border-border transition-colors hover:bg-secondary/40"
-                        onClick={() => toast.info(track.title, { description: `${track.artist} · ${formatHms(track.length)}` })}
-                      >
-                        <TableCell>
-                          <div className="h-10 w-10 shrink-0 overflow-hidden rounded">
-                            <img
-                              src={track.albumArt ?? '/album-art/rock-1.png'}
-                              alt=""
-                              className="h-full w-full object-cover"
-                              onError={(e) => { ;(e.target as HTMLImageElement).style.opacity = '0' }}
-                            />
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-mono text-[10px] text-muted-foreground">{track.id}</TableCell>
-                        <TableCell className="font-medium text-foreground">
-                          <div className="flex items-center gap-1.5">
-                            <Music className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
-                            <span className="truncate">{track.title}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell text-muted-foreground">{track.artist}</TableCell>
-                        <TableCell className="hidden lg:table-cell text-muted-foreground">{track.album}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={cn('font-mono text-[10px]', groupColors[track.group] ?? 'border-border text-muted-foreground')}>
-                            {track.group}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">{track.genre}</TableCell>
-                        <TableCell className="text-right font-mono text-xs text-muted-foreground">{formatHms(track.length)}</TableCell>
-                        <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">{formatRelative(track.lastPlayed ?? null)}</TableCell>
-                        <TableCell className="text-right font-mono text-xs text-muted-foreground">{track.playCount.toLocaleString()}</TableCell>
-                      </TableRow>
-                    ))
+                    tracks.data.tracks.map((track) => {
+                      const rowStyle = rowHighlightStyle({
+                        group: track.group,
+                        origin: track.origin,
+                      })
+                      return (
+                        <TableRow
+                          key={track.id}
+                          className="cursor-pointer border-border transition-colors hover:bg-secondary/40"
+                          onClick={() => toast.info(track.title, { description: `${track.artist} · ${formatHms(track.length)}` })}
+                          style={rowStyle}
+                        >
+                          <TableCell>
+                            <div className="h-10 w-10 shrink-0 overflow-hidden rounded">
+                              <img
+                                src={track.albumArt ?? '/album-art/rock-1.png'}
+                                alt=""
+                                className="h-full w-full object-cover"
+                                onError={(e) => { ;(e.target as HTMLImageElement).style.opacity = '0' }}
+                              />
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-[10px] text-muted-foreground">{track.id}</TableCell>
+                          <TableCell className="font-medium text-foreground">
+                            <div className="flex items-center gap-1.5">
+                              <Music className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+                              <span className="truncate">{track.title}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell text-muted-foreground">{track.artist}</TableCell>
+                          <TableCell className="hidden lg:table-cell text-muted-foreground">{track.album}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={cn('font-mono text-[10px]', groupColors[track.group] ?? 'border-border text-muted-foreground')} style={appearanceStyle('group', track.group)}>
+                              {track.group}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell text-xs text-muted-foreground" style={appearanceStyle('origin', track.origin)}>{track.genre}</TableCell>
+                          <TableCell className="text-right font-mono text-xs text-muted-foreground">{formatHms(track.length)}</TableCell>
+                          <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">{formatRelative(track.lastPlayed ?? null)}</TableCell>
+                          <TableCell className="text-right font-mono text-xs text-muted-foreground">{track.playCount.toLocaleString()}</TableCell>
+                        </TableRow>
+                      )
+                    })
                   ) : (
                     <TableRow className="border-border">
                       <TableCell colSpan={10} className="py-12 text-center text-sm text-muted-foreground">
@@ -138,9 +148,16 @@ export function LibraryTab() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
             <span>{tracks.data ? `${tracks.data.count} of ${tracks.data.total} tracks` : 'Loading…'}</span>
-            <span>Click a row for details</span>
+            <span className="flex items-center gap-1.5">
+              <Palette className="h-3 w-3 text-primary" aria-hidden="true" />
+              Row colors:
+              <span className="text-amber-400">MUSIC</span>·
+              <span className="text-emerald-400">JINGLES</span>·
+              <span className="text-accent">ADS</span>·
+              <span className="text-purple-400">PROMOS</span>
+            </span>
           </div>
         </CardContent>
       </Card>
