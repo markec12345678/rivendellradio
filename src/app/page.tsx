@@ -43,7 +43,7 @@ export default function HomePage() {
       <Header />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar active={tab} onChange={setTab} />
-        <main className="flex-1 overflow-y-auto scrollbar-broadcast" role="main">
+        <main className="flex-1 overflow-y-auto scrollbar-broadcast pt-12 md:pt-0" role="main">
           {tab === 'dashboard' && <DashboardTab />}
           {tab === 'library' && <LibraryTab />}
           {tab === 'schedule' && <ScheduleTab />}
