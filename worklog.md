@@ -203,3 +203,30 @@ Stage Summary:
 - VLM prioriteta #2 (Weekly Timetable) — DONE
 - 6 zavihkov, ~4500 vrstic
 - Memory limit 768MB za stabilnost
+
+---
+Task ID: row-highlighting
+Agent: lead
+Task: Row highlighting + appearance rules (Zetta 3-layer color system)
+
+Work Log:
+- UI store (src/lib/stores/ui.ts):
+  - AppearanceRule: per-attribute cell coloring (MUSIC amber, JINGLES green, ADS red, PROMOS purple)
+  - RowHighlight: full-row highlight (ADS=red bg, JINGLES=green bg, PROMOS=purple bg)
+  - useAppearanceStyle() hook za cell styling
+  - useRowHighlightStyle() hook za row styling
+- Library tabela:
+  - <TableRow style={rowHighlightStyle(...)}> aplikira row background
+  - Group badge style={appearanceStyle('group', ...)} aplikira cell color
+  - Genre cell style={appearanceStyle('origin', ...)} aplikira origin color
+  - Footer legend: "Row colors: MUSIC · JINGLES · ADS · PROMOS"
+- Lint: čist
+- Agent Browser validacija (JS eval):
+  - 30 MUSIC, 4 JINGLES, 2 PROMOS, 2 ADS vrstice
+  - ADS vrstice imajo bg="oklch(0.65 0.22 25 / 0.25)" (rdeče) ✓
+  - Row highlighting deluje!
+
+Stage Summary:
+- VLM prioriteta #4 (Row highlighting) — DONE
+- Zetta 3-plastni barvni sistem: Theme + Appearance + Row Highlight
+- Vsi 4 VLMprioritetet končane: album art, weekly timetable, večji waveform, row highlighting
