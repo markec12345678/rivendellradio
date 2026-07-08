@@ -102,3 +102,43 @@ Stage Summary:
 - Real-time waveform (canvas, 30 FPS, VU iz WebSocket)
 - 8-button soundpanel z F1-F8 keyboard shortcutsi
 - Polni keyboard shortcut sistem (F1-F8, Space, Esc, D/L/S, R, ?)
+
+---
+Task ID: reports-log-editor
+Agent: lead
+Task: Reports analytics tab + drag-drop log editor
+
+Work Log:
+- Reports API ruta: 24h listener history (hourly buckets, daypart pattern)
+- useReports hook
+- ReportsTab komponenta (~200 vrstic):
+  - Area chart: total listeners 24h (gradient fill, recharts)
+  - Line chart: per-station breakdown (multi-line, 3 stations)
+  - Bar chart: station comparison (horizontal, current hour)
+  - Stats: Current (2,272), Peak (2,531), Average (1,547), Active Streams (3)
+  - Dark theme chart styling z oklch barvami
+- LogEditorDialog komponenta (~350 vrstic):
+  - @dnd-kit/sortable drag-drop reorder
+  - Track palette z search (real rock tracks iz library-ja)
+  - Transition cycling (PLAY/SEGUE/STOP/FADE)
+  - Move up/down, delete, save z dirty state tracking
+  - View/Edit mode toggle
+  - ReadOnlyView tabela za view mode
+- ScheduleTab: klik na show odpre LogEditorDialog
+- Sidebar: dodan Reports zavihek (BarChart3 ikona)
+- Page.tsx: 6 zavihkov (Dashboard, Library, Schedule, Streams, Reports, Settings)
+- Lint: čist (0 napak)
+- Agent Browser validacija:
+  - Reports: 6 recharts grafov, realne statistike (2,272/2,531/1,547/3)
+  - Log editor: drag handles prisotni, track palette z rock pesmimi
+  - Add track: "Added to log: Back in Black — AC/DC" toast
+  - Dirty state: "unsaved" badge se prikaže
+  - Save: "Log saved" toast, dialog se zapre
+  - 0 napak v brskalniku
+
+Stage Summary:
+- 6 zavihkov, 30+ datotek, ~4000 vrstic
+- Real-time waveform + soundpanel + keyboard shortcuts
+- Reports z recharts grafi (area/line/bar)
+- Drag-drop log editor z @dnd-kit
+- Vse na GitHub (web-dashboard branch)
