@@ -259,3 +259,34 @@ Stage Summary:
 - Rock 88.7 dashboard prekaša AzuraCast v 4 od 5 kriterijev
 - Edino kjer AzuraCast vodi: information density (8 vs 7)
 - VLM pohvalil: "clean, focused, visually striking, strong brand identity"
+
+---
+Task ID: info-density-boost
+Agent: lead
+Task: Information density boost + VLM micro-fixes
+
+Work Log:
+- API ruta /api/rivendell/recent: recently played (8 trackov) + top tracks (5 najbolj predvajanih)
+- useRecent hook
+- Dashboard: Recently Played sekcija (album art, timestamp, show name)
+- Dashboard: Top Tracks sekcija (gold/silver/bronze badge-i, play count)
+- Progress bar: h-2.5 (debelejši) + glow shadow efekt
+- Soundpanel: 5 barv z višjim kontrastom (amber/green/red/blue/purple, 50/15 opacity)
+- Lint: čist
+
+Finalna VLM primerjava (v4):
+| Kriterij           | AzuraCast | Rock 88.7 | Prejšnja |
+|--------------------|-----------|-----------|----------|
+| Layout             | 6/10      | 8/10      | 9/10     |
+| Color scheme       | 5/10      | 9/10      | 9/10     |
+| Information density| 4/10      | 9/10 ✨   | 7/10     |
+| Visual hierarchy   | 5/10      | 9/10      | 9/10     |
+| Overall            | 5/10      | 9/10      | 9/10     |
+
+Information density se je popravil iz 7→9 (AzuraCast padel iz 8→4)
+VLM: "Rock 88.7 is clearly superior — outperforms AzuraCast in every category"
+
+Stage Summary:
+- Information density: 7→9/10 (cilj dosežen)
+- AzuraCast: vseh 5 kriterijev nižje od nas
+- VLM: "clearly superior", "thoughtful design tailored to radio station needs"
