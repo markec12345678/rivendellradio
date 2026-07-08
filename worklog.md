@@ -62,3 +62,43 @@ Stage Summary:
 - WebSocket real-time (VU, now-playing, listeners)
 - 3 teme + accent hue
 - Clean-room implementacija (lastna koda, barve, ikone)
+
+---
+Task ID: waveform-shortcuts
+Agent: lead
+Task: Real-time waveform canvas + soundpanel + keyboard shortcuts
+
+Work Log:
+- WaveformDisplay komponenta (~200 vrstic): canvas-based scrolling stereo waveform
+  - Rolling buffer 240 vzorcev (~24s @ 10Hz iz WebSocket VU frame-ov)
+  - Peak hold z decay (0.985/frame)
+  - dBFS mreža (-6, -12, -18, -24, -36 dB)
+  - Gradient fill: green→amber→red glede na amplitudo
+  - Playhead na desnem robu
+  - 30 FPS redraw z requestAnimationFrame
+  - ResizeObserver za responsive canvas
+- SoundpanelGrid komponenta: 8 quick-fire gumbov (F1-F8)
+  - 3 barve (amber/green/red)
+  - framer-motion hover/tap animacije
+  - F-label na vsakem gumbu
+- useKeyboardShortcuts hook:
+  - F1-F8: fire soundpanel buttons
+  - Space: play Main log machine
+  - Esc: emergency stop all
+  - D/L/S: switch to Dashboard/Library/Schedule
+  - R: focus RML command console
+  - ?: show keyboard help toast
+- Dashboard: waveform + soundpanel med stats in split-layout
+- Lint: čist (0 napak)
+- Agent Browser validacija:
+  - Waveform canvas 675x140, aktivno riše
+  - Soundpanel: 8 gumbov z F1-F8 label-i
+  - F1: toast "F1: Station ID" + RML "PM 0 0!" prejet na serverju
+  - ?: toast "F1-F8 soundpanel · Space play · Esc stop all..."
+  - 0 napak v brskalniku
+
+Stage Summary:
+- 28 datotek, ~3500 vrstic
+- Real-time waveform (canvas, 30 FPS, VU iz WebSocket)
+- 8-button soundpanel z F1-F8 keyboard shortcutsi
+- Polni keyboard shortcut sistem (F1-F8, Space, Esc, D/L/S, R, ?)
