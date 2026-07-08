@@ -153,3 +153,32 @@ export function useWeeklySchedule() {
     queryFn: () => fetchJson<WeeklyScheduleResponse>('/api/rivendell/weekly-schedule'),
   })
 }
+
+export interface RecentTrack {
+  trackId: string
+  title: string
+  artist: string
+  album: string
+  albumArt?: string
+  playedAt: string
+  show: string
+}
+export interface TopTrack {
+  trackId: string
+  title: string
+  artist: string
+  album: string
+  albumArt?: string
+  playCount: number
+  length: number
+}
+export interface RecentResponse {
+  recent: RecentTrack[]
+  top: TopTrack[]
+}
+export function useRecent() {
+  return useQuery<RecentResponse>({
+    queryKey: ['rv', 'recent'] as const,
+    queryFn: () => fetchJson<RecentResponse>('/api/rivendell/recent'),
+  })
+}

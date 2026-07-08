@@ -1,11 +1,11 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Disc3, Music2, Clock, Radio, Users, Activity, Play, Square, Pause } from 'lucide-react'
+import { Disc3, Music2, Clock, Radio, Users, Activity, Play, Square, Pause, History, Crown } from 'lucide-react'
 import { useLiveStore } from '@/lib/stores/live'
-import { useSchedule, useStations, useSendRml } from '@/lib/rivendell/api'
+import { useSchedule, useStations, useSendRml, useRecent } from '@/lib/rivendell/api'
 import { rockTracks } from '@/lib/rivendell/mock-data'
-import { formatHms, formatClock, formatNumber } from '@/lib/rivendell/format'
+import { formatHms, formatClock, formatNumber, formatRelative } from '@/lib/rivendell/format'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -24,6 +24,7 @@ export function DashboardTab() {
   const listeners = useLiveStore((s) => s.listeners)
   const schedule = useSchedule()
   const stations = useStations()
+  const recent = useRecent()
 
   // Find the album art for the currently playing track
   const currentTrack = nowPlaying?.trackId
@@ -103,7 +104,7 @@ export function DashboardTab() {
                     {nowPlaying.artist}
                   </p>
                   <div className="mt-3 space-y-1.5">
-                    <Progress value={progress} className="h-2 bg-secondary/60 [&>div]:bg-primary" />
+                    <Progress value={progress} className="h-2.5 bg-secondary/60 [&>div]:bg-primary [&>div]:shadow-[0_0_8px_oklch(0.72_0.18_60_/_0.5)]" />
                     <div className="flex items-center justify-between font-mono text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" aria-hidden="true" />
@@ -281,6 +282,98 @@ export function DashboardTab() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      {/* Recently Played + Top Tracks (information density boost) */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Recently Played */}
+        <Card className="border-border bg-card/80">
+          <CardHeader className="border-b border-border/60 px-4 py-3">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <History className="h-4 w-4 text-primary" aria-hidden="true" />
+              Recently Played
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ScrollArea className="max-h-72">
+              {recent.isLoading ? (
+                <div className="p-4 space-y-2">
+                  {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                </div>
+              ) : recent.data && recent.data.recent.length > 0 ? (
+                <div className="divide-y divide-border/60">
+                  {recent.data.recent.map((track, idx) => (
+                    <div key={idx} className="flex items-center gap-3 px-4 py-2 hover:bg-secondary/30">
+                      <img
+                        src={track.albumArt ?? '/album-art/rock-1.png'}
+                        alt=""
+                        className="h-9 w-9 shrink-0 rounded object-cover"
+                        onError={(e) => { ;(e.target as HTMLImageElement).style.opacity = '0' }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-xs font-medium text-foreground">{track.title}</div>
+                        <div className="truncate text-[10px] text-muted-foreground">{track.artist}</div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="font-mono text-[9px] text-muted-foreground">{formatRelative(track.playedAt)}</div>
+                        <div className="text-[9px] text-muted-foreground/60">{track.show}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-6 text-center text-xs text-muted-foreground">No recently played tracks.</div>
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
+
+        {/* Top Tracks */}
+        <Card className="border-border bg-card/80">
+          <CardHeader className="border-b border-border/60 px-4 py-3">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Crown className="h-4 w-4 text-amber-400" aria-hidden="true" />
+              Top Tracks
+              <span className="font-mono text-[10px] text-muted-foreground">by play count</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ScrollArea className="max-h-72">
+              {recent.isLoading ? (
+                <div className="p-4 space-y-2">
+                  {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                </div>
+              ) : recent.data ? (
+                <div className="divide-y divide-border/60">
+                  {recent.data.top.map((track, idx) => (
+                    <div key={idx} className="flex items-center gap-3 px-4 py-2 hover:bg-secondary/30">
+                      <span className={cn(
+                        'flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-[10px] font-bold',
+                        idx === 0 ? 'bg-amber-500/20 text-amber-400' : idx === 1 ? 'bg-gray-400/20 text-gray-300' : idx === 2 ? 'bg-orange-700/20 text-orange-500' : 'bg-secondary/40 text-muted-foreground',
+                      )}>
+                        {idx + 1}
+                      </span>
+                      <img
+                        src={track.albumArt ?? '/album-art/rock-1.png'}
+                        alt=""
+                        className="h-9 w-9 shrink-0 rounded object-cover"
+                        onError={(e) => { ;(e.target as HTMLImageElement).style.opacity = '0' }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-xs font-medium text-foreground">{track.title}</div>
+                        <div className="truncate text-[10px] text-muted-foreground">{track.artist}</div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="font-mono text-xs font-semibold text-primary">{formatNumber(track.playCount)}</div>
+                        <div className="text-[9px] text-muted-foreground">plays</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </ScrollArea>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

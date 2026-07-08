@@ -19,16 +19,18 @@ const buttons: SoundpanelButton[] = [
   { id: 'sp2', label: 'Top of Hour', rml: 'PM 0 1!', color: 'amber' },
   { id: 'sp3', label: 'Weather Bed', rml: 'PM 0 2!', color: 'amber' },
   { id: 'sp4', label: 'News Intro', rml: 'PM 0 3!', color: 'amber' },
-  { id: 'sp5', label: 'Promo: Friday', rml: 'PM 0 4!', color: 'green' },
-  { id: 'sp6', label: 'PSA', rml: 'PM 0 5!', color: 'red' },
+  { id: 'sp5', label: 'Promo: Friday', rml: 'PM 0 4!', color: 'purple' },
+  { id: 'sp6', label: 'PSA', rml: 'PM 0 5!', color: 'blue' },
   { id: 'sp7', label: 'Ad: Guitar', rml: 'PM 0 6!', color: 'red' },
   { id: 'sp8', label: 'Time Temp', rml: 'PM 0 7!', color: 'amber' },
 ]
 
 const colorClasses: Record<string, string> = {
-  amber: 'border-primary/40 bg-primary/10 text-primary hover:bg-primary/20',
-  green: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20',
-  red: 'border-accent/40 bg-accent/10 text-accent hover:bg-accent/20',
+  amber: 'border-amber-500/50 bg-amber-500/15 text-amber-300 hover:bg-amber-500/25',
+  green: 'border-emerald-500/50 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25',
+  red: 'border-red-500/50 bg-red-500/15 text-red-300 hover:bg-red-500/25',
+  blue: 'border-blue-500/50 bg-blue-500/15 text-blue-300 hover:bg-blue-500/25',
+  purple: 'border-purple-500/50 bg-purple-500/15 text-purple-300 hover:bg-purple-500/25',
 }
 
 export function SoundpanelGrid() {
