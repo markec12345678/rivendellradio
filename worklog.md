@@ -142,3 +142,35 @@ Stage Summary:
 - Reports z recharts grafi (area/line/bar)
 - Drag-drop log editor z @dnd-kit
 - Vse na GitHub (web-dashboard branch)
+
+---
+Task ID: vlm-improvements
+Agent: lead
+Task: VLM-prioritetne izboljšave — album art + večji waveform
+
+Work Log:
+- Generiral 4 abstraktne album art naslovnice (AI, brez copyright-a):
+  - rock-1.png (Hard Rock, Punk, Nu Metal, Jingle, Bed, Promo, PSA, Ad)
+  - grunge-1.png (Grunge)
+  - metal-1.png (Heavy Metal)
+  - alt-1.png (Alternative Rock, Indie)
+  - classic-1.png (Classic Rock)
+- Track tip razširjen z albumArt poljem
+- albumArtFor() helper: mapira žanr → naslovnica
+- Dashboard hero: album art z vrtečo se Disc3 overlay (namesto same ikone)
+- Library tabela: nov Art column z 40x40 thumbnaili (38 thumbnailov)
+- Waveform povečan na 160px, full width (prej 140px v 2/3 širini)
+- start.sh skripta za stabilen mini-service zagon
+- Lint: čist
+- VLM validacija:
+  - "album art (lightning-themed with guitar) clearly visible"
+  - "waveform significantly larger"
+  - "cleaner, more cohesive layout"
+  - "more professional"
+  - Preostala mikro-poboljšanja: progress bar vidljivost, soundpanel kontrast
+
+Stage Summary:
+- Album art: DONE (VLM potrjeno)
+- Večji waveform: DONE (VLM potrjeno)
+- Library thumbnails: DONE (38 thumbnailov)
+- VLM ocena: "more professional" kot prej
