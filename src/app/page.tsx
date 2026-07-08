@@ -8,6 +8,7 @@ import { DashboardTab } from '@/components/rivendell/tabs/dashboard'
 import { LibraryTab } from '@/components/rivendell/tabs/library'
 import { ScheduleTab } from '@/components/rivendell/tabs/schedule'
 import { StreamsTab } from '@/components/rivendell/tabs/streams'
+import { ReportsTab } from '@/components/rivendell/tabs/reports'
 import { SettingsTab } from '@/components/rivendell/tabs/settings'
 import { useBroadcastFeed } from '@/hooks/use-broadcast-feed'
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts'
@@ -27,6 +28,7 @@ export default function HomePage() {
           {tab === 'library' && <LibraryTab />}
           {tab === 'schedule' && <ScheduleTab />}
           {tab === 'streams' && <StreamsTab />}
+          {tab === 'reports' && <ReportsTab />}
           {tab === 'settings' && <SettingsTab />}
         </main>
       </div>

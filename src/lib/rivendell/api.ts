@@ -118,3 +118,19 @@ export function useSendRml() {
     },
   })
 }
+
+export interface ListenerHistoryPoint { hour: string; listeners: number }
+export interface StationListenerHistory { id: string; name: string; baseListeners: number; history: ListenerHistoryPoint[] }
+export interface ReportsResponse {
+  stations: StationListenerHistory[]
+  total: ListenerHistoryPoint[]
+  peak: number
+  avg: number
+  current: number
+}
+export function useReports() {
+  return useQuery<ReportsResponse>({
+    queryKey: ['rv', 'reports'] as const,
+    queryFn: () => fetchJson<ReportsResponse>('/api/rivendell/reports'),
+  })
+}
