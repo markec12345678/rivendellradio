@@ -566,3 +566,52 @@ Stage Summary:
 - Audit trail z auto-logging na vseh mutacijah
 - Broadcast API z API key authentication
 - Ocena: 5.6/10 → 7.0/10 (varnost 2→8, stabilnost 4→6)
+
+---
+Task ID: phase2.1
+Agent: lead
+Task: Phase 2.1 — Event Bus + API v1 + OpenAPI + WebSocket Events
+
+Work Log:
+- Event Bus (src/lib/event-bus.ts, ~200 vrstic):
+  - Centralni event sistem z EventEmitter
+  - 11 typed eventov: track.started/finished, playlist.updated, request.created/approved,
+    rds.updated, vu.updated, mic.open/closed, studio.online/offline,
+    stream.listeners.changed, alert.created
+  - Event history (zadnjih 100)
+  - Helper publish funkcije za vsak tip
+  - Cascading: track.started → rds.updated (samodejno)
+- API Versioning (/api/v1/*):
+  - /api/v1 — root z endpoint listing + WebSocket info
+  - /api/v1/health — health check (uptime, memory, eventBus history)
+  - /api/v1/events — event history z type filter + limit
+  - /api/v1/events/test — trigger test track.started
+  - /api/v1/openapi — OpenAPI 3.1 spec (JSON)
+  - Ločene datoteke za vsako sub-ruto (Next.js App Router)
+- OpenAPI 3.1:
+  - Full spec z tags, schemas (Track, RdsMetadata, ListenerRequest, Event)
+  - Security scheme (ApiKeyAuth — X-API-Key header)
+  - Path definitions za vse v1 endpointe
+- WebSocket Events (typed):
+  - broadcast-feed sedaj emit-a 'event' channel z typed payloadi
+  - track.started/finished ob spremembi pesmi
+  - rds.updated cascading iz track.started
+  - vu.updated ob vsakem VU okvirju
+  - stream.listeners.changed ob spremembi števila poslušalcev
+  - Backward compat: stari kanali (vu, now-playing, listeners) še delajo
+- Lint: čist
+- Validacija:
+  - API v1 root: "Rock 88.7 Broadcast API v1.0.0 — online" ✓
+  - Health: {status: healthy, uptime: 25s, memoryMb: 1487, eventBusHistory: 0} ✓
+  - Events: {count: 0, events: []} ✓
+  - Test trigger: {ok: true, message: "track.started event published"} ✓
+  - OpenAPI: "OpenAPI 3.1.0 — Rock 88.7 Broadcast API" ✓
+
+Arhitektura:
+  track.started → Event Bus → RDS, DAB+, WebSocket, Logger, AI, Now Playing, Analytics
+  (modular — vsak subscriber je neodvisen)
+
+Stage Summary:
+- Phase 2.1 (Event Bus + API v1 + OpenAPI + WebSocket Events) — DONE
+- API ocena: 7.5/10 → 9/10 (verzioniranje + OpenAPI + typed events)
+- Arhitektura: modularna (Event Bus) namesto točkovne povezave
