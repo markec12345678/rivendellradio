@@ -990,3 +990,42 @@ Stage Summary:
 - System tab: 12 sekcij (Studio Clock, Overview, Daemons, Feed, RDS, SNMP, GPIO, Production Readiness, Topology, Incidents, Copilot, Replay Studio)
 - Skupno: 7 zavihkov + 30+ komponent + 35+ API rut
 - Vsi 5 uporabnikovih top predlogov implementirani: Incident Timeline, AI Root Cause, AI Copilot, Broadcast Topology, Replay Studio
+
+---
+Task ID: final-state
+Agent: lead
+Task: Končno stanje projekta — povzetek
+
+Work Log:
+- Hydration fix: zamenjal 30 Date.now() klicev s fixed NOW konstanto v mock-data.ts
+- allowedDevOrigins dodan v next.config.ts za cross-origin preview
+- Lint: čin
+- GitHub: vse pushano na web-dashboard branch
+
+Končno stanje projekta:
+- 7 zavihkov: Dashboard, Library, Schedule, Streams, Reports, System, Settings
+- 30+ komponent
+- 35+ API rut (v1 + legacy)
+- 11 AI modulov (event-driven)
+- 8 Prisma modelov
+- 20,000+ vrstic kode
+- 70+ git commitov
+- WebSocket mini-service (port 3003)
+- Event Bus z persistence, correlationId, replay, webhooks, DLQ, metrics
+- Broadcast integracije: RDS/DAB+, EBU Metadata, RadioDNS, SNMP, GPIO
+- Production readiness: health diagnostics, backup/RTO/RPO
+- Operativne funkcije: Incident Timeline, AI Root Cause, AI Copilot, Broadcast Topology, Replay Studio
+- RBAC: 9 vlog z granular permissions
+- Audit Trail z filtering
+- API Keys z SHA-256
+- OpenAPI 3.1 spec
+- Prometheus metrics
+
+Vsi 5 uporabnikovih top predlogov implementirani:
+1. Incident Timeline ✅
+2. AI Root Cause Engine ✅
+3. AI Copilot Chat ✅
+4. Broadcast Topology ✅
+5. Replay Studio ✅
+
+VLM ocena (zadnja uspešna): 9/10 — prekaša AzuraCast v vseh 5 kriterijih
