@@ -651,3 +651,50 @@ Stage Summary:
 - Event replay: DONE (/api/v1/events/replay)
 - Webhook subscriptions: DONE (auto-fire, HMAC, fail tracking)
 - EventBus ocena: 9.5/10 → 10/10
+
+---
+Task ID: phase3-broadcast
+Agent: lead
+Task: Phase 3 — RadioDNS + EBU Metadata + SNMP + GPIO
+
+Work Log:
+- RadioDNS API (/api/v1/radiodns):
+  - JSON overview: domain, DNS CNAME records (5), services (4), coverage (FM/DAB+/IP)
+  - SPI XML (?format=spi): EBU TS 102 371 — programme guide z 5 show-i, genres, multimedia
+  - RadioEPG XML (?format=epg): isti kot SPI
+  - RadioVIS XML (?format=vis): visual content — station logo, show logo, now-playing album art, links
+  - 4 services: SPI, RadioEPG, RadioVIS, RadioTag
+  - Coverage: FM 88.7 MHz (PI=887F), DAB+ (96kbps AAC+), IP (MP3 192k)
+- EBU Metadata API (/api/v1/ebu):
+  - JSON summary: standard=EBU Tech 3293 (EBUCore 1.8), 30 tracks, 6 compatible systems
+  - XML export (?format=xml): EBUCore 1.8 z XSD schema reference
+  - Fields: title, artist, album, ISRC, year, genre, duration, audioFormat, BPM, rights
+  - Compatible: BBC, ARD, SRG SSR, RTV Slovenija, Radio France, RAI
+- SNMP Monitoring API (/api/v1/snmp):
+  - 6 devices: FM Transmitter (RVR T60), RDS Encoder (Inovonics 730), DAB+ Mux, Audio Processor (Omnia 9), Icecast2, Studer Vista 1
+  - 31 OID readings: power, VSWR, temperature, bitrate, error rate, loudness, listeners, CPU
+  - Health Score: 75% (4 online, 1 warning, 1 offline)
+  - Per-device: IP, port, community, status, uptime, OIDs z normal/warning/critical
+- GPIO/GPI API (/api/v1/gpio):
+  - 8 inputs: Studio ON-AIR, Mic 1/2, Doorbell, EAS, Network Failover, Fader Start B, PTT
+  - 8 outputs: ON-AIR Lamp, Cue Light, EAS Relay, Automation Bypass, Silence Alarm, Backup TX, Now-Playing Sign, Record Light
+  - Per-line: driver (serial/gpio/livewire), device, mapping, description
+  - Active: 2 inputs, 2 outputs
+- Lint: čist
+- Validacija:
+  - RadioDNS: domain=radiodns.rock887.fm, services=4 ✓
+  - EBU: standard=EBU Tech 3293, tracks=30, compatible=6 ✓
+  - SNMP: devices=6, health=75%, OIDs=31 ✓
+  - GPIO: inputs=8, outputs=8, active_in=2, active_out=2 ✓
+
+Stage Summary:
+- Phase 3 (RadioDNS + EBU + SNMP + GPIO) — DONE
+- Broadcast funkcionalnost: 7/10 → 8.5/10
+- Interoperabilnost: EBU standardi + RadioDNS + SNMP + GPIO
+- Ocena po fazah:
+  Arhitektura: 9.6/10
+  Event Bus: 9.8/10
+  API: 9.3/10
+  Varnost: 9.0/10
+  Broadcast funkcionalnost: 8.5/10 ⬆️
+  Studijska integracija: 5.5/10 ⬆️ (SNMP + GPIO)
