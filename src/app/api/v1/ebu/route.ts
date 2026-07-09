@@ -86,12 +86,12 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const format = searchParams.get('format')
 
-  if (format === 'xml' || !format) {
+  if (format === 'xml') {
     const xml = buildEbuCoreXml()
     return new NextResponse(xml, { headers: { 'Content-Type': 'application/xml; charset=utf-8' } })
   }
 
-  // JSON summary
+  // JSON summary (default)
   const musicTracks = rockTracks.filter((t) => t.type === 'music')
   return NextResponse.json({
     standard: 'EBU Tech 3293 (EBUCore 1.8)',
