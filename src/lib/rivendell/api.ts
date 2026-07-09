@@ -236,3 +236,41 @@ export function useSubmitRequest() {
     onSuccess: () => { void qc.invalidateQueries({ queryKey: ['rv', 'requests'] as const }) },
   })
 }
+
+export interface RdsMetadata {
+  pi: string
+  ps: string
+  pty: number
+  ptyLabel: string
+  rt: string
+  rtPlus: { tag1: { type: string; start: number; length: number }; tag2: { type: string; start: number; length: number } }
+  dls: string
+  hdTitle: string
+  hdArtist: string
+  hdAlbum: string
+  streamTitle: string
+  streamUrl: string
+  uecpCommand: { address: number; dataset: number; elements: Array<{ type: string; value: string }> }
+  encoderConnected: boolean
+  lastUpdate: string
+  trackId: string
+}
+export interface RdsTarget {
+  id: string
+  name: string
+  protocol: string
+  address: string
+  status: 'connected' | 'disconnected'
+  lastSent: string | null
+}
+export interface RdsResponse {
+  rds: RdsMetadata
+  targets: RdsTarget[]
+}
+export function useRds() {
+  return useQuery<RdsResponse>({
+    queryKey: ['rv', 'rds'] as const,
+    queryFn: () => fetchJson<RdsResponse>('/api/rivendell/rds'),
+    refetchInterval: 10_000,
+  })
+}

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { useSystemStatus, useDaemons } from '@/lib/rivendell/api'
 import { useLiveStore } from '@/lib/stores/live'
+import { RdsPanel } from '@/components/rivendell/rds-panel'
 import { formatHms, formatClock, formatNumber } from '@/lib/rivendell/format'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -250,6 +251,9 @@ export function SystemTab() {
           </CardContent>
         </Card>
       </div>
+
+      {/* RDS / DAB+ Metadata Output */}
+      <RdsPanel />
     </div>
   )
 }

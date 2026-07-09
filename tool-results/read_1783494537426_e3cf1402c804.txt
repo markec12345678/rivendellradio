@@ -1,0 +1,704 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect } from 'react'
+     4→import { Badge } from '@/components/ui/badge'
+     5→import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+     6→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+     7→import { Button } from '@/components/ui/button'
+     8→import { Separator } from '@/components/ui/separator'
+     9→import {
+    10→  Radio, Activity, Cpu, AudioLines, Wifi, Server, Shield, Zap,
+    11→  CircleDot, Layers, GitBranch, CheckCircle2, AlertCircle,
+    12→  Boxes, Cable, Gauge, Music, Play, Square,
+    13→  RadioTower, Waves, Volume2, Headphones, Network,
+    14→  Download, BookOpen, Github, Star
+    15→} from 'lucide-react'
+    16→
+    17→const rivendellStats = [
+    18→  ['Verzija', 'v4.4.1'], ['DB schema', '377'], ['Commitov', '4 029'],
+    19→  ['C++/H datotek', '1 379'], ['DB tabel', '96'], ['Manpageov', '24'],
+    20→  ['GitHub zvezde', '239'], ['Forkov', '67'],
+    21→] as const
+    22→
+    23→const rdxStats = [
+    24→  ['RDX verzija', 'v4.0.1'], ['Datotek', '506'], ['C++ modulov', '17'],
+    25→  ['PyPAD skript', '22'], ['AES67', 'da'], ['AAC+ streaming', 'HE-AAC v1/v2'],
+    26→  ['Zadnja posodobitev', 'Okt 2025'], ['Licenca', 'GPLv2'],
+    27→] as const
+    28→
+    29→const coreComponents = [
+    30→  { name: 'caed', desc: 'Common Audio Engine — JACK/ALSA/HPI', icon: AudioLines },
+    31→  { name: 'ripcd', desc: 'I/O Control Daemon — 50+ switcherjev', icon: Network },
+    32→  { name: 'rdcatchd', desc: 'Avtomatsko snimanje / scheduler', icon: CircleDot },
+    33→  { name: 'rdpadengined', desc: 'SoundPanel / cartwall motor', icon: Square },
+    34→  { name: 'rdrepld', desc: 'Replikacija audio store-a', icon: Layers },
+    35→  { name: 'rdrssd', desc: 'RSS / Podcast procesor', icon: Radio },
+    36→]
+    37→
+    38→const rdxComponents = [
+    39→  { name: 'rdx-jack-helper', desc: 'Pametni JACK auto-routing + D-Bus', icon: Cable },
+    40→  { name: 'rdx-aac-streamer', desc: 'AAC+/HE-AAC v1/v2 encoding', icon: Waves },
+    41→  { name: 'rdx-broadcast-center', desc: 'GUI kontrolni center', icon: Gauge },
+    42→  { name: 'liquidsoap', desc: 'Stream procesiranje (upravljan)', icon: Volume2 },
+    43→  { name: 'icecast2', desc: 'Streaming strežnik (upravljan)', icon: RadioTower },
+    44→  { name: 'stereo-tool', desc: 'Zvočna obdelava (lifecycle)', icon: Headphones },
+    45→]
+    46→
+    47→const features = [
+    48→  { feature: 'On-air playout (rdairplay)', core: true, rdx: true },
+    49→  { feature: 'Audio knjižnica (rdlibrary)', core: true, rdx: true },
+    50→  { feature: 'Log editor + voicetracking', core: true, rdx: true },
+    51→  { feature: 'Auto log generacija (rdlogmanager)', core: true, rdx: true },
+    52→  { feature: 'Cartwall / SoundPanel', core: true, rdx: true },
+    53→  { feature: 'Podcast upravljanje', core: true, rdx: true },
+    54→  { feature: 'JACK / ALSA / HPI audio', core: true, rdx: true },
+    55→  { feature: '50+ GPIO/switcher drajverjev', core: true, rdx: true },
+    56→  { feature: 'RML makro jezik (70+ ukazov)', core: true, rdx: true },
+    57→  { feature: 'MySQL/MariaDB baza (96 tabel)', core: true, rdx: true },
+    58→  { feature: 'Web API (rdxport.cgi, C+Python)', core: true, rdx: true },
+    59→  { feature: '22 PyPAD now-playing skript', core: true, rdx: true },
+    60→  { feature: 'AES67 audio-over-IP', core: false, rdx: true },
+    61→  { feature: 'AAC+/HE-AAC v1/v2 streaming', core: false, rdx: true },
+    62→  { feature: 'Pametni JACK auto-routing', core: false, rdx: true },
+    63→  { feature: 'Zaščita kritičnih povezav', core: false, rdx: true },
+    64→  { feature: 'Icecast GUI upravljanje', core: false, rdx: true },
+    65→  { feature: 'Liquidsoap config builder', core: false, rdx: true },
+    66→  { feature: 'Stereo Tool lifecycle', core: false, rdx: true },
+    67→  { feature: 'Stream Builder (codec/bitrate/mount)', core: false, rdx: true },
+    68→  { feature: 'D-Bus service integracija', core: false, rdx: true },
+    69→  { feature: 'PulseAudio eliminacija', core: false, rdx: true },
+    70→  { feature: '.deb paket z avto. odvisnostmi', core: false, rdx: true },
+    71→  { feature: 'Profilna orkestracija', core: false, rdx: true },
+    72→]
+    73→
+    74→const jackSources = ['rivendell_0', 'system (capture)', 'vlc', 'liquidsoap', 'stereo_tool']
+    75→const jackDestinations = ['system (playback)', 'icecast', 'stereo_tool', 'liquidsoap']
+    76→const criticalConnections = new Set(['rivendell_0→stereo_tool', 'stereo_tool→liquidsoap', 'liquidsoap→icecast'])
+    77→
+    78→const defaultStreams = [
+    79→  { codec: 'MP3', bitrate: 320, mount: '/mp3-320', active: true },
+    80→  { codec: 'MP3', bitrate: 192, mount: '/mp3-192', active: true },
+    81→  { codec: 'AAC+', bitrate: 64, mount: '/aac-64', active: true },
+    82→  { codec: 'AAC+', bitrate: 32, mount: '/aac-32', active: false },
+    83→  { codec: 'FLAC', bitrate: 0, mount: '/flac-lossless', active: false },
+    84→]
+    85→
+    86→const ecosystem = [
+    87→  { name: 'ElvishArtisan/rivendell', role: 'Upstream (uraden)', stars: 239, status: 'active', note: 'v4.4.1, Fred Gleason / Paravel Systems' },
+    88→  { name: 'anjeleno/rdx-rivendell', role: 'RDX razširitev (spojen)', stars: 4, status: 'merged', note: 'AES67, AAC+, JACK routing GUI' },
+    89→  { name: 'alastairtech/rivendell-arm', role: 'ARM/Raspberry Pi port', stars: 21, status: 'active', note: 'Build skripte za ARM' },
+    90→  { name: 'olsson82/rivendellweb', role: 'Spletni vmesnik', stars: 13, status: 'active', note: 'JavaScript remote upravljanje' },
+    91→  { name: 'ElvishArtisan/aman', role: 'Redundanca (failover)', stars: 8, status: 'active', note: 'Shared-nothing par strežnikov' },
+    92→  { name: 'markec12345678/rivendellradio', role: 'Vaš fork (izhodišče)', stars: 0, status: 'origin', note: 'Mirror upstream v4' },
+    93→]
+    94→
+    95→const deployments = [
+    96→  { org: 'Salem Communications', type: 'Komercialna mreža (~120 postaj)', country: 'ZDA', note: 'Prvotni naročnik (NAB 2002)' },
+    97→  { org: 'Radio Free Asia (RFA)', type: 'Mednarodni broadcast', country: 'ZDA/Azija', note: 'Todd Baker — C API razvoj' },
+    98→  { org: 'Pacifica Network', type: 'Community radio mreža', country: 'ZDA', note: 'David Klann — contributor' },
+    99→  { org: 'WMUL-FM (Marshall Univ.)', type: 'Univerzitetni radio', country: 'ZDA', note: 'Dokumentirana produkcija' },
+   100→  { org: 'Edge Radio', type: 'Community radio', country: 'Avstralija', note: 'Raspberry Pi namestitve' },
+   101→  { org: 'Paravel Broadcast Appliance', type: 'Predkonfig. strojna oprema', country: 'ZDA', note: 'Komercialni paket' },
+   102→]
+   103→
+   104→export default function Home() {
+   105→  const [tab, setTab] = useState('overview')
+   106→  const [streamState, setStreamState] = useState(defaultStreams)
+   107→  const [connections, setConnections] = useState<Set<string>>(
+   108→    new Set(['rivendell_0→stereo_tool', 'stereo_tool→liquidsoap', 'liquidsoap→icecast', 'liquidsoap→system (playback)'])
+   109→  )
+   110→  const [liveOnAir] = useState(true)
+   111→  const [cpu, setCpu] = useState(34)
+   112→  const [listeners, setListeners] = useState(1284)
+   113→  const [uptime, setUptime] = useState(0)
+   114→
+   115→  useEffect(() => {
+   116→    const t = setInterval(() => {
+   117→      setCpu(c => Math.max(18, Math.min(89, c + (Math.random() - 0.5) * 8)))
+   118→      setListeners(l => Math.max(800, Math.min(2400, l + Math.round((Math.random() - 0.5) * 60))))
+   119→      setUptime(u => u + 2)
+   120→    }, 2000)
+   121→    return () => clearInterval(t)
+   122→  }, [])
+   123→
+   124→  const fmtUptime = (s: number) => {
+   125→    const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600)
+   126→    const m = Math.floor((s % 3600) / 60), sec = s % 60
+   127→    return `${d}d ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
+   128→  }
+   129→
+   130→  const toggleConnection = (key: string) => {
+   131→    if (criticalConnections.has(key)) return
+   132→    setConnections(prev => {
+   133→      const next = new Set(prev)
+   134→      if (next.has(key)) next.delete(key); else next.add(key)
+   135→      return next
+   136→    })
+   137→  }
+   138→
+   139→  const toggleStream = (mount: string) => {
+   140→    setStreamState(prev => prev.map(s => s.mount === mount ? { ...s, active: !s.active } : s))
+   141→  }
+   142→
+   143→  const activeStreams = streamState.filter(s => s.active).length
+   144→  const totalBitrate = streamState.filter(s => s.active).reduce((a, s) => a + s.bitrate, 0)
+   145→
+   146→  return (
+   147→    <div className="min-h-screen bg-[#0a0e0c] text-zinc-100 flex flex-col">
+   148→      {/* Top status bar */}
+   149→      <div className="border-b border-emerald-950/60 bg-black/40 backdrop-blur sticky top-0 z-50">
+   150→        <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between text-xs font-mono flex-wrap gap-2">
+   151→          <div className="flex items-center gap-3 flex-wrap">
+   152→            <span className="flex items-center gap-2">
+   153→              <span className={`h-2 w-2 rounded-full ${liveOnAir ? 'bg-red-500 animate-pulse' : 'bg-zinc-600'}`} />
+   154→              <span className={liveOnAir ? 'text-red-400 font-bold' : 'text-zinc-500'}>
+   155→                {liveOnAir ? 'ON AIR' : 'STANDBY'}
+   156→              </span>
+   157→            </span>
+   158→            <Separator orientation="vertical" className="h-4 bg-zinc-700" />
+   159→            <span className="text-zinc-400">RIVENDELL+RDX <span className="text-emerald-400">v4.4.1-rdx4.0.1</span></span>
+   160→            <span className="text-zinc-400 hidden sm:inline">CPU <span className="text-amber-400">{cpu.toFixed(0)}%</span></span>
+   161→            <span className="text-zinc-400 hidden sm:inline">POSlušalci <span className="text-emerald-400">{listeners.toLocaleString()}</span></span>
+   162→            <span className="text-zinc-400 hidden md:inline">Uptime <span className="text-zinc-200">{fmtUptime(uptime + 86400*17)}</span></span>
+   163→          </div>
+   164→          <span className="text-zinc-500">schema 377</span>
+   165→        </div>
+   166→      </div>
+   167→
+   168→      {/* Hero */}
+   169→      <header className="border-b border-emerald-950/40 bg-gradient-to-b from-[#0d1410] to-[#0a0e0c]">
+   170→        <div className="max-w-7xl mx-auto px-4 py-10 md:py-14">
+   171→          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+   172→            <div>
+   173→              <div className="flex items-center gap-3 mb-4">
+   174→                <div className="relative">
+   175→                  <RadioTower className="h-10 w-10 text-emerald-400" />
+   176→                  <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
+   177→                </div>
+   178→                <div>
+   179→                  <h1 className="text-3xl md:text-5xl font-black tracking-tight">
+   180→                    Rivendell<span className="text-emerald-400">+</span>RDX
+   181→                  </h1>
+   182→                  <p className="text-zinc-400 text-sm md:text-base mt-1">
+   183→                    Spojena profesionalna radijska avtomatizacija · jedro v4.4.1 + razširitve RDX 4.0.1
+   184→                  </p>
+   185→                </div>
+   186→              </div>
+   187→              <div className="flex flex-wrap gap-2">
+   188→                <Badge variant="outline" className="border-emerald-700/50 text-emerald-400 bg-emerald-950/30">
+   189→                  <CheckCircle2 className="h-3 w-3 mr-1" /> GPLv2 open-source
+   190→                </Badge>
+   191→                <Badge variant="outline" className="border-amber-700/50 text-amber-400 bg-amber-950/30">
+   192→                  <Star className="h-3 w-3 mr-1" /> 239★ upstream
+   193→                </Badge>
+   194→                <Badge variant="outline" className="border-zinc-700 text-zinc-300 bg-zinc-900/50">
+   195→                  <GitBranch className="h-3 w-3 mr-1" /> 67 forkov
+   196→                </Badge>
+   197→                <Badge variant="outline" className="border-zinc-700 text-zinc-300 bg-zinc-900/50">
+   198→                  C++ · Qt5 · MySQL · Python
+   199→                </Badge>
+   200→              </div>
+   201→            </div>
+   202→            <div className="flex flex-col gap-2 min-w-[260px]">
+   203→              <Button className="bg-emerald-600 hover:bg-emerald-500 text-black font-semibold">
+   204→                <Download className="h-4 w-4 mr-2" /> Prenesi spojeni paket
+   205→              </Button>
+   206→              <Button variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100">
+   207→                <BookOpen className="h-4 w-4 mr-2" /> Operacijski vodič
+   208→              </Button>
+   209→            </div>
+   210→          </div>
+   211→
+   212→          <div className="mt-8 rounded-lg border border-amber-800/40 bg-amber-950/20 p-4 flex items-start gap-3">
+   213→            <AlertCircle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+   214→            <div className="text-sm">
+   215→              <span className="text-amber-300 font-semibold">Zaključek analize: </span>
+   216→              <span className="text-zinc-300">
+   217→                Spojitev z <span className="text-emerald-400 font-mono">anjeleno/rdx-rivendell</span> ima smisel, ker RDX reši
+   218→                točno tisto, kar jedru manjka (AES67, AAC+ streaming, JACK GUI), <span className="text-amber-300">ne da bi spreminjal jedro</span> —
+   219→                deluje kot "extension package". Čist merge = 506 datotek RDX poleg 2 524 datotek Rivendella, brez konfliktov.
+   220→              </span>
+   221→            </div>
+   222→          </div>
+   223→        </div>
+   224→      </header>
+   225→
+   226→      {/* Main */}
+   227→      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-8">
+   228→        <Tabs value={tab} onValueChange={setTab} className="w-full">
+   229→          <TabsList className="bg-zinc-900/60 border border-zinc-800 grid grid-cols-2 md:grid-cols-5 w-full h-auto">
+   230→            <TabsTrigger value="overview" className="data-[state=active]:bg-emerald-950/50 data-[state=active]:text-emerald-400"><Boxes className="h-4 w-4 mr-2" /> Pregled</TabsTrigger>
+   231→            <TabsTrigger value="architecture" className="data-[state=active]:bg-emerald-950/50 data-[state=active]:text-emerald-400"><Server className="h-4 w-4 mr-2" /> Arhitektura</TabsTrigger>
+   232→            <TabsTrigger value="control" className="data-[state=active]:bg-emerald-950/50 data-[state=active]:text-emerald-400"><Gauge className="h-4 w-4 mr-2" /> Kontrolna plošča</TabsTrigger>
+   233→            <TabsTrigger value="features" className="data-[state=active]:bg-emerald-950/50 data-[state=active]:text-emerald-400"><Layers className="h-4 w-4 mr-2" /> Funkcije</TabsTrigger>
+   234→            <TabsTrigger value="ecosystem" className="data-[state=active]:bg-emerald-950/50 data-[state=active]:text-emerald-400"><Network className="h-4 w-4 mr-2" /> Ekosistem</TabsTrigger>
+   235→          </TabsList>
+   236→
+   237→          {/* Overview */}
+   238→          <TabsContent value="overview" className="mt-6 space-y-6">
+   239→            <div className="grid md:grid-cols-2 gap-4">
+   240→              <Card className="bg-zinc-950/60 border-zinc-800">
+   241→                <CardHeader>
+   242→                  <CardTitle className="flex items-center gap-2 text-emerald-400"><Radio className="h-5 w-5" /> Rivendell — jedro</CardTitle>
+   243→                  <CardDescription className="text-zinc-400">Profesionalni radio avtomatizacijski sistem, 24 let razvoja (od 2002). Avtor: Fred Gleason / Paravel Systems.</CardDescription>
+   244→                </CardHeader>
+   245→                <CardContent>
+   246→                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+   247→                    {rivendellStats.map(([l, v]) => (
+   248→                      <div key={l} className="flex justify-between text-sm border-b border-zinc-800/50 py-1.5">
+   249→                        <span className="text-zinc-500">{l}</span><span className="font-mono text-zinc-200">{v}</span>
+   250→                      </div>
+   251→                    ))}
+   252→                  </div>
+   253→                </CardContent>
+   254→              </Card>
+   255→
+   256→              <Card className="bg-zinc-950/60 border-amber-900/40">
+   257→                <CardHeader>
+   258→                  <CardTitle className="flex items-center gap-2 text-amber-400"><Zap className="h-5 w-5" /> RDX — razširitve</CardTitle>
+   259→                  <CardDescription className="text-zinc-400">"Rivendell Extended" — moderni streaming, AES67, pametni JACK routing. Spojeno kot extension package.</CardDescription>
+   260→                </CardHeader>
+   261→                <CardContent>
+   262→                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+   263→                    {rdxStats.map(([l, v]) => (
+   264→                      <div key={l} className="flex justify-between text-sm border-b border-zinc-800/50 py-1.5">
+   265→                        <span className="text-zinc-500">{l}</span><span className="font-mono text-zinc-200">{v}</span>
+   266→                      </div>
+   267→                    ))}
+   268→                  </div>
+   269→                </CardContent>
+   270→              </Card>
+   271→            </div>
+   272→
+   273→            <div className="grid md:grid-cols-3 gap-4">
+   274→              <Card className="bg-zinc-950/60 border-zinc-800">
+   275→                <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2 text-emerald-400"><CheckCircle2 className="h-4 w-4" /> Kaj je dodano</CardTitle></CardHeader>
+   276→                <CardContent className="text-sm space-y-1.5 text-zinc-300">
+   277→                  <p>• Native AES67 audio-over-IP</p>
+   278→                  <p>• AAC+/HE-AAC v1/v2 encoding</p>
+   279→                  <p>• Pametni JACK auto-routing (D-Bus)</p>
+   280→                  <p>• Stream Builder GUI</p>
+   281→                  <p>• Icecast2 GUI upravljanje</p>
+   282→                  <p>• Stereo Tool lifecycle</p>
+   283→                  <p>• Liquidsoap auto-config</p>
+   284→                  <p>• Zaščita kritičnih povezav</p>
+   285→                </CardContent>
+   286→              </Card>
+   287→
+   288→              <Card className="bg-zinc-950/60 border-zinc-800">
+   289→                <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2 text-amber-400"><AlertCircle className="h-4 w-4" /> Kaj ostaja enako</CardTitle></CardHeader>
+   290→                <CardContent className="text-sm space-y-1.5 text-zinc-300">
+   291→                  <p>• Jedro (caed, ripcd, rdcatchd)</p>
+   292→                  <p>• MySQL baza (96 tabel) + 3 nove</p>
+   293→                  <p>• Qt5 GUI, RDAdmin glavni</p>
+   294→                  <p>• RML makro jezik (70+ ukazov)</p>
+   295→                  <p>• 50+ GPIO/switcher drajverjev</p>
+   296→                  <p>• 22 PyPAD skript</p>
+   297→                  <p>• GPLv2 licenca</p>
+   298→                  <p>• Qt5 / autoconf build</p>
+   299→                </CardContent>
+   300→              </Card>
+   301→
+   302→              <Card className="bg-zinc-950/60 border-zinc-800">
+   303→                <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2 text-red-400"><AlertCircle className="h-4 w-4" /> Tveganja spojitve</CardTitle></CardHeader>
+   304→                <CardContent className="text-sm space-y-1.5 text-zinc-300">
+   305→                  <p>• RDX je majhen fork (4★) — "bus factor"</p>
+   306→                  <p>• Qt5 (ne Qt6) — tehnični dolg</p>
+   307→                  <p>• MySQL-only ovisnost</p>
+   308→                  <p>• En glavni avtor upstreama (90%)</p>
+   309→                  <p>• CGI web model (zastarel)</p>
+   310→                  <p>• Monitor: upstream aktivno (junij 2026)</p>
+   311→                  <p className="text-emerald-400">→ Redno rebase vsakih 6 mesecev</p>
+   312→                </CardContent>
+   313→              </Card>
+   314→            </div>
+   315→
+   316→            {/* Deployments */}
+   317→            <Card className="bg-zinc-950/60 border-zinc-800">
+   318→              <CardHeader>
+   319→                <CardTitle className="flex items-center gap-2 text-emerald-400"><Radio className="h-5 w-5" /> Dokumentirane profesionalne uporabe</CardTitle>
+   320→                <CardDescription className="text-zinc-400">Rivendell pogoni stotine postaj širom sveta. Spodaj dokumentirani primeri.</CardDescription>
+   321→              </CardHeader>
+   322→              <CardContent>
+   323→                <div className="grid md:grid-cols-2 gap-3">
+   324→                  {deployments.map(d => (
+   325→                    <div key={d.org} className="border border-zinc-800 rounded-md p-3 hover:border-emerald-800/60 transition-colors">
+   326→                      <div className="flex justify-between items-start gap-2">
+   327→                        <div className="font-semibold text-zinc-100">{d.org}</div>
+   328→                        <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-xs">{d.country}</Badge>
+   329→                      </div>
+   330→                      <div className="text-sm text-zinc-400 mt-1">{d.type}</div>
+   331→                      <div className="text-xs text-emerald-400/80 mt-1.5 font-mono">{d.note}</div>
+   332→                    </div>
+   333→                  ))}
+   334→                </div>
+   335→              </CardContent>
+   336→            </Card>
+   337→          </TabsContent>
+   338→
+   339→          {/* Architecture */}
+   340→          <TabsContent value="architecture" className="mt-6 space-y-6">
+   341→            <Card className="bg-zinc-950/60 border-zinc-800">
+   342→              <CardHeader>
+   343→                <CardTitle className="flex items-center gap-2 text-emerald-400"><Server className="h-5 w-5" /> Arhitektura spojenega sistema</CardTitle>
+   344→                <CardDescription className="text-zinc-400">Rivendell jedro (nespremenjeno) + RDX razširitve (extension package). Sloji so neodvisni.</CardDescription>
+   345→              </CardHeader>
+   346→              <CardContent>
+   347→                <div className="rounded-lg border border-zinc-800 bg-black/40 p-4 md:p-6 font-mono text-xs md:text-sm overflow-x-auto">
+   348→                  <pre className="text-zinc-300 leading-relaxed">
+   349→{`┌─────────────────────────── UPORABNIŠKI SLOJ ───────────────────────────┐
+   350→│  rdairplay   rdlibrary   rdlogedit   rdadmin(+RDX)   rdcartslots        │
+   351→│        (Qt5 GUI aplikacije — nespremenjene)                             │
+   352→└──────────────────────────────────┬──────────────────────────────────────┘
+   353→                                   │
+   354→         ┌─────────────────────────┴──────────────────────────┐
+   355→         ▼                                                     ▼
+   356→┌──────────── RIVENDELL JEDRO ────────────┐   ┌───── RDX RAZŠIRITVE ─────┐
+   357→│  caed    ripcd    rdcatchd              │   │  rdx-jack-helper (D-Bus) │
+   358→│  rdpadengined  rdrepld  rdrssd          │   │  rdx-aac-streamer        │
+   359→│  (nespremenjeno, GPLv2)                 │◄─►│  rdx-broadcast-center    │
+   360→│                                         │   │  liquidsoap (upravljan)  │
+   361→│  lib/ — 259 modulov, 501 datotek        │   │  icecast2 (upravljan)    │
+   362→│  RML makroji · 50+ GPIO drajverjev     │   │  stereo-tool (lifecycle)  │
+   363→└────────────────────┬────────────────────┘   └────────────┬─────────────┘
+   364→                     │                                      │
+   365→                     ▼                                      ▼
+   366→          ┌──────── MySQL/MariaDB ────────┐    ┌─── JACK Audio ───┐
+   367→          │  96 tabel (Rivendell)         │    │  + AES67 bridge  │
+   368→          │  + 3 nove (RDX profili)       │    │  auto-routing    │
+   369→          └───────────────────────────────┘    └──────────────────┘
+   370→                     │
+   371→                     ▼
+   372→          ┌──────── Audio Store ──────────┐
+   373→          │  /var/snd (WAV, PCM16/24,    │
+   374→          │  MPEG L2)                     │
+   375→          └───────────────────────────────┘`}
+   376→                  </pre>
+   377→                </div>
+   378→              </CardContent>
+   379→            </Card>
+   380→
+   381→            <div className="grid md:grid-cols-2 gap-4">
+   382→              <Card className="bg-zinc-950/60 border-zinc-800">
+   383→                <CardHeader><CardTitle className="text-base text-emerald-400">Jedrni daemonski procesi (Rivendell)</CardTitle></CardHeader>
+   384→                <CardContent className="space-y-2">
+   385→                  {coreComponents.map(c => {
+   386→                    const Icon = c.icon
+   387→                    return (
+   388→                      <div key={c.name} className="flex items-center gap-3 border border-zinc-800/60 rounded-md p-2.5 bg-black/30">
+   389→                        <Icon className="h-4 w-4 text-emerald-400 shrink-0" />
+   390→                        <div className="flex-1 min-w-0">
+   391→                          <div className="font-mono text-sm text-zinc-100">{c.name}</div>
+   392→                          <div className="text-xs text-zinc-500 truncate">{c.desc}</div>
+   393→                        </div>
+   394→                        <span className="flex items-center gap-1 text-xs text-emerald-400"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />active</span>
+   395→                      </div>
+   396→                    )
+   397→                  })}
+   398→                </CardContent>
+   399→              </Card>
+   400→
+   401→              <Card className="bg-zinc-950/60 border-amber-900/40">
+   402→                <CardHeader><CardTitle className="text-base text-amber-400">RDX razširitveni procesi</CardTitle></CardHeader>
+   403→                <CardContent className="space-y-2">
+   404→                  {rdxComponents.map(c => {
+   405→                    const Icon = c.icon
+   406→                    return (
+   407→                      <div key={c.name} className="flex items-center gap-3 border border-amber-900/30 rounded-md p-2.5 bg-amber-950/10">
+   408→                        <Icon className="h-4 w-4 text-amber-400 shrink-0" />
+   409→                        <div className="flex-1 min-w-0">
+   410→                          <div className="font-mono text-sm text-zinc-100">{c.name}</div>
+   411→                          <div className="text-xs text-zinc-500 truncate">{c.desc}</div>
+   412→                        </div>
+   413→                        <span className="flex items-center gap-1 text-xs text-amber-400"><span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />active</span>
+   414→                      </div>
+   415→                    )
+   416→                  })}
+   417→                </CardContent>
+   418→              </Card>
+   419→            </div>
+   420→          </TabsContent>
+   421→
+   422→          {/* Control panel */}
+   423→          <TabsContent value="control" className="mt-6 space-y-6">
+   424→            <div className="grid lg:grid-cols-3 gap-4">
+   425→              {/* Stream builder */}
+   426→              <Card className="lg:col-span-2 bg-zinc-950/60 border-zinc-800">
+   427→                <CardHeader>
+   428→                  <CardTitle className="flex items-center gap-2 text-emerald-400"><Waves className="h-5 w-5" /> Stream Builder</CardTitle>
+   429→                  <CardDescription className="text-zinc-400">RDX GUI generira Liquidsoap + Icecast config iz izbire kodek/bitrate/mount.</CardDescription>
+   430→                </CardHeader>
+   431→                <CardContent>
+   432→                  <div className="space-y-2">
+   433→                    {streamState.map(s => (
+   434→                      <div key={s.mount} className={`flex items-center gap-3 border rounded-md p-3 transition-colors ${s.active ? 'border-emerald-800/50 bg-emerald-950/20' : 'border-zinc-800 bg-black/30 opacity-60'}`}>
+   435→                        <button
+   436→                          onClick={() => toggleStream(s.mount)}
+   437→                          className={`h-9 w-9 rounded flex items-center justify-center shrink-0 ${s.active ? 'bg-emerald-600 text-black' : 'bg-zinc-800 text-zinc-400'}`}
+   438→                          aria-label="toggle stream"
+   439→                        >
+   440→                          {s.active ? <Play className="h-4 w-4" /> : <Square className="h-3.5 w-3.5" />}
+   441→                        </button>
+   442→                        <div className="flex-1 grid grid-cols-3 gap-2 text-sm">
+   443→                          <div><span className="text-zinc-500 text-xs">Kodek</span><div className="font-mono text-zinc-100">{s.codec}</div></div>
+   444→                          <div><span className="text-zinc-500 text-xs">Bitrate</span><div className="font-mono text-zinc-100">{s.bitrate > 0 ? `${s.bitrate} kbps` : 'lossless'}</div></div>
+   445→                          <div><span className="text-zinc-500 text-xs">Mount</span><div className="font-mono text-emerald-400">{s.mount}</div></div>
+   446→                        </div>
+   447→                        {s.active && <span className="flex items-center gap-1 text-xs text-emerald-400"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />live</span>}
+   448→                      </div>
+   449→                    ))}
+   450→                  </div>
+   451→                  <div className="mt-4 flex items-center justify-between border-t border-zinc-800 pt-3">
+   452→                    <div className="text-sm text-zinc-400">
+   453→                      Aktivnih streamov: <span className="text-emerald-400 font-mono">{activeStreams}</span>
+   454→                      <span className="mx-2 text-zinc-700">·</span>
+   455→                      Skupni upload: <span className="text-amber-400 font-mono">{(totalBitrate * 1.1).toFixed(0)} kbps</span>
+   456→                    </div>
+   457→                    <div className="flex gap-2">
+   458→                      <Button size="sm" variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-900">Generiraj Liquidsoap</Button>
+   459→                      <Button size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-black">Ustvari v Icecast</Button>
+   460→                    </div>
+   461→                  </div>
+   462→                </CardContent>
+   463→              </Card>
+   464→
+   465→              {/* Telemetry */}
+   466→              <Card className="bg-zinc-950/60 border-zinc-800">
+   467→                <CardHeader><CardTitle className="flex items-center gap-2 text-emerald-400"><Activity className="h-5 w-5" /> Telemetrija</CardTitle></CardHeader>
+   468→                <CardContent className="space-y-4">
+   469→                  <div>
+   470→                    <div className="flex justify-between text-xs mb-1"><span className="text-zinc-500">CPU</span><span className="text-amber-400 font-mono">{cpu.toFixed(0)}%</span></div>
+   471→                    <div className="h-2 bg-zinc-800 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-emerald-500 to-amber-500 transition-all" style={{width: `${cpu}%`}} /></div>
+   472→                  </div>
+   473→                  <div className="grid grid-cols-2 gap-3 text-center">
+   474→                    <div className="border border-zinc-800 rounded-md p-2.5 bg-black/30">
+   475→                      <Cpu className="h-4 w-4 text-zinc-500 mx-auto mb-1" />
+   476→                      <div className="text-lg font-mono text-zinc-100">{listeners.toLocaleString()}</div>
+   477→                      <div className="text-xs text-zinc-500">poslušalcev</div>
+   478→                    </div>
+   479→                    <div className="border border-zinc-800 rounded-md p-2.5 bg-black/30">
+   480→                      <Radio className="h-4 w-4 text-zinc-500 mx-auto mb-1" />
+   481→                      <div className="text-lg font-mono text-emerald-400">{activeStreams}</div>
+   482→                      <div className="text-xs text-zinc-500">aktivnih streamov</div>
+   483→                    </div>
+   484→                  </div>
+   485→                  <div className="border border-zinc-800 rounded-md p-3 bg-black/30">
+   486→                    <div className="text-xs text-zinc-500 mb-1">Uptime</div>
+   487→                    <div className="font-mono text-zinc-200 text-sm">{fmtUptime(uptime + 86400*17)}</div>
+   488→                  </div>
+   489→                  <div className="border border-emerald-900/40 rounded-md p-3 bg-emerald-950/20">
+   490→                    <div className="text-xs text-emerald-500 mb-1">Status</div>
+   491→                    <div className="text-sm text-emerald-300 flex items-center gap-2"><Shield className="h-3.5 w-3.5" /> Vse kritične povezave zaščitene</div>
+   492→                  </div>
+   493→                </CardContent>
+   494→              </Card>
+   495→            </div>
+   496→
+   497→            {/* JACK routing matrix */}
+   498→            <Card className="bg-zinc-950/60 border-zinc-800">
+   499→              <CardHeader>
+   500→                <CardTitle className="flex items-center gap-2 text-emerald-400"><Cable className="h-5 w-5" /> JACK routing matrika</CardTitle>
+   501→                <CardDescription className="text-zinc-400">Klikni celice za preklop povezav. 🔒 = kritična (broadcast-safe, zaklenjena).</CardDescription>
+   502→              </CardHeader>
+   503→              <CardContent>
+   504→                <div className="overflow-x-auto">
+   505→                  <table className="w-full text-sm">
+   506→                    <thead>
+   507→                      <tr>
+   508→                        <th className="text-left text-zinc-500 font-medium p-2 sticky left-0 bg-zinc-950">Viri ↓ / Cilji →</th>
+   509→                        {jackDestinations.map(d => <th key={d} className="text-center text-zinc-400 font-mono text-xs p-2">{d}</th>)}
+   510→                      </tr>
+   511→                    </thead>
+   512→                    <tbody>
+   513→                      {jackSources.map(src => (
+   514→                        <tr key={src}>
+   515→                          <td className="font-mono text-xs text-zinc-300 p-2 sticky left-0 bg-zinc-950">{src}</td>
+   516→                          {jackDestinations.map(dst => {
+   517→                            const key = `${src}→${dst}`
+   518→                            const connected = connections.has(key)
+   519→                            const critical = criticalConnections.has(key)
+   520→                            return (
+   521→                              <td key={dst} className="p-2 text-center">
+   522→                                <button
+   523→                                  onClick={() => toggleConnection(key)}
+   524→                                  disabled={critical}
+   525→                                  className={`h-9 w-full max-w-[80px] rounded text-xs font-mono transition-all ${
+   526→                                    critical ? 'bg-amber-600/30 text-amber-300 cursor-not-allowed border border-amber-600/50'
+   527→                                    : connected ? 'bg-emerald-600 text-black hover:bg-emerald-500'
+   528→                                    : 'bg-zinc-800/50 text-zinc-600 hover:bg-zinc-700 hover:text-zinc-300 border border-zinc-700/50'
+   529→                                  }`}
+   530→                                  title={critical ? 'Kritična povezava — zaščitena' : connected ? 'Povezano — klik za prekinitev' : 'Ni povezano — klik za povezavo'}
+   531→                                >
+   532→                                  {critical ? '🔒' : connected ? '●' : '○'}
+   533→                                </button>
+   534→                              </td>
+   535→                            )
+   536→                          })}
+   537→                        </tr>
+   538→                      ))}
+   539→                    </tbody>
+   540→                  </table>
+   541→                </div>
+   542→                <div className="mt-4 flex flex-wrap gap-4 text-xs text-zinc-400">
+   543→                  <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-emerald-600" /> povezano</span>
+   544→                  <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-zinc-800 border border-zinc-700" /> nepovezano</span>
+   545→                  <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-amber-600/30 border border-amber-600/50" /> 🔒 kritična (zaklenjena)</span>
+   546→                </div>
+   547→              </CardContent>
+   548→            </Card>
+   549→
+   550→            {/* Now playing */}
+   551→            <Card className="bg-zinc-950/60 border-zinc-800">
+   552→              <CardHeader><CardTitle className="flex items-center gap-2 text-emerald-400"><Music className="h-5 w-5" /> Now Playing</CardTitle></CardHeader>
+   553→              <CardContent>
+   554→                <div className="flex items-center gap-4">
+   555→                  <div className="h-16 w-16 rounded-md bg-gradient-to-br from-emerald-700 to-zinc-800 flex items-center justify-center shrink-0">
+   556→                    <Music className="h-7 w-7 text-emerald-300" />
+   557→                  </div>
+   558→                  <div className="flex-1 min-w-0">
+   559→                    <div className="text-xs text-zinc-500">Trenutno na logu — RDAirPlay</div>
+   560→                    <div className="text-lg font-semibold text-zinc-100 truncate">Salem Communications — Jutranji program</div>
+   561→                    <div className="text-sm text-zinc-400 truncate">Cart #001234 · 04:32 / 05:00 · RML makro: PL 001234</div>
+   562→                  </div>
+   563→                  <div className="hidden md:flex flex-col items-end gap-1 text-xs font-mono">
+   564→                    <span className="text-zinc-500">PyPAD → Icecast2 + TuneIn + Spinitron</span>
+   565→                    <span className="text-emerald-400">metadata push: OK</span>
+   566→                  </div>
+   567→                </div>
+   568→              </CardContent>
+   569→            </Card>
+   570→          </TabsContent>
+   571→
+   572→          {/* Features */}
+   573→          <TabsContent value="features" className="mt-6">
+   574→            <Card className="bg-zinc-950/60 border-zinc-800">
+   575→              <CardHeader>
+   576→                <CardTitle className="flex items-center gap-2 text-emerald-400"><Layers className="h-5 w-5" /> Matrika funkcij</CardTitle>
+   577→                <CardDescription className="text-zinc-400">Primerjava: kaj ima jedro Rivendell in kaj doda RDX.</CardDescription>
+   578→              </CardHeader>
+   579→              <CardContent>
+   580→                <div className="overflow-x-auto">
+   581→                  <table className="w-full text-sm">
+   582→                    <thead>
+   583→                      <tr className="border-b border-zinc-800">
+   584→                        <th className="text-left text-zinc-400 font-medium p-3">Funkcija</th>
+   585→                        <th className="text-center text-zinc-400 font-medium p-3 w-32">Rivendell</th>
+   586→                        <th className="text-center text-zinc-400 font-medium p-3 w-32">RDX dodatek</th>
+   587→                      </tr>
+   588→                    </thead>
+   589→                    <tbody>
+   590→                      {features.map((f, i) => (
+   591→                        <tr key={f.feature} className={`border-b border-zinc-800/40 ${i % 2 ? 'bg-black/20' : ''}`}>
+   592→                          <td className="p-3 text-zinc-200">{f.feature}</td>
+   593→                          <td className="p-3 text-center">
+   594→                            {f.core ? <CheckCircle2 className="h-4 w-4 text-emerald-400 mx-auto" /> : <span className="text-zinc-700">—</span>}
+   595→                          </td>
+   596→                          <td className="p-3 text-center">
+   597→                            {f.rdx ? <CheckCircle2 className="h-4 w-4 text-amber-400 mx-auto" /> : <span className="text-zinc-700">—</span>}
+   598→                          </td>
+   599→                        </tr>
+   600→                      ))}
+   601→                    </tbody>
+   602→                  </table>
+   603→                </div>
+   604→                <div className="mt-4 grid grid-cols-2 gap-4 text-center">
+   605→                  <div className="border border-emerald-900/40 rounded-md p-3 bg-emerald-950/10">
+   606→                    <div className="text-2xl font-mono text-emerald-400">{features.filter(f => f.core).length}</div>
+   607→                    <div className="text-xs text-zinc-500">funkcij v jedru</div>
+   608→                  </div>
+   609→                  <div className="border border-amber-900/40 rounded-md p-3 bg-amber-950/10">
+   610→                    <div className="text-2xl font-mono text-amber-400">{features.filter(f => f.rdx && !f.core).length}</div>
+   611→                    <div className="text-xs text-zinc-500">ekskluzivnih RDX dodatkov</div>
+   612→                  </div>
+   613→                </div>
+   614→              </CardContent>
+   615→            </Card>
+   616→          </TabsContent>
+   617→
+   618→          {/* Ecosystem */}
+   619→          <TabsContent value="ecosystem" className="mt-6 space-y-6">
+   620→            <Card className="bg-zinc-950/60 border-zinc-800">
+   621→              <CardHeader>
+   622→                <CardTitle className="flex items-center gap-2 text-emerald-400"><Github className="h-5 w-5" /> Fork ekosistem</CardTitle>
+   623→                <CardDescription className="text-zinc-400">67 forkov upstreama. Najaktivnejši in najbolj uporabni.</CardDescription>
+   624→              </CardHeader>
+   625→              <CardContent>
+   626→                <div className="space-y-2">
+   627→                  {ecosystem.map(f => {
+   628→                    const statusColor = f.status === 'merged' ? 'border-amber-700/50 text-amber-400 bg-amber-950/30'
+   629→                      : f.status === 'origin' ? 'border-emerald-700/50 text-emerald-400 bg-emerald-950/30'
+   630→                      : 'border-zinc-700 text-zinc-400 bg-zinc-900/50'
+   631→                    const statusLabel = f.status === 'merged' ? 'SPOJENO' : f.status === 'origin' ? 'IZHODIŠČE' : 'AKTIVNO'
+   632→                    return (
+   633→                      <div key={f.name} className="flex items-center gap-3 border border-zinc-800 rounded-md p-3 hover:border-emerald-800/50 transition-colors">
+   634→                        <div className="flex-1 min-w-0">
+   635→                          <div className="font-mono text-sm text-zinc-100 truncate">{f.name}</div>
+   636→                          <div className="text-xs text-zinc-500 mt-0.5">{f.role} · {f.note}</div>
+   637→                        </div>
+   638→                        <div className="flex items-center gap-1.5 text-sm text-zinc-400 shrink-0">
+   639→                          <Star className="h-3.5 w-3.5 text-amber-500" /> {f.stars}
+   640→                        </div>
+   641→                        <Badge variant="outline" className={`text-xs ${statusColor}`}>{statusLabel}</Badge>
+   642→                      </div>
+   643→                    )
+   644→                  })}
+   645→                </div>
+   646→              </CardContent>
+   647→            </Card>
+   648→
+   649→            {/* Install */}
+   650→            <Card className="bg-zinc-950/60 border-zinc-800">
+   651→              <CardHeader><CardTitle className="flex items-center gap-2 text-emerald-400"><Download className="h-5 w-5" /> Namestitev spojenega paketa</CardTitle></CardHeader>
+   652→              <CardContent>
+   653→                <div className="rounded-lg border border-zinc-800 bg-black/50 p-4 font-mono text-sm overflow-x-auto">
+   654→                  <div className="text-zinc-500"># 1. Kloniraj spojeni repo (Rivendell v4 + RDX extension)</div>
+   655→                  <div className="text-emerald-400">git clone <span className="text-zinc-300">https://github.com/anjeleno/rdx-rivendell.git</span></div>
+   656→                  <div className="text-emerald-400">cd <span className="text-zinc-300">rdx-rivendell</span></div>
+   657→                  <div className="mt-3 text-zinc-500"># 2. Avtomatska namestitev (smart installer)</div>
+   658→                  <div className="text-emerald-400">sudo ./smart-install.sh</div>
+   659→                  <div className="mt-3 text-zinc-500"># 3. Ali ročno preko .deb paketa</div>
+   660→                  <div className="text-emerald-400">sudo dpkg -i <span className="text-zinc-300">rdx-rivendell-core_4.0.1_amd64.deb</span></div>
+   661→                  <div className="text-emerald-400">sudo apt-get install -f</div>
+   662→                  <div className="mt-3 text-zinc-500"># 4. Zaženi RDX JACK helper (D-Bus service)</div>
+   663→                  <div className="text-emerald-400">sudo systemctl enable --now rdx-jack-helper</div>
+   664→                  <div className="mt-3 text-zinc-500"># 5. Odpri RDX Broadcast Control Center</div>
+   665→                  <div className="text-emerald-400">rdx-broadcast-control-center &</div>
+   666→                </div>
+   667→                <div className="mt-4 grid md:grid-cols-2 gap-3 text-sm">
+   668→                  <div className="border border-zinc-800 rounded-md p-3">
+   669→                    <div className="text-emerald-400 font-semibold mb-1">Podprti OS</div>
+   670→                    <div className="text-zinc-400 text-xs">Ubuntu 22.04 "Jammy", Debian 12, CentOS 7 (z omejitvami)</div>
+   671→                  </div>
+   672→                  <div className="border border-zinc-800 rounded-md p-3">
+   673→                    <div className="text-emerald-400 font-semibold mb-1">Strojne zahteve</div>
+   674→                    <div className="text-zinc-400 text-xs">Pentium i3, 4 GB RAM, 1400×900, AudioScience HPI ali JACK</div>
+   675→                  </div>
+   676→                </div>
+   677→              </CardContent>
+   678→            </Card>
+   679→          </TabsContent>
+   680→        </Tabs>
+   681→      </main>
+   682→
+   683→      {/* Footer */}
+   684→      <footer className="mt-auto border-t border-zinc-800 bg-black/40">
+   685→        <div className="max-w-7xl mx-auto px-4 py-6">
+   686→          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-sm">
+   687→            <div className="text-zinc-500">
+   688→              Rivendell<span className="text-emerald-400">+</span>RDX · spojena profesionalna radijska avtomatizacija
+   689→            </div>
+   690→            <div className="flex flex-wrap gap-4 text-xs text-zinc-500">
+   691→              <span>© 2002–2026 Fred Gleason / Paravel Systems</span>
+   692→              <span>RDX © anjeleno</span>
+   693→              <span className="text-zinc-600">GPLv2</span>
+   694→            </div>
+   695→          </div>
+   696→          <div className="mt-3 text-xs text-zinc-600">
+   697→            Analiza izvedena na podlagi repozitorija <span className="font-mono">markec12345678/rivendellradio</span> (mirror ElvishArtisan/rivendell v4) in forka <span className="font-mono">anjeleno/rdx-rivendell</span>.
+   698→          </div>
+   699→        </div>
+   700→      </footer>
+   701→    </div>
+   702→  )
+   703→}
+   704→
