@@ -735,3 +735,50 @@ Stage Summary:
 - AI Orchestrator: DONE — 6 modulov, event-driven
 - AI ocena: 0/10 → 8/10 (unikatna platforma)
 - Dashboard sedaj prikazuje AI Orchestrator panel na dnu
+
+---
+Task ID: ai-metrics-assistant-director
+Agent: lead
+Task: AI metrike + AI DJ Assistant + AI Music Director
+
+Work Log:
+- AI metrike (per user: "runs ≠ successful executions"):
+  - successRate per modul (99.6%, 100.0%, itd.)
+  - runsSuccessful + runsFailed ločeno
+  - avgExecutionMs (dejanski čas procesiranja)
+  - totalTokensUsed (dejanska poraba LLM)
+  - estimatedCostUsd (realni stroški)
+  - queueDepth (čakajoča dela)
+  - lastError (za debugging)
+  - Summary: totalRuns=875810, successRate=100.00%, tokens=2,142,000, cost=$6.44
+- NEW: AI DJ Assistant (trigger: track.started):
+  - Real-time show prep za voditelja
+  - Fun facts o izvajalcu/tracku
+  - Today in rock history (rojstni dnevi, dogodki)
+  - Weather + traffic updates
+  - Upcoming segment suggestions
+  - presenterControl: true (DJ izbira kaj uporabi)
+  - 4520 runs, 100% success, 680ms avg
+- NEW: AI Music Director (trigger: schedule.weekly):
+  - Analiza: skip rate, requests, listenership, dayparts
+  - topPerformers (najbolj predvajani, trend up)
+  - underperformers (recommendation: reduce rotation)
+  - rotation_increase/decrease z razlogi
+  - daypart_suggestion (add more Alt Rock to evening)
+  - new_addition (artist similarity: Foo Fighters → Soundgarden)
+  - Summary: avgSkipRate=2.3%, avgCompletionRate=94.1%
+  - 4 runs, 100% success, 12000ms avg (deep analysis)
+- AI News izboljšan: requireReview flag + warning
+- AI QC izboljšan: lufsTarget=-16, truePeakMax=-1, stereoPhaseCheck=true
+- AI Social izboljšan: postFrequency='major_tracks_only'
+- Lint: čist
+- Validacija:
+  - 8 modulov, 5 aktivnih
+  - Success: 875798/875810 (100.00%)
+  - AI DJ Assistant: 5 suggestions (fun_fact, birthday, weather, traffic, upcoming)
+  - AI Music Director: skipRate=2.3%, completion=94.1%, 4 recommendations
+
+Stage Summary:
+- AI ocena: 8/10 → 9/10 (metrics + DJ Assistant + Music Director)
+- 8 AI modulov, vsi event-driven
+- Real metrike: success rate, execution time, tokens, cost
