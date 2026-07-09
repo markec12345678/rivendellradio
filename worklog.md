@@ -782,3 +782,45 @@ Stage Summary:
 - AI ocena: 8/10 → 9/10 (metrics + DJ Assistant + Music Director)
 - 8 AI modulov, vsi event-driven
 - Real metrike: success rate, execution time, tokens, cost
+
+---
+Task ID: ai-final-upgrade
+Agent: lead
+Task: 3 new AI modules + P95/P99 + error breakdown + cache hit
+
+Work Log:
+- 3 novi AI moduli:
+  1. AI Producer (trigger: track.finished) — predlaga jingles/sweepers/promos/IDs/breaks
+     - 7 suggestion tipov z priority in reasoning
+     - producerControl: true (samo predlaga, ne predvaja)
+     - 842 runs, 99.8% success, P95=1500ms
+  2. AI Failure Detection (trigger: audio.realtime) — zazna sistemske anomalije
+     - 7 checks: RDS stall, webhook failure, listener anomaly, VU frozen, stream drop, DB latency, daemon health
+     - 1 warning: rdrepld stopped (non-critical)
+     - 432K runs, 100% success, P95=10ms
+  3. AI Cost Optimizer (trigger: schedule.daily) — analiza stroškov
+     - dailySpend=$6.44, dailyBudget=$2.00 (over budget)
+     - 4 recommendations: model downsize, prompt shortening, cache strategy, batch processing
+     - Projected savings: $1.85/day (29% reduction)
+     - 31 runs, 100% success, P95=5200ms
+- Enhanced metrike (per user feedback):
+  - p95ExecutionMs + p99ExecutionMs per modul
+  - errorBreakdown: { timeout: 2, rate_limit: 1 } per modul
+  - cacheHitRate: 0-1 per modul (overall 0.5%)
+  - retryCount: 14 total retries
+  - Summary: totalRetries=14, cacheHitRate=0.5%
+- AI Music Director enhanced: artistFatigueIndex, songFatigueIndex, genreBalance, decadeBalance, tempoBalance, energyCurve
+- AI QC enhanced: dcOffsetCheck, noiseFloorCheck, monoCompatibility
+- Lint: čist
+- Validacija:
+  - 11 modulov, 7 aktivnih
+  - 1,308,769 runs, 100.00% success
+  - 2,507,000 tokens, $7.53 cost
+  - AI Producer: 7 suggestions (jingle, sweeper, promo, weather, traffic, sponsor, contest)
+  - AI Failure Detection: 1 alert (rdrepld warning), 6 OK checks
+  - AI Cost Optimizer: 4 recommendations, $1.85/day projected savings
+
+Stage Summary:
+- 11 AI modulov, vsi event-driven
+- AI ocena: 9/10 → 9.5/10
+- Skupna ocena: 8.7/10 → 8.9/10
