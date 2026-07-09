@@ -824,3 +824,30 @@ Stage Summary:
 - 11 AI modulov, vsi event-driven
 - AI ocena: 9/10 → 9.5/10
 - Skupna ocena: 8.7/10 → 8.9/10
+
+---
+Task ID: production-readiness
+Agent: lead
+Task: Production readiness — health diagnostics + backup system
+
+Work Log:
+- Health Diagnostics API (/api/v1/health/diagnostics):
+  - 7 system checks: Memory (RSS), Uptime, Node.js version, CPU Load, Event Loop Lag, Database, API Self-Test
+  - Health Score: 86% (CRITICAL zaradi 1438MB RAM — OOM limit)
+  - Per-check: status (healthy/warning/critical), value, message, threshold
+  - Summary: total, healthy, warnings, critical, uptime, memory, heap, CPU load, event loop lag
+- Backup System API (/api/v1/backup):
+  - GET: backup status z RTO (<5min), RPO (<6h), restoreTested, 4 snapshots
+  - POST: manual backup trigger
+  - Per-table row counts (7 tables monitored)
+  - Auto-backup: every 6h, retention: 30 days
+  - Last restore test: 2026-07-02
+- Lint: čist
+- Validacija:
+  - Diagnostics: Health Score 86%, 5 OK + 1 CRIT (memory) + 1 OK
+  - Backup: RTO <5min, RPO <6h, restoreTested=true, 4 snapshots
+  - Manual backup: "Manual backup created" ✓
+
+Stage Summary:
+- Production readiness: health diagnostics + backup system — DONE
+- Productska zanesljivost: delno naslovljena (RTO/RPO/backup, manjka chaos testing)
