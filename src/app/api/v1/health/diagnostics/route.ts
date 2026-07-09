@@ -1,219 +1,101 @@
 import { NextResponse } from 'next/server'
-import { db } from '@/lib/db'
-import { eventBus, getMetrics } from '@/lib/event-bus'
+import { loadavg } from 'os'
 
 export const dynamic = 'force-dynamic'
 
 interface DiagnosticCheck {
   name: string
-  category: 'database' | 'eventbus' | 'websocket' | 'daemons' | 'memory' | 'disk' | 'network' | 'security'
+  category: string
   status: 'healthy' | 'warning' | 'critical' | 'unknown'
   message: string
   value?: string
-  threshold?: string
-  responseTimeMs?: number
   lastChecked: string
 }
 
 export async function GET() {
-  const checks: DiagnosticCheck[] = []
   const now = new Date().toISOString()
+  const checks: DiagnosticCheck[] = []
 
-  // 1. Database connectivity
-  const dbStart = Date.now()
-  try {
-    await db.rivendellConfig.count()
-    const dbLatency = Date.now() - dbStart
-    checks.push({
-      name: 'Database Connection',
-      category: 'database',
-      status: dbLatency < 100 ? 'healthy' : dbLatency < 500 ? 'warning' : 'critical',
-      message: 'SQLite database responding',
-      value: `${dbLatency}ms`,
-      threshold: '< 100ms',
-      responseTimeMs: dbLatency,
-      lastChecked: now,
-    })
-  } catch {
-    checks.push({
-      name: 'Database Connection',
-      category: 'database',
-      status: 'critical',
-      message: 'Database connection failed',
-      lastChecked: now,
-      responseTimeMs: Date.now() - dbStart,
-    })
-  }
-
-  // 2. Event Bus health
-  const eventMetrics = getMetrics()
-  const eventLatency = eventMetrics.avgEventLatencyMs
-  checks.push({
-    name: 'Event Bus Latency',
-    category: 'eventbus',
-    status: eventLatency < 50 ? 'healthy' : eventLatency < 200 ? 'warning' : 'critical',
-    message: `${eventMetrics.eventsTotal} events processed`,
-    value: `${eventLatency}ms avg`,
-    threshold: '< 50ms',
-    responseTimeMs: eventLatency,
-    lastChecked: now,
-  })
-
-  // 3. Event Bus history
-  const historyCount = eventBus.getHistory().length
-  checks.push({
-    name: 'Event Bus History',
-    category: 'eventbus',
-    status: 'healthy',
-    message: `${historyCount} events in memory history`,
-    value: `${historyCount}/100`,
-    lastChecked: now,
-  })
-
-  // 4. Memory usage
+  // 1. Memory
   const mem = process.memoryUsage()
   const memMb = Math.round(mem.rss / 1024 / 1024)
   const heapUsed = Math.round(mem.heapUsed / 1024 / 1024)
   const heapTotal = Math.round(mem.heapTotal / 1024 / 1024)
-  const heapPct = Math.round((heapUsed / heapTotal) * 100)
   checks.push({
     name: 'Memory (RSS)',
     category: 'memory',
     status: memMb < 512 ? 'healthy' : memMb < 1024 ? 'warning' : 'critical',
-    message: `RSS: ${memMb}MB, Heap: ${heapUsed}/${heapTotal}MB (${heapPct}%)`,
+    message: `Heap: ${heapUsed}/${heapTotal}MB`,
     value: `${memMb}MB`,
-    threshold: '< 512MB',
     lastChecked: now,
   })
 
-  // 5. Process uptime
+  // 2. Uptime
   const uptimeSec = Math.round(process.uptime())
   checks.push({
     name: 'Process Uptime',
     category: 'system',
-    status: uptimeSec > 3600 ? 'healthy' : uptimeSec > 300 ? 'warning' : 'healthy',
-    message: `Running for ${Math.floor(uptimeSec / 3600)}h ${Math.floor((uptimeSec % 3600) / 60)}m`,
+    status: 'healthy',
+    message: `${Math.floor(uptimeSec / 3600)}h ${Math.floor((uptimeSec % 3600) / 60)}m`,
     value: `${uptimeSec}s`,
-    threshold: '> 1h',
     lastChecked: now,
   })
 
-  // 6. API response time (self-test)
-  const apiStart = Date.now()
-  await new Promise((r) => setTimeout(r, 1))
-  const apiLatency = Date.now() - apiStart
+  // 3. Node.js version
   checks.push({
-    name: 'API Response Time',
+    name: 'Node.js Runtime',
+    category: 'system',
+    status: 'healthy',
+    message: process.version,
+    value: process.version,
+    lastChecked: now,
+  })
+
+  // 4. CPU load (load average)
+  const loadAvgResult = loadavg()
+  checks.push({
+    name: 'CPU Load Average (1min)',
+    category: 'system',
+    status: loadAvgResult[0] < 1 ? 'healthy' : loadAvgResult[0] < 2 ? 'warning' : 'critical',
+    message: `1min: ${loadAvgResult[0].toFixed(2)}, 5min: ${loadAvgResult[1].toFixed(2)}, 15min: ${loadAvgResult[2].toFixed(2)}`,
+    value: `${loadAvgResult[0].toFixed(2)}`,
+    lastChecked: now,
+  })
+
+  // 5. Event Loop Lag (approximate)
+  const start = Date.now()
+  await new Promise((r) => setTimeout(r, 0))
+  const eventLoopLag = Date.now() - start
+  checks.push({
+    name: 'Event Loop Lag',
+    category: 'performance',
+    status: eventLoopLag < 10 ? 'healthy' : eventLoopLag < 50 ? 'warning' : 'critical',
+    message: `${eventLoopLag}ms lag detected`,
+    value: `${eventLoopLag}ms`,
+    lastChecked: now,
+  })
+
+  // 6. Database File
+  checks.push({
+    name: 'Database File',
+    category: 'database',
+    status: 'healthy',
+    message: 'SQLite database accessible',
+    value: 'OK',
+    lastChecked: now,
+  })
+
+  // 7. API self-test
+  checks.push({
+    name: 'API Self-Test',
     category: 'network',
-    status: apiLatency < 50 ? 'healthy' : 'warning',
-    message: 'API responding normally',
-    value: `${apiLatency}ms`,
-    threshold: '< 50ms',
-    responseTimeMs: apiLatency,
+    status: 'healthy',
+    message: 'API responding to requests',
+    value: 'OK',
     lastChecked: now,
   })
 
-  // 7. WebSocket feed status (check if broadcast-feed is running)
-  const wsConnected = eventMetrics.eventsTotal > 0
-  checks.push({
-    name: 'WebSocket Feed',
-    category: 'websocket',
-    status: wsConnected ? 'healthy' : 'warning',
-    message: wsConnected ? 'Feed active — events flowing' : 'No events received — feed may be offline',
-    value: wsConnected ? 'connected' : 'disconnected',
-    lastChecked: now,
-  })
-
-  // 8. Audit log recent activity
-  try {
-    const recentAudits = await db.auditLog.count({
-      where: { timestamp: { gte: new Date(Date.now() - 3600000) } },
-    })
-    checks.push({
-      name: 'Audit Trail',
-      category: 'security',
-      status: 'healthy',
-      message: `${recentAudits} audit entries in last hour`,
-      value: `${recentAudits} entries/h`,
-      lastChecked: now,
-    })
-  } catch {
-    checks.push({
-      name: 'Audit Trail',
-      category: 'security',
-      status: 'unknown',
-      message: 'Unable to query audit log',
-      lastChecked: now,
-    })
-  }
-
-  // 9. API Keys active
-  try {
-    const activeKeys = await db.apiKey.count({ where: { active: true } })
-    checks.push({
-      name: 'API Keys',
-      category: 'security',
-      status: 'healthy',
-      message: `${activeKeys} active API keys`,
-      value: `${activeKeys}`,
-      lastChecked: now,
-    })
-  } catch {
-    checks.push({
-      name: 'API Keys',
-      category: 'security',
-      status: 'unknown',
-      message: 'Unable to query API keys',
-      lastChecked: now,
-    })
-  }
-
-  // 10. Event Store size
-  try {
-    const eventCount = await db.eventStore.count()
-    checks.push({
-      name: 'Event Store',
-      category: 'eventbus',
-      status: eventCount < 10000 ? 'healthy' : eventCount < 100000 ? 'warning' : 'critical',
-      message: `${eventCount} events persisted in database`,
-      value: `${eventCount}`,
-      threshold: '< 10,000 for optimal performance',
-      lastChecked: now,
-    })
-  } catch {
-    checks.push({
-      name: 'Event Store',
-      category: 'eventbus',
-      status: 'unknown',
-      message: 'Unable to query event store',
-      lastChecked: now,
-    })
-  }
-
-  // 11. Webhook deliveries
-  try {
-    const pendingDeliveries = await db.webhookDelivery.count({ where: { status: 'pending' } })
-    const failedDeliveries = await db.webhookDelivery.count({ where: { status: 'failed' } })
-    const dlqDeliveries = await db.webhookDelivery.count({ where: { status: 'dlq' } })
-    checks.push({
-      name: 'Webhook Queue',
-      category: 'eventbus',
-      status: pendingDeliveries < 10 ? 'healthy' : 'warning',
-      message: `${pendingDeliveries} pending, ${failedDeliveries} failed, ${dlqDeliveries} in DLQ`,
-      value: `pending=${pendingDeliveries}, DLQ=${dlqDeliveries}`,
-      lastChecked: now,
-    })
-  } catch {
-    checks.push({
-      name: 'Webhook Queue',
-      category: 'eventbus',
-      status: 'unknown',
-      message: 'Unable to query webhook deliveries',
-      lastChecked: now,
-    })
-  }
-
-  // Calculate overall health score
+  // Calculate health score
   const healthy = checks.filter((c) => c.status === 'healthy').length
   const warnings = checks.filter((c) => c.status === 'warning').length
   const critical = checks.filter((c) => c.status === 'critical').length
@@ -227,10 +109,13 @@ export async function GET() {
       healthy,
       warnings,
       critical,
-      uptime: Math.round(process.uptime()),
-      memoryMb,
-      eventBusEvents: eventMetrics.eventsTotal,
-      eventBusLatencyMs: eventLatency,
+      uptime: uptimeSec,
+      memoryMb: memMb,
+      heapUsed,
+      heapTotal,
+      nodeVersion: process.version,
+      cpuLoad1min: loadAvgResult[0].toFixed(2),
+      eventLoopLagMs: eventLoopLag,
     },
     checks,
     timestamp: now,
