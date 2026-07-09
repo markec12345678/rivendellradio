@@ -4,7 +4,7 @@ import { create } from 'zustand'
 import type { NowPlayingFrame, VuFrame, ListenersFrame, DaemonLoadFrame } from '@/lib/rivendell/types'
 
 interface LiveState {
-  now: Date
+  now: Date | null
   tick: number
   vu: [number, number]
   feedConnected: boolean
@@ -21,7 +21,7 @@ interface LiveState {
 }
 
 export const useLiveStore = create<LiveState>((set) => ({
-  now: new Date(),
+  now: null,
   tick: 0,
   vu: [0.5, 0.5],
   feedConnected: false,

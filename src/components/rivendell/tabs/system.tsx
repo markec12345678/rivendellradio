@@ -69,7 +69,7 @@ export function SystemTab() {
                   className="font-mono text-3xl font-bold tabular-nums text-primary"
                   suppressHydrationWarning
                 >
-                  {formatClock(now).slice(0, 5)}
+                  {now ? formatClock(now).slice(0, 5) : '--:--'}
                 </span>
               </motion.div>
               <div className="absolute -top-1 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-primary" />

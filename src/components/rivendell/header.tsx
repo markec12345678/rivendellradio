@@ -62,7 +62,7 @@ export function Header() {
       <div className="hidden items-center gap-2 md:flex" aria-label="Station clock">
         <Activity className="h-4 w-4 text-primary" aria-hidden="true" />
         <span className="font-mono text-base font-semibold tabular-nums text-foreground" suppressHydrationWarning>
-          {formatClock(now)}
+          {now ? formatClock(now) : '--:--:--'}
         </span>
       </div>
 

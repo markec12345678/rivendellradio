@@ -180,7 +180,7 @@ export function DashboardTab() {
 
       {/* Stats row — color-coded per VLM feedback (not all amber) */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard icon={Clock} label="Station Time" value={formatClock(now)} color="amber" />
+        <StatCard icon={Clock} label="Station Time" value={now ? formatClock(now) : '--:--:--'} color="amber" />
         <StatCard icon={Users} label="Total Listeners" value={formatNumber(totalListeners)} color="emerald" />
         <StatCard icon={Radio} label="Active Stations" value={String(stations.data?.count ?? 0)} color="blue" />
         <StatCard icon={Activity} label="Schedule Shows" value={String(schedule.data?.count ?? 0)} color="purple" />
