@@ -29,6 +29,7 @@ export function formatRelative(iso: string | null): string {
   return `${Math.floor(h / 24)}d ago`
 }
 
-export function formatNumber(n: number): string {
+export function formatNumber(n: number | undefined | null): string {
+  if (n == null || isNaN(n)) return '0'
   return n.toLocaleString('en-US')
 }
