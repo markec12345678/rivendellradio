@@ -922,3 +922,37 @@ Stage Summary:
 - 3 unikatne operativne funkcije (Incident Timeline + AI Root Cause + Copilot)
 - System tab sedaj: Studio Clock, Daemons, Feed, RDS, SNMP, GPIO, Production Readiness, Incidents, Copilot
 - Skupno: 7 zavihkov + 25+ komponent + 30+ API rut
+
+---
+Task ID: broadcast-topology
+Agent: lead
+Task: Broadcast Topology — interaktivna vizualna shema signalne verige
+
+Work Log:
+- Topology API (/api/v1/topology):
+  - 10 nodes: Studio A → Studer Vista 1 → Omnia 9 → Signal Split
+    ├── FM Path: RDS (Inovonics 730) → Transmitter (RVR T60) → FM Listeners
+    └── Stream Path: Icecast2 → CDN → Web Listeners
+  - 9 connections z latencyMs, packetLoss, protocol, label
+  - Path summaries: FM (2ms, 0.01% loss, 1287 listeners), Stream (170ms, 0.003% loss, 501 listeners)
+  - Overall status: warning (transmitter temperature trending up)
+- TopologyPanel komponenta (~250 vrstic):
+  - Visual SVG layout z pozicioniranimi vozlišči
+  - Color-coded status (healthy=green, warning=amber, critical=red)
+  - Klik na vozlišče → detailed metrics + incoming/outgoing connections
+  - Connection labels z latency + packet loss na midpoint
+  - FM Path in Stream Path summary kartici
+  - Overall status badge
+  - Transmitter WARNING (korelacija z incident timeline)
+- System tab: 11 sekcij
+- Lint: čist
+- Validacija:
+  - API: 10 nodes, 9 connections, 1788 listeners, status=warning
+  - FM path: 2ms latency, 0.01% loss, 1287 listeners
+  - Stream path: 170ms latency, 0.003% loss, 501 listeners
+  - Transmitter: WARNING (temperature trending up)
+
+Stage Summary:
+- Broadcast Topology: DONE
+- System tab: 11 sekcij (Studio Clock, Overview, Daemons, Feed, RDS, SNMP, GPIO, Production Readiness, Topology, Incidents, Copilot)
+- Skupno: 7 zavihkov + 28+ komponent + 32+ API rut
