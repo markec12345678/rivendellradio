@@ -12,6 +12,7 @@ import { RdsPanel } from '@/components/rivendell/rds-panel'
 import { SnmpPanel } from '@/components/rivendell/snmp-panel'
 import { GpioPanel } from '@/components/rivendell/gpio-panel'
 import { ProductionReadinessPanel } from '@/components/rivendell/production-readiness-panel'
+import { IncidentTimeline, CopilotChat } from '@/components/rivendell/incident-copilot'
 import { formatHms, formatClock, formatNumber } from '@/lib/rivendell/format'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -267,6 +268,12 @@ export function SystemTab() {
 
       {/* Production Readiness — Health + Backup */}
       <ProductionReadinessWrapper />
+
+      {/* Incident Timeline + AI Copilot */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <IncidentTimelineWrapper />
+        <CopilotChat />
+      </div>
     </div>
   )
 }
@@ -318,6 +325,20 @@ function ProductionReadinessWrapper() {
   }, [])
 
   return <ProductionReadinessPanel health={health as never} backup={backup as never} isLoading={loading} />
+}
+
+function IncidentTimelineWrapper() {
+  const [data, setData] = useState<{ incidents: unknown[] } | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/v1/incidents').then(r => r.json()).then(d => {
+      setData({ incidents: d.incidents ?? [] })
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [])
+
+  return <IncidentTimeline incidents={data?.incidents as never} isLoading={loading} />
 }
 
 function StatCard({ icon: Icon, label, value, color = 'amber' }: { icon: typeof Cpu; label: string; value: string; color?: 'amber' | 'emerald' | 'blue' | 'purple' }) {
