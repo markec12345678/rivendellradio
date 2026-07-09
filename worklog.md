@@ -956,3 +956,37 @@ Stage Summary:
 - Broadcast Topology: DONE
 - System tab: 11 sekcij (Studio Clock, Overview, Daemons, Feed, RDS, SNMP, GPIO, Production Readiness, Topology, Incidents, Copilot)
 - Skupno: 7 zavihkov + 28+ komponent + 32+ API rut
+
+---
+Task ID: replay-studio
+Agent: lead
+Task: Replay Studio — time-range event playback with scrubber
+
+Work Log:
+- Replay Studio API (/api/v1/replay):
+  - GET z from/to/limit parametri
+  - Queries EventStore DB za persisted events
+  - Falls back to 20 mock events (typical 30-min window)
+  - Events iz vseh sistemov: track, RDS, GPIO, SNMP, AI, webhook, listener, incident
+  - Summary: total, byCategory, bySeverity, timeRange duration
+- ReplayStudio komponenta (~250 vrstic):
+  - Time range selector (From/To datetime inputs + Load button)
+  - Playback controls: Skip Back, Play/Pause, Skip Forward
+  - Progress bar z scrubber (click to jump)
+  - Current event card (highlighted z data JSON)
+  - Event list z category icons, timestamps, past/current/future states
+  - Playback speed: 800ms per event
+  - 10 event categories z unique icons/colors
+- System tab: 12 sekcij
+- Lint: čist
+- Validacija:
+  - API: 20 events, 8 categories, 464s duration
+  - Categories: track(4), rds(2), ai(5), listener(2), snmp(2), gpio(2), system(2), incident(1)
+  - Severity: 18 info, 2 warning, 0 critical
+  - Events vključujejo: track.started/finished, rds.updated, ai.social/dj_assistant/voice_track/qc/producer, gpio.changed, snmp.warning, incident.warning
+
+Stage Summary:
+- Replay Studio: DONE
+- System tab: 12 sekcij (Studio Clock, Overview, Daemons, Feed, RDS, SNMP, GPIO, Production Readiness, Topology, Incidents, Copilot, Replay Studio)
+- Skupno: 7 zavihkov + 30+ komponent + 35+ API rut
+- Vsi 5 uporabnikovih top predlogov implementirani: Incident Timeline, AI Root Cause, AI Copilot, Broadcast Topology, Replay Studio
