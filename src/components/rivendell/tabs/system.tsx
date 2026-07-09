@@ -14,6 +14,7 @@ import { GpioPanel } from '@/components/rivendell/gpio-panel'
 import { ProductionReadinessPanel } from '@/components/rivendell/production-readiness-panel'
 import { IncidentTimeline, CopilotChat } from '@/components/rivendell/incident-copilot'
 import { TopologyPanel } from '@/components/rivendell/topology-panel'
+import { ReplayStudio } from '@/components/rivendell/replay-studio'
 import { formatHms, formatClock, formatNumber } from '@/lib/rivendell/format'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -278,6 +279,9 @@ export function SystemTab() {
         <IncidentTimelineWrapper />
         <CopilotChat />
       </div>
+
+      {/* Replay Studio */}
+      <ReplayStudio />
     </div>
   )
 }
