@@ -851,3 +851,34 @@ Work Log:
 Stage Summary:
 - Production readiness: health diagnostics + backup system — DONE
 - Productska zanesljivost: delno naslovljena (RTO/RPO/backup, manjka chaos testing)
+
+---
+Task ID: broadcast-ui-panels
+Agent: lead
+Task: UI panels za SNMP, GPIO in Production Readiness
+
+Work Log:
+- SnmpPanel komponenta (~120 vrstic):
+  - Device grid z type icons (transmitter, encoder, processor, mixer, rds-encoder, dab-mux, stream-server)
+  - Per-device: name, IP:port, status badge, OID readings grid (6 per device)
+  - Color-coded OID values (normal=green, warning=amber, critical=red)
+  - Health Score badge
+  - Uptime display
+- GpioPanel komponenta (~110 vrstic):
+  - 2-column layout: GPI Inputs (blue) + GPO Outputs (amber)
+  - Per-line: ID badge, name, description, driver badge, state indicator
+  - Active lines highlighted z glow effect
+  - Active count badge per column
+- ProductionReadinessPanel komponenta (~160 vrstic):
+  - System Health card: health score bar, 7 diagnostic checks grid
+  - Backup & Recovery card: RTO/RPO, last backup, DB size, auto-backup, restore tested
+  - Snapshot list (4 snapshots z type + timestamp + size)
+  - Color-coded health score (green/amber/red)
+- System tab posodobljen z 3 novimi paneli (wrapper komponente z fetch iz v1 API)
+- Lint: čist
+- Napake: hydration error na prvem renderu (pre-existing Date.now() issue v mock data)
+
+Stage Summary:
+- System tab sedaj vsebuje: Studio Clock, Daemons, Feed Status, RDS, SNMP, GPIO, Production Readiness
+- Vsi API-ji imajo sedaj UI panele
+- Skupno: 7 zavihkov + 20+ komponent + 25+ API rut
