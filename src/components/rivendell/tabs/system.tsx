@@ -13,6 +13,7 @@ import { SnmpPanel } from '@/components/rivendell/snmp-panel'
 import { GpioPanel } from '@/components/rivendell/gpio-panel'
 import { ProductionReadinessPanel } from '@/components/rivendell/production-readiness-panel'
 import { IncidentTimeline, CopilotChat } from '@/components/rivendell/incident-copilot'
+import { TopologyPanel } from '@/components/rivendell/topology-panel'
 import { formatHms, formatClock, formatNumber } from '@/lib/rivendell/format'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -268,6 +269,9 @@ export function SystemTab() {
 
       {/* Production Readiness — Health + Backup */}
       <ProductionReadinessWrapper />
+
+      {/* Broadcast Topology */}
+      <TopologyPanel />
 
       {/* Incident Timeline + AI Copilot */}
       <div className="grid gap-4 lg:grid-cols-2">
