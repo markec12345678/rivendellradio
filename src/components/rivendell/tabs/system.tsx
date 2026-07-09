@@ -8,6 +8,9 @@ import {
 import { useSystemStatus, useDaemons } from '@/lib/rivendell/api'
 import { useLiveStore } from '@/lib/stores/live'
 import { RdsPanel } from '@/components/rivendell/rds-panel'
+import { SnmpPanel } from '@/components/rivendell/snmp-panel'
+import { GpioPanel } from '@/components/rivendell/gpio-panel'
+import { ProductionReadinessPanel } from '@/components/rivendell/production-readiness-panel'
 import { formatHms, formatClock, formatNumber } from '@/lib/rivendell/format'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -254,8 +257,67 @@ export function SystemTab() {
 
       {/* RDS / DAB+ Metadata Output */}
       <RdsPanel />
+
+      {/* SNMP Device Monitoring */}
+      <SnmpWrapper />
+
+      {/* GPIO / GPI */}
+      <GpioWrapper />
+
+      {/* Production Readiness — Health + Backup */}
+      <ProductionReadinessWrapper />
     </div>
   )
+}
+
+// Wrapper components that fetch data from v1 APIs
+import { useState, useEffect } from 'react'
+
+function SnmpWrapper() {
+  const [data, setData] = useState<{ devices: unknown[]; healthScore: number } | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/v1/snmp').then(r => r.json()).then(d => {
+      setData({ devices: d.devices ?? [], healthScore: d.healthScore ?? 0 })
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [])
+
+  return <SnmpPanel devices={data?.devices as never} healthScore={data?.healthScore} isLoading={loading} />
+}
+
+function GpioWrapper() {
+  const [data, setData] = useState<{ inputs: unknown[]; outputs: unknown[] } | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/v1/gpio').then(r => r.json()).then(d => {
+      setData({ inputs: d.inputs ?? [], outputs: d.outputs ?? [] })
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [])
+
+  return <GpioPanel inputs={data?.inputs as never} outputs={data?.outputs as never} isLoading={loading} />
+}
+
+function ProductionReadinessWrapper() {
+  const [health, setHealth] = useState<Record<string, unknown> | null>(null)
+  const [backup, setBackup] = useState<Record<string, unknown> | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/v1/health/diagnostics').then(r => r.json()).catch(() => null),
+      fetch('/api/v1/backup').then(r => r.json()).catch(() => null),
+    ]).then(([h, b]) => {
+      setHealth(h)
+      setBackup(b)
+      setLoading(false)
+    })
+  }, [])
+
+  return <ProductionReadinessPanel health={health as never} backup={backup as never} isLoading={loading} />
 }
 
 function StatCard({ icon: Icon, label, value, color = 'amber' }: { icon: typeof Cpu; label: string; value: string; color?: 'amber' | 'emerald' | 'blue' | 'purple' }) {
