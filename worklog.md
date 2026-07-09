@@ -882,3 +882,43 @@ Stage Summary:
 - System tab sedaj vsebuje: Studio Clock, Daemons, Feed Status, RDS, SNMP, GPIO, Production Readiness
 - Vsi API-ji imajo sedaj UI panele
 - Skupno: 7 zavihkov + 20+ komponent + 25+ API rut
+
+---
+Task ID: incident-copilot
+Agent: lead
+Task: Incident Timeline + AI Root Cause + AI Copilot Chat
+
+Work Log:
+- Incident Timeline API (/api/v1/incidents):
+  - 8 mock incidentov z correlationId, AI analysis, severity
+  - GET z category/severity/unresolved filtri
+  - POST za acknowledge/resolve
+  - Stats: total, critical, high, medium, low, unresolved, withAiAnalysis
+- AI Copilot API (/api/v1/copilot):
+  - POST z natural language query
+  - Knowledge base: stream, CPU, RDS, listeners
+  - Sources per answer (SNMP, Event Bus, AI, RDS API, Reports)
+  - Confidence levels (high/medium/low)
+  - Follow-up questions
+- IncidentTimeline komponenta (~120 vrstic):
+  - Visual timeline z ikonami na liniji
+  - 6 event types: alert, warning, info, recovery, ai_action, human_action
+  - AI Root Cause analysis v karticah (purple highlight)
+  - Severity badge-i, resolved status, correlationId
+- CopilotChat komponenta (~130 vrstic):
+  - Interaktivni chat z AI
+  - Sources citirani per odgovor
+  - Confidence badge
+  - Follow-up question gumbi (clickable)
+  - Loading state ("Analyzing system data…")
+- System tab: 2-column grid (Incident Timeline + Copilot Chat)
+- Lint: čist
+- Validacija:
+  - Incidents: 8 events, 2 z AI analysis, 5 unresolved ✓
+  - Copilot "why is cpu high": confidence=high, 3 sources, 3 followUps ✓
+  - Copilot "did the stream fall": confidence=high, detailed answer ✓
+
+Stage Summary:
+- 3 unikatne operativne funkcije (Incident Timeline + AI Root Cause + Copilot)
+- System tab sedaj: Studio Clock, Daemons, Feed, RDS, SNMP, GPIO, Production Readiness, Incidents, Copilot
+- Skupno: 7 zavihkov + 25+ komponent + 30+ API rut
