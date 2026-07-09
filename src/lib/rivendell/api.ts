@@ -313,3 +313,31 @@ export function useCreateApiKey() {
     onSuccess: () => { void qc.invalidateQueries({ queryKey: ['rv', 'api-keys'] as const }) },
   })
 }
+
+// AI Orchestrator
+export interface AiModule {
+  id: string
+  name: string
+  description: string
+  icon: string
+  status: 'active' | 'idle' | 'processing' | 'error'
+  trigger: string
+  lastRun: string | null
+  runsTotal: number
+  config: Record<string, unknown>
+}
+export interface AiOrchestratorResponse {
+  count: number
+  active: number
+  processing: number
+  totalRuns: number
+  architecture: string
+  modules: AiModule[]
+}
+export function useAiOrchestrator() {
+  return useQuery<AiOrchestratorResponse>({
+    queryKey: ['rv', 'ai-orchestrator'] as const,
+    queryFn: () => fetchJson<AiOrchestratorResponse>('/api/v1/ai'),
+    refetchInterval: 15_000,
+  })
+}

@@ -17,6 +17,7 @@ import { WaveformDisplay } from '@/components/rivendell/waveform-display'
 import { SoundpanelGrid } from '@/components/rivendell/soundpanel-grid'
 import { NowPlayingDialog } from '@/components/rivendell/now-playing-dialog'
 import { RequestsPanel } from '@/components/rivendell/requests-panel'
+import { AiOrchestratorPanel } from '@/components/rivendell/ai-orchestrator-panel'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -388,6 +389,9 @@ export function DashboardTab() {
         {/* Listener Requests */}
         <RequestsPanel />
       </div>
+
+      {/* AI Orchestrator */}
+      <AiOrchestratorPanel />
 
       {/* Now Playing detail dialog */}
       <NowPlayingDialog track={currentTrack ?? null} open={dialogOpen} onOpenChange={setDialogOpen} />
