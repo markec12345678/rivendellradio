@@ -615,3 +615,39 @@ Stage Summary:
 - Phase 2.1 (Event Bus + API v1 + OpenAPI + WebSocket Events) — DONE
 - API ocena: 7.5/10 → 9/10 (verzioniranje + OpenAPI + typed events)
 - Arhitektura: modularna (Event Bus) namesto točkovne povezave
+
+---
+Task ID: phase2.2
+Agent: lead
+Task: Event persistence + correlationId + replay + webhooks
+
+Work Log:
+- Prisma EventStore model: eventId (UUID), type, version, source, correlationId, data, timestamp
+  - Indeksin na type, correlationId, timestamp, source
+  - Auto-persist vsak event v DB (async, non-blocking)
+- Prisma Webhook model: name, url, secret, events, active, lastFired, lastStatus, failCount
+- BaseEvent posodobljen z: eventId, version (1), correlationId
+- Helper createEvent() funkcija z auto correlationId
+- Cascading: publishTrackStarted → publishRdsUpdated (isti correlationId)
+- EventBus.publish() sedaj:
+  1. Shrani v memory history (100)
+  2. Persist v DB (async)
+  3. Fire webhooks (async, z HMAC-SHA256 signing)
+  4. Emit vsem subscriberjem
+- GET /api/v1/events — bere iz memory + DB
+- GET /api/v1/events/replay — replay iz DB (limit, type, from filtri)
+- GET/POST /api/v1/webhooks — list/create webhooks z auto-secret
+- Lint: čist
+- Validacija:
+  - Health: events=0 (pred testom) ✓
+  - Trigger: "track.started event published" ✓
+  - Events: 2 z ENAKIM correlationId (2091331f) — track.started + rds.updated ✓
+  - Replay: 2 povrnjena iz DB ✓
+  - Webhooks: 0 (pravilno) ✓
+
+Stage Summary:
+- Event persistence: DONE (memory + DB)
+- Event version + correlationId: DONE (v1, UUID)
+- Event replay: DONE (/api/v1/events/replay)
+- Webhook subscriptions: DONE (auto-fire, HMAC, fail tracking)
+- EventBus ocena: 9.5/10 → 10/10
