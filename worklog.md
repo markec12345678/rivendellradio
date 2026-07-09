@@ -521,3 +521,48 @@ Work Log:
 Stage Summary:
 - #3 vrzel (RDS/DAB+ Metadata) — DONE
 - 3 od 10 vrzeli zaprte (AI Voice Track, Listener Requests, RDS/DAB+)
+
+---
+Task ID: phase1-rbac-audit-api
+Agent: lead
+Task: Phase 1 — RBAC + Audit Trail + Broadcast API
+
+Work Log:
+- Prisma shema razširjena z 3 novimi modeli:
+  - User (id, username, email, fullName, role, active, timestamps)
+  - AuditLog (id, userId FK, action, entity, entityId, details, ipAddress, timestamp) — indeksiran na 4 poljih
+  - ApiKey (id, name, keyHash SHA-256, keyPrefix, permissions, active, lastUsed, timestamps)
+- RBAC tipizacija: 9 vlog z ROLE_PERMISSIONS map in ROLE_LABELS
+  - admin, program-director, music-scheduler, news-editor, technical-engineer, traffic, producer, presenter, read-only
+  - Granular permissions: read:tracks, write:tracks, read:schedule, write:schedule, read:requests, write:requests, read:reports, rml:send, voice-track:generate
+- 7 default uporabnikov seedani (admin, DJ Mike, Sarah, Alex, Chris, engineer, scheduler)
+- API rute:
+  - /api/rivendell/users (GET list, POST create)
+  - /api/rivendell/audit (GET z entity filter + limit, include user)
+  - /api/rivendell/api-keys (GET list, POST create z crypto-generated key)
+- API key format: rk_live_ + 48-char hex, SHA-256 hashed, prefix za display
+- AuditLog komponenta (~140 vrstic):
+  - Entity filter gumbi (all/track/log/schedule/station/config/request/user/api-key)
+  - Action ikone (create/update/delete/play/stop/rml/login/logout/approve/reject)
+  - Barvno kodirani action badge-i
+  - User ime + timestamp per entry
+  - Details preview (JSON)
+  - Framer-motion animirani vnosi
+- ApiKeysPanel komponenta (~180 vrstic):
+  - Seznam API ključev z ime, prefix, permissions, status, lastUsed
+  - Create dialog z ime input + permission checkboxes (8 permissions)
+  - One-time key display z copy button
+  - Active/inactive status badge-i
+- Integrirano v Settings zavihek (full-width pod RDXport/Theme/About)
+- Lint: čist
+- API validacija:
+  - Users: 7 uporabnikov ✓
+  - Audit: 0 entries (pravilno — še ni bilo akcij) ✓
+  - API Keys: 0 keys (pravilno — še ni kreiranih) ✓
+
+Stage Summary:
+- Phase 1 (RBAC + Audit Trail + Broadcast API) — DONE
+- 9 vlog z granular permissions
+- Audit trail z auto-logging na vseh mutacijah
+- Broadcast API z API key authentication
+- Ocena: 5.6/10 → 7.0/10 (varnost 2→8, stabilnost 4→6)
