@@ -3,18 +3,23 @@ import { rockTracks, scheduleShows } from '@/lib/rivendell/mock-data'
 
 export const dynamic = 'force-dynamic'
 
-// AI Orchestrator — 8 AI modules driven by Event Bus
-// Per user feedback: added metrics, AI DJ Assistant, AI Music Director
+// AI Orchestrator — 11 AI modules driven by Event Bus
+// Per user feedback: P95/P99, error breakdown, cache hit, retries + 3 new modules
 
 interface AiModuleMetrics {
   runsTotal: number
   runsSuccessful: number
   runsFailed: number
   avgExecutionMs: number
+  p95ExecutionMs: number
+  p99ExecutionMs: number
   totalTokensUsed: number
   estimatedCostUsd: number
   queueDepth: number
   lastError: string | null
+  errorBreakdown: Record<string, number>
+  cacheHitRate: number
+  retryCount: number
 }
 
 interface AiModule {
@@ -34,51 +39,70 @@ const modules: AiModule[] = [
     id: 'ai-dj', name: 'AI DJ', description: 'Generates voice track scripts between songs',
     icon: 'mic', status: 'active', trigger: 'track.finished', lastRun: new Date(Date.now() - 300000).toISOString(),
     config: { style: 'energetic', language: 'en', maxLength: 30, autoInsert: true },
-    metrics: { runsTotal: 842, runsSuccessful: 839, runsFailed: 3, avgExecutionMs: 1240, totalTokensUsed: 487000, estimatedCostUsd: 1.46, queueDepth: 0, lastError: null },
+    metrics: { runsTotal: 842, runsSuccessful: 839, runsFailed: 3, avgExecutionMs: 1240, p95ExecutionMs: 2100, p99ExecutionMs: 3400, totalTokensUsed: 487000, estimatedCostUsd: 1.46, queueDepth: 0, lastError: null, errorBreakdown: { timeout: 2, rate_limit: 1 }, cacheHitRate: 0.34, retryCount: 3 },
   },
   {
     id: 'ai-news', name: 'AI News', description: 'Generates news bulletins (requires editorial review)',
     icon: 'newspaper', status: 'idle', trigger: 'schedule.hourly', lastRun: new Date(Date.now() - 1800000).toISOString(),
     config: { sources: ['RSS', 'API'], language: 'en', duration: 60, autoPlay: false, requireReview: true },
-    metrics: { runsTotal: 124, runsSuccessful: 122, runsFailed: 2, avgExecutionMs: 3200, totalTokensUsed: 189000, estimatedCostUsd: 0.57, queueDepth: 0, lastError: 'RSS timeout on last run' },
+    metrics: { runsTotal: 124, runsSuccessful: 122, runsFailed: 2, avgExecutionMs: 3200, p95ExecutionMs: 5100, p99ExecutionMs: 7200, totalTokensUsed: 189000, estimatedCostUsd: 0.57, queueDepth: 0, lastError: 'RSS timeout on last run', errorBreakdown: { rss_timeout: 1, content_filter: 1 }, cacheHitRate: 0.12, retryCount: 2 },
   },
   {
     id: 'ai-scheduler', name: 'AI Scheduler', description: 'Auto-generates playlists with rotation rules + AI optimization',
     icon: 'calendar', status: 'active', trigger: 'schedule.daily', lastRun: new Date(Date.now() - 3600000).toISOString(),
     config: { rotationDepth: 7, tempoMatching: true, daypartAware: true, avoidRepeat: 2, aiOptimization: true },
-    metrics: { runsTotal: 31, runsSuccessful: 31, runsFailed: 0, avgExecutionMs: 5600, totalTokensUsed: 93000, estimatedCostUsd: 0.28, queueDepth: 0, lastError: null },
+    metrics: { runsTotal: 31, runsSuccessful: 31, runsFailed: 0, avgExecutionMs: 5600, p95ExecutionMs: 8200, p99ExecutionMs: 11000, totalTokensUsed: 93000, estimatedCostUsd: 0.28, queueDepth: 0, lastError: null, errorBreakdown: {}, cacheHitRate: 0.08, retryCount: 0 },
   },
   {
     id: 'ai-metadata', name: 'AI Metadata', description: 'Auto-tags tracks with BPM, key, mood, energy, genre, tags',
     icon: 'tag', status: 'processing', trigger: 'track.imported', lastRun: new Date(Date.now() - 60000).toISOString(),
     config: { autoBPM: true, autoKey: true, autoMood: true, autoEnergy: true, autoGenre: true },
-    metrics: { runsTotal: 1567, runsSuccessful: 1564, runsFailed: 3, avgExecutionMs: 890, totalTokensUsed: 782000, estimatedCostUsd: 2.35, queueDepth: 4, lastError: null },
+    metrics: { runsTotal: 1567, runsSuccessful: 1564, runsFailed: 3, avgExecutionMs: 890, p95ExecutionMs: 1400, p99ExecutionMs: 2200, totalTokensUsed: 782000, estimatedCostUsd: 2.35, queueDepth: 4, lastError: null, errorBreakdown: { low_confidence: 2, timeout: 1 }, cacheHitRate: 0.45, retryCount: 3 },
   },
   {
     id: 'ai-social', name: 'AI Social', description: 'Posts now-playing updates to social media',
     icon: 'share', status: 'active', trigger: 'track.started', lastRun: new Date(Date.now() - 5000).toISOString(),
     config: { platforms: ['twitter', 'instagram', 'discord'], autoPost: true, includeArtwork: true, postFrequency: 'major_tracks_only' },
-    metrics: { runsTotal: 4521, runsSuccessful: 4518, runsFailed: 3, avgExecutionMs: 450, totalTokensUsed: 312000, estimatedCostUsd: 0.94, queueDepth: 0, lastError: 'Discord rate limit (recovered)' },
+    metrics: { runsTotal: 4521, runsSuccessful: 4518, runsFailed: 3, avgExecutionMs: 450, p95ExecutionMs: 800, p99ExecutionMs: 1400, totalTokensUsed: 312000, estimatedCostUsd: 0.94, queueDepth: 0, lastError: 'Discord rate limit (recovered)', errorBreakdown: { rate_limit: 2, network: 1 }, cacheHitRate: 0.67, retryCount: 3 },
   },
   {
-    id: 'ai-qc', name: 'AI Quality Control', description: 'Detects silence, clipping, LUFS, true peak, stereo phase',
+    id: 'ai-qc', name: 'AI Quality Control', description: 'Detects silence, clipping, LUFS, true peak, stereo phase, DC offset, noise floor',
     icon: 'shield', status: 'active', trigger: 'audio.realtime', lastRun: new Date(Date.now() - 1000).toISOString(),
-    config: { silenceThreshold: -60, silenceDuration: 10, clippingThreshold: -0.5, lufsTarget: -16, truePeakMax: -1, stereoPhaseCheck: true, autoAlert: true },
-    metrics: { runsTotal: 864200, runsSuccessful: 864200, runsFailed: 0, avgExecutionMs: 2, totalTokensUsed: 0, estimatedCostUsd: 0, queueDepth: 0, lastError: null },
+    config: { silenceThreshold: -60, silenceDuration: 10, clippingThreshold: -0.5, lufsTarget: -16, truePeakMax: -1, stereoPhaseCheck: true, dcOffsetCheck: true, noiseFloorCheck: true, monoCompatibility: true, autoAlert: true },
+    metrics: { runsTotal: 864200, runsSuccessful: 864200, runsFailed: 0, avgExecutionMs: 2, p95ExecutionMs: 4, p99ExecutionMs: 8, totalTokensUsed: 0, estimatedCostUsd: 0, queueDepth: 0, lastError: null, errorBreakdown: {}, cacheHitRate: 0, retryCount: 0 },
   },
-  // NEW: AI DJ Assistant (per user suggestion)
   {
     id: 'ai-dj-assistant', name: 'AI DJ Assistant', description: 'Real-time show prep: fun facts, birthdays, news, weather for presenter',
     icon: 'lightbulb', status: 'active', trigger: 'track.started', lastRun: new Date(Date.now() - 5000).toISOString(),
     config: { showFunFacts: true, showBirthdays: true, showNews: true, showWeather: true, showTraffic: true, autoSuggest: true, presenterControl: true },
-    metrics: { runsTotal: 4521, runsSuccessful: 4520, runsFailed: 1, avgExecutionMs: 680, totalTokensUsed: 234000, estimatedCostUsd: 0.70, queueDepth: 0, lastError: null },
+    metrics: { runsTotal: 4521, runsSuccessful: 4520, runsFailed: 1, avgExecutionMs: 680, p95ExecutionMs: 1100, p99ExecutionMs: 1800, totalTokensUsed: 234000, estimatedCostUsd: 0.70, queueDepth: 0, lastError: null, errorBreakdown: { timeout: 1 }, cacheHitRate: 0.52, retryCount: 1 },
   },
-  // NEW: AI Music Director (per user suggestion)
   {
     id: 'ai-music-director', name: 'AI Music Director', description: 'Analyzes listenership, skips, requests to suggest rotation changes',
     icon: 'trending', status: 'idle', trigger: 'schedule.weekly', lastRun: new Date(Date.now() - 86400000).toISOString(),
-    config: { analyzeSkipRate: true, analyzeRequests: true, analyzeListenership: true, analyzeDayparts: true, suggestRotationChanges: true, aiPower: 'medium' },
-    metrics: { runsTotal: 4, runsSuccessful: 4, runsFailed: 0, avgExecutionMs: 12000, totalTokensUsed: 45000, estimatedCostUsd: 0.14, queueDepth: 0, lastError: null },
+    config: { analyzeSkipRate: true, analyzeRequests: true, analyzeListenership: true, analyzeDayparts: true, suggestRotationChanges: true, artistFatigueIndex: true, songFatigueIndex: true, genreBalance: true, decadeBalance: true, tempoBalance: true, energyCurve: true, aiPower: 'medium' },
+    metrics: { runsTotal: 4, runsSuccessful: 4, runsFailed: 0, avgExecutionMs: 12000, p95ExecutionMs: 15000, p99ExecutionMs: 18000, totalTokensUsed: 45000, estimatedCostUsd: 0.14, queueDepth: 0, lastError: null, errorBreakdown: {}, cacheHitRate: 0.0, retryCount: 0 },
+  },
+  // NEW: AI Producer (per user suggestion)
+  {
+    id: 'ai-producer', name: 'AI Producer', description: 'Suggests jingles, sweepers, promos, station IDs, breaks during show',
+    icon: 'clapperboard', status: 'active', trigger: 'track.finished', lastRun: new Date(Date.now() - 300000).toISOString(),
+    config: { suggestJingles: true, suggestSweepers: true, suggestPromos: true, suggestStationIds: true, suggestWeatherBreak: true, suggestTrafficBreak: true, suggestContestReminder: true, suggestSponsorMention: true, autoPlay: false, producerControl: true },
+    metrics: { runsTotal: 842, runsSuccessful: 840, runsFailed: 2, avgExecutionMs: 920, p95ExecutionMs: 1500, p99ExecutionMs: 2400, totalTokensUsed: 298000, estimatedCostUsd: 0.89, queueDepth: 0, lastError: null, errorBreakdown: { timeout: 2 }, cacheHitRate: 0.38, retryCount: 2 },
+  },
+  // NEW: AI Failure Detection (per user suggestion)
+  {
+    id: 'ai-failure-detection', name: 'AI Failure Detection', description: 'Detects RDS stalls, webhook failures, listener anomalies, frozen VU meters',
+    icon: 'alert-triangle', status: 'active', trigger: 'audio.realtime', lastRun: new Date(Date.now() - 2000).toISOString(),
+    config: { checkRdsStall: true, checkWebhookFailure: true, checkListenerAnomaly: true, checkVuFrozen: true, checkStreamDrop: true, checkDbLatency: true, alertThreshold: 'critical', autoNotify: true },
+    metrics: { runsTotal: 432100, runsSuccessful: 432100, runsFailed: 0, avgExecutionMs: 5, p95ExecutionMs: 10, p99ExecutionMs: 20, totalTokensUsed: 0, estimatedCostUsd: 0, queueDepth: 0, lastError: null, errorBreakdown: {}, cacheHitRate: 0, retryCount: 0 },
+  },
+  // NEW: AI Cost Optimizer (per user suggestion)
+  {
+    id: 'ai-cost-optimizer', name: 'AI Cost Optimizer', description: 'Analyzes token usage and suggests prompt optimization / model downsizing',
+    icon: 'coins', status: 'idle', trigger: 'schedule.daily', lastRun: new Date(Date.now() - 7200000).toISOString(),
+    config: { analyzeTokenUsage: true, suggestPromptShortening: true, suggestModelDownsize: true, suggestCacheStrategy: true, costThresholdUsd: 5.00, dailyBudgetUsd: 2.00 },
+    metrics: { runsTotal: 31, runsSuccessful: 31, runsFailed: 0, avgExecutionMs: 3400, p95ExecutionMs: 5200, p99ExecutionMs: 6800, totalTokensUsed: 67000, estimatedCostUsd: 0.20, queueDepth: 0, lastError: null, errorBreakdown: {}, cacheHitRate: 0.15, retryCount: 0 },
   },
 ]
 
@@ -94,6 +118,10 @@ export async function GET() {
   const totalTokens = modules.reduce((acc, m) => acc + m.metrics.totalTokensUsed, 0)
   const queueDepth = modules.reduce((acc, m) => acc + m.metrics.queueDepth, 0)
 
+  const totalRetries = modules.reduce((acc, m) => acc + m.metrics.retryCount, 0)
+  const totalCacheHits = modules.reduce((acc, m) => acc + (m.metrics.cacheHitRate * m.metrics.runsTotal), 0)
+  const overallCacheHitRate = totalRuns > 0 ? ((totalCacheHits / totalRuns) * 100).toFixed(1) : '0'
+
   return NextResponse.json({
     count: modules.length,
     active,
@@ -106,6 +134,8 @@ export async function GET() {
       totalTokensUsed: totalTokens,
       totalEstimatedCostUsd: Number(totalCost.toFixed(2)),
       queueDepth,
+      totalRetries,
+      cacheHitRate: `${overallCacheHitRate}%`,
     },
     architecture: 'Event Bus → AI Modules (modular, independent, event-driven)',
     modules: modules.map((m) => ({
@@ -222,6 +252,54 @@ export async function POST(req: Request) {
       { platform: 'instagram', text: `🎧 ${track.title}\n${track.artist}\n.\nNow playing on Rock 88.7 FM 📻\n.\n#rock887 #nowplaying #${track.genre.toLowerCase().replace(/\s/g, '')} #radio`, url: 'https://instagram.com/rock887' },
     ]
     return NextResponse.json({ module: 'ai-social', posts, track: { title: track.title, artist: track.artist }, executionMs: 450, tokensUsed: 180 })
+  }
+
+  // AI Producer — suggests jingles, sweepers, promos, breaks
+  if (body.module === 'ai-producer') {
+    const suggestions = [
+      { type: 'jingle', title: 'Station ID — Rock 88.7', reason: 'Top of hour — 3 tracks since last ID', priority: 'high', autoPlay: false },
+      { type: 'sweeper', title: 'Sweeper: "The Best Rock"', reason: 'Transition between genres (Hard Rock → Alternative)', priority: 'medium', autoPlay: false },
+      { type: 'promo', title: 'Promo: Friday Night Rock Show', reason: 'Promo rotation — last played 2h ago', priority: 'medium', autoPlay: false },
+      { type: 'weather_break', title: 'Weather Break', reason: 'Scheduled — 15min since last weather', priority: 'low', autoPlay: false },
+      { type: 'traffic_break', title: 'Traffic Update', reason: 'Approaching rush hour (16:00)', priority: 'high', autoPlay: false },
+      { type: 'sponsor', title: 'Sponsor: Guitar Center', reason: 'Sponsor rotation — 2h since last mention', priority: 'medium', autoPlay: false },
+      { type: 'contest', title: 'Contest Reminder: Win Tickets', reason: 'Active contest — reminder every 30min', priority: 'low', autoPlay: false },
+    ]
+    return NextResponse.json({ module: 'ai-producer', suggestions, warning: 'All suggestions require producer approval', executionMs: 920, tokensUsed: 340 })
+  }
+
+  // AI Failure Detection — detects system anomalies
+  if (body.module === 'ai-failure-detection') {
+    const checks = [
+      { check: 'rds_stall', status: 'ok', message: 'RDS updated 3s ago', lastChecked: new Date().toISOString() },
+      { check: 'webhook_delivery', status: 'ok', message: 'All webhooks delivering successfully', lastChecked: new Date().toISOString() },
+      { check: 'listener_anomaly', status: 'ok', message: 'Listener count within normal range', lastChecked: new Date().toISOString() },
+      { check: 'vu_frozen', status: 'ok', message: 'VU meters active (last update 100ms ago)', lastChecked: new Date().toISOString() },
+      { check: 'stream_drop', status: 'ok', message: 'All 3 streams online', lastChecked: new Date().toISOString() },
+      { check: 'db_latency', status: 'ok', message: 'DB response: 2ms', lastChecked: new Date().toISOString() },
+      { check: 'daemon_health', status: 'warning', message: 'rdrepld is stopped (non-critical)', lastChecked: new Date().toISOString() },
+    ]
+    const alerts = checks.filter((c) => c.status !== 'ok')
+    return NextResponse.json({ module: 'ai-failure-detection', checks, alerts: alerts.length, alertsDetail: alerts, executionMs: 5, tokensUsed: 0 })
+  }
+
+  // AI Cost Optimizer — analyzes token usage and suggests savings
+  if (body.module === 'ai-cost-optimizer') {
+    const analysis = {
+      dailySpend: 6.44,
+      dailyBudget: 2.00,
+      overBudget: true,
+      topConsumer: 'AI Metadata ($2.35, 782K tokens)',
+      recommendations: [
+        { module: 'ai-metadata', type: 'model_downsize', description: 'Switch from GPT-4 to GPT-3.5 for BPM detection — saves ~$1.20/day', savings: 1.20, confidence: 'high' },
+        { module: 'ai-dj', type: 'prompt_shortening', description: 'Reduce context window from 4096 to 2048 tokens — saves ~$0.30/day', savings: 0.30, confidence: 'medium' },
+        { module: 'ai-news', type: 'cache_strategy', description: 'Cache weather/traffic prompts (they repeat) — saves ~$0.15/day', savings: 0.15, confidence: 'high' },
+        { module: 'ai-social', type: 'batch_processing', description: 'Batch social posts every 5min instead of per-track — saves ~$0.20/day', savings: 0.20, confidence: 'medium' },
+      ],
+      projectedSavings: 1.85,
+      projectedDailyCost: 4.59,
+    }
+    return NextResponse.json({ module: 'ai-cost-optimizer', analysis, executionMs: 3400, tokensUsed: 890 })
   }
 
   return NextResponse.json({ error: 'Unknown module' }, { status: 400 })
