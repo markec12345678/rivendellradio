@@ -145,3 +145,76 @@ export interface DaemonLoadFrame {
   memoryMb: number
   ts: number
 }
+
+// ============================================================================
+// Phase 1: RBAC + Audit Trail + Broadcast API
+// ============================================================================
+
+export type UserRole =
+  | 'admin'
+  | 'program-director'
+  | 'music-scheduler'
+  | 'news-editor'
+  | 'technical-engineer'
+  | 'traffic'
+  | 'producer'
+  | 'presenter'
+  | 'read-only'
+
+export interface User {
+  id: string
+  username: string
+  email: string | null
+  fullName: string | null
+  role: UserRole
+  active: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AuditLogEntry {
+  id: number
+  userId: string | null
+  username: string | null
+  action: string
+  entity: string
+  entityId: string | null
+  details: string | null
+  ipAddress: string | null
+  timestamp: string
+}
+
+export interface ApiKey {
+  id: number
+  name: string
+  keyPrefix: string
+  permissions: string
+  active: boolean
+  lastUsed: string | null
+  createdAt: string
+  createdBy: string | null
+}
+
+export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
+  'admin': ['*'],
+  'program-director': ['read:tracks', 'write:tracks', 'read:schedule', 'write:schedule', 'read:logs', 'write:logs', 'read:requests', 'write:requests', 'read:reports', 'read:stations', 'read:system', 'rml:send', 'voice-track:generate'],
+  'music-scheduler': ['read:tracks', 'write:tracks', 'read:schedule', 'write:schedule', 'read:reports', 'read:requests'],
+  'news-editor': ['read:tracks', 'write:tracks', 'read:schedule', 'write:schedule', 'rml:send', 'voice-track:generate'],
+  'technical-engineer': ['read:system', 'write:system', 'read:stations', 'write:stations', 'read:config', 'write:config', 'rml:send'],
+  'traffic': ['read:schedule', 'write:schedule', 'read:tracks', 'read:reports'],
+  'producer': ['read:tracks', 'write:tracks', 'read:schedule', 'write:schedule', 'read:logs', 'write:logs', 'rml:send', 'voice-track:generate'],
+  'presenter': ['read:tracks', 'read:schedule', 'read:logs', 'rml:send', 'voice-track:generate'],
+  'read-only': ['read:tracks', 'read:schedule', 'read:stations', 'read:reports', 'read:system'],
+}
+
+export const ROLE_LABELS: Record<UserRole, string> = {
+  'admin': 'Administrator',
+  'program-director': 'Program Director',
+  'music-scheduler': 'Music Scheduler',
+  'news-editor': 'News Editor',
+  'technical-engineer': 'Technical Engineer',
+  'traffic': 'Traffic Manager',
+  'producer': 'Producer',
+  'presenter': 'Presenter',
+  'read-only': 'Read-Only',
+}

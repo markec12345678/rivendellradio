@@ -274,3 +274,42 @@ export function useRds() {
     refetchInterval: 10_000,
   })
 }
+
+// Phase 1: RBAC + Audit + API Keys
+export interface UsersResponse { count: number; users: Array<Record<string, unknown>> }
+export function useUsers() {
+  return useQuery<UsersResponse>({
+    queryKey: ['rv', 'users'] as const,
+    queryFn: () => fetchJson<UsersResponse>('/api/rivendell/users'),
+  })
+}
+
+export interface AuditResponse { count: number; entries: import('./types').AuditLogEntry[] }
+export function useAuditLog(entity?: string, limit = 50) {
+  const params = new URLSearchParams()
+  if (entity) params.set('entity', entity)
+  params.set('limit', String(limit))
+  return useQuery<AuditResponse>({
+    queryKey: ['rv', 'audit', entity ?? 'all', limit] as const,
+    queryFn: () => fetchJson<AuditResponse>(`/api/rivendell/audit?${params}`),
+  })
+}
+
+export interface ApiKeysResponse { count: number; keys: import('./types').ApiKey[] }
+export function useApiKeys() {
+  return useQuery<ApiKeysResponse>({
+    queryKey: ['rv', 'api-keys'] as const,
+    queryFn: () => fetchJson<ApiKeysResponse>('/api/rivendell/api-keys'),
+  })
+}
+export function useCreateApiKey() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: { name: string; permissions: string }) => {
+      const res = await fetch('/api/rivendell/api-keys', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      if (!res.ok) throw new Error('Failed')
+      return res.json()
+    },
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['rv', 'api-keys'] as const }) },
+  })
+}

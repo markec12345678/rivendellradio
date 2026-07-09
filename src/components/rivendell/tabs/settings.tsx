@@ -12,6 +12,8 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
+import { AuditPanel } from '@/components/rivendell/audit-panel'
+import { ApiKeysPanel } from '@/components/rivendell/api-keys-panel'
 import type { ThemeMode } from '@/lib/rivendell/types'
 import { cn } from '@/lib/utils'
 
@@ -126,6 +128,12 @@ export function SettingsTab() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Audit Trail + API Keys (Phase 1) */}
+      <div className="lg:col-span-3 space-y-4">
+        <AuditPanel />
+        <ApiKeysPanel />
+      </div>
     </div>
   )
 }

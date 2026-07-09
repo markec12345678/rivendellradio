@@ -1,5 +1,5 @@
 // Prisma schema — Rivendell Web Dashboard
-// Shranjuje: RDXport connection config, active station, theme preference
+// Phase 1: RBAC + Audit Trail + Broadcast API
 
 generator client {
   provider = "prisma-client-js"
@@ -10,7 +10,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// RDXport connection configuration (single row, id=1)
+// ============================================================================
+// Configuration (existing)
+// ============================================================================
+
 model RivendellConfig {
   id        Int      @id @default(1)
   url       String   @default("http://localhost/rdxport.cgi")
@@ -20,17 +23,68 @@ model RivendellConfig {
   updatedAt DateTime @updatedAt
 }
 
-/// Active station selection (multi-station dashboard)
 model ActiveStation {
   id        Int      @id @default(1)
   stationId String   @default("main-fm")
   updatedAt DateTime @updatedAt
 }
 
-/// Theme preference (dark/metal/light + accent hue)
 model ThemePreference {
   id        Int      @id @default(1)
   mode      String   @default("dark")
   accentHue Int      @default(60)
   updatedAt DateTime @updatedAt
+}
+
+// ============================================================================
+// Phase 1: RBAC (Role-Based Access Control)
+// ============================================================================
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  email     String?  @unique
+  fullName  String?
+  role      String   @default("read-only") // admin | program-director | music-scheduler | news-editor | technical-engineer | traffic | producer | presenter | read-only
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  auditLogs AuditLog[]
+}
+
+// ============================================================================
+// Phase 1: Audit Trail
+// ============================================================================
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String   // create | update | delete | login | logout | play | stop | rml | approve | reject
+  entity    String   // track | log | schedule | station | config | request | voice-track | user
+  entityId  String?
+  details   String?  // JSON string with before/after values
+  ipAddress String?
+  timestamp DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity])
+  @@index([action])
+  @@index([timestamp])
+}
+
+// ============================================================================
+// Phase 1: Broadcast API (API Keys)
+// ============================================================================
+
+model ApiKey {
+  id          Int      @id @default(autoincrement())
+  name        String   // e.g. "Newsroom Integration", "Mobile App"
+  keyHash     String   @unique // SHA-256 hash of the API key
+  keyPrefix   String   // First 8 chars for display (e.g. "rk_live_...")
+  permissions String   // Comma-separated: "read:tracks,write:requests,read:schedule"
+  active      Boolean  @default(true)
+  lastUsed    DateTime?
+  createdAt   DateTime @default(now())
+  createdBy   String?
 }
