@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   Cpu, Activity, Clock, Server, ShieldCheck, AlertCircle, CheckCircle2, XCircle,
@@ -271,7 +272,6 @@ export function SystemTab() {
 }
 
 // Wrapper components that fetch data from v1 APIs
-import { useState, useEffect } from 'react'
 
 function SnmpWrapper() {
   const [data, setData] = useState<{ devices: unknown[]; healthScore: number } | null>(null)
