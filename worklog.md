@@ -486,3 +486,38 @@ Work Log:
 Stage Summary:
 - #2 vrzel (Listener Requests) — DONE
 - Dashboard sedaj 3-column: Recently Played + Top Tracks + Listener Requests
+
+---
+Task ID: rds-dab
+Agent: lead
+Task: RDS/DAB+ Metadata output panel — #3 gap
+
+Work Log:
+- /api/rivendell/rds endpoint:
+  - FM RDS: PI (887F), PS (ROCK887, 8ch), PTY (11=Rock music), RT (64ch), RT+ tags
+  - DAB+ DLS (Dynamic Label Segment, 128ch)
+  - HD Radio: title, artist, album
+  - Streaming: streamTitle, streamUrl
+  - UECP command (addr, dataset, elements)
+  - 6 metadata targets (FM RDS Inovonics 730, DAB+ DLS, HD Radio, Icecast2, TuneIn, Spotify)
+- useRds hook z 10s auto-refresh
+- RdsPanel komponenta (~200 vrstic):
+  - Live RDS metadata grid (PI, PS, PTY, RT)
+  - RDS Receiver Preview (kako izgleda na avtoradiu)
+  - DAB+ DLS, HD Radio metadata
+  - UECP command display (addr, dataset, elements)
+  - 6 metadata targets z connected/disconnected status
+  - Protocol badges (UDP/TCP/HTTP/HTTPS)
+  - Last sent timestamps (relative)
+- Integrirano v System zavihek pod feed status
+- Lint: čist
+- Agent Browser validacija:
+  - API: PI=887F, PS=ROCK887, PTY=11, 6 targets
+  - Panel: "RDS / DAB+ Metadata Output", ENCODER ONLINE
+  - RDS Receiver Preview: ROCK887, Rock music, 887F
+  - DAB+ DLS sekcija prisotna
+  - 0 napak
+
+Stage Summary:
+- #3 vrzel (RDS/DAB+ Metadata) — DONE
+- 3 od 10 vrzeli zaprte (AI Voice Track, Listener Requests, RDS/DAB+)
