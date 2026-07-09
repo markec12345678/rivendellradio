@@ -88,3 +88,38 @@ model ApiKey {
   createdAt   DateTime @default(now())
   createdBy   String?
 }
+
+// ============================================================================
+// Phase 2: Event Store (persistent event bus) + Webhooks
+// ============================================================================
+
+/// Persistent event store — vsak event na Event Bus-u se shrani v DB
+model EventStore {
+  id            Int      @id @default(autoincrement())
+  eventId       String   @unique // UUID za deduplikacijo
+  type          String   // track.started, rds.updated, itd.
+  version       Int      @default(1) // event schema version
+  source        String   // kateri modul je sprožil event
+  correlationId String?  // za sledenje kaskadnim dogodkom
+  data          String   // JSON string s payloadom
+  timestamp     DateTime @default(now())
+
+  @@index([type])
+  @@index([correlationId])
+  @@index([timestamp])
+  @@index([source])
+}
+
+/// Webhook subscriptions — Event Bus → external systems (Discord, Slack, Spotify)
+model Webhook {
+  id          Int      @id @default(autoincrement())
+  name        String   // e.g. "Discord #now-playing"
+  url         String   // webhook URL
+  secret      String?  // HMAC signing secret
+  events      String   // comma-separated event types to subscribe (* = all)
+  active      Boolean  @default(true)
+  lastFired   DateTime?
+  lastStatus  Int?     // HTTP status code od zadnjega klica
+  failCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+}
