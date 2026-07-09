@@ -59,7 +59,7 @@ io.on('connection', (socket) => {
   })
 })
 
-// VU meter: 10 Hz
+// VU meter: 10 Hz — emit as typed event
 setInterval(() => {
   const target = 0.5 + Math.random() * 0.35
   vuL = vuL * 0.6 + target * 0.4 + (Math.random() - 0.5) * 0.08
@@ -67,36 +67,55 @@ setInterval(() => {
   vuL = Math.max(0, Math.min(1, vuL))
   vuR = Math.max(0, Math.min(1, vuR))
   io.emit('vu', { left: vuL, right: vuR, ts: Date.now() })
+  io.emit('event', { type: 'vu.updated', timestamp: Date.now(), source: 'audio-engine', data: { left: vuL, right: vuR } })
 }, 100)
 
-// Now playing: 5s tick
+// Now playing: 5s tick — emit track.started/track.finished events
 setInterval(() => {
+  const prevTrack = playlist[playlistIdx]
+  const prevLen = playlist[playlistIdx].length
   elapsed += 5000
-  const current = playlist[playlistIdx]
-  if (elapsed >= current.length) {
+  if (elapsed >= prevLen) {
+    // Track finished
+    io.emit('event', {
+      type: 'track.finished', timestamp: Date.now(), source: 'playout',
+      data: { trackId: prevTrack.id, title: prevTrack.title, artist: prevTrack.artist, playedDuration: prevLen, station: 'Rock 88.7 FM' },
+    })
     elapsed = 0
     playlistIdx = (playlistIdx + 1) % playlist.length
+    // Track started
+    const next = playlist[playlistIdx]
+    io.emit('event', {
+      type: 'track.started', timestamp: Date.now(), source: 'playout',
+      data: { trackId: next.id, title: next.title, artist: next.artist, album: next.album, length: next.length, station: 'Rock 88.7 FM', listeners: listeners['main-fm'] ?? 0 },
+    })
+    // RDS updated (cascading event from track.started)
+    io.emit('event', {
+      type: 'rds.updated', timestamp: Date.now(), source: 'rds-engine',
+      data: { pi: '887F', ps: 'ROCK887', pty: 11, ptyLabel: 'Rock music', rt: `${next.artist} - ${next.title}`, dls: `Now playing: ${next.title} by ${next.artist}` },
+    })
   }
   const now = playlist[playlistIdx]
   io.emit('now-playing', {
-    trackId: now.id,
-    title: now.title,
-    artist: now.artist,
-    album: now.album,
-    length: now.length,
-    elapsed,
-    remaining: Math.max(0, now.length - elapsed),
-    listeners: listeners['main-fm'] ?? 0,
-    ts: Date.now(),
+    trackId: now.id, title: now.title, artist: now.artist, album: now.album,
+    length: now.length, elapsed, remaining: Math.max(0, now.length - elapsed),
+    listeners: listeners['main-fm'] ?? 0, ts: Date.now(),
   })
 }, 5000)
 
-// Listeners: 1s
+// Listeners: 1s — emit stream.listeners.changed event
 setInterval(() => {
   for (const id of Object.keys(listeners)) {
+    const prev = listeners[id]
     const delta = Math.floor((Math.random() - 0.45) * 5)
     listeners[id] = Math.max(0, listeners[id] + delta)
     io.emit('listeners', { stationId: id, listeners: listeners[id], ts: Date.now() })
+    if (delta !== 0) {
+      io.emit('event', {
+        type: 'stream.listeners.changed', timestamp: Date.now(), source: 'streaming',
+        data: { stationId: id, listeners: listeners[id], delta },
+      })
+    }
   }
 }, 1000)
 
