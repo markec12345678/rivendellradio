@@ -8,6 +8,7 @@
 
 import { EventEmitter } from 'events'
 import { randomUUID } from 'crypto'
+import { z } from 'zod'
 import { db } from '@/lib/db'
 
 // ============================================================================
@@ -164,6 +165,21 @@ class EventBus {
 
   /** Publish event na bus — vsi subscriberji prejmejo + persist v DB */
   publish(event: BroadcastEvent): void {
+    // Idempotency check — preveri ali eventId že obstaja v memory history
+    if (this.history.some((e) => e.eventId === event.eventId)) {
+      return // Duplicate event — ignore (idempotency)
+    }
+
+    // Schema validation
+    const validated = safeValidateEvent(event)
+    if (!validated) {
+      metrics.eventsFailed++
+      return
+    }
+
+    // Record metrics
+    recordMetric(event)
+
     // Shrani v memory history
     this.history.push(event)
     if (this.history.length > this.maxHistory) {
@@ -217,11 +233,36 @@ class EventBus {
     }
   }
 
-  /** Deliver webhook z HMAC signing in fail tracking */
+  /** Deliver webhook z DLQ, retry policy, in idempotency tracking */
   private async deliverWebhook(wh: { id: number; url: string; secret: string | null }, event: BroadcastEvent): Promise<void> {
+    // Create delivery record for tracking (idempotency + DLQ)
+    let deliveryId: number | null = null
     try {
+      const delivery = await db.webhookDelivery.create({
+        data: {
+          webhookId: wh.id,
+          eventId: event.eventId,
+          eventType: event.type,
+          payload: JSON.stringify(event),
+          status: 'pending',
+          attemptCount: 0,
+        },
+      })
+      deliveryId = delivery.id
+    } catch {
+      // If delivery record already exists for this eventId, skip (idempotency)
+      return
+    }
+
+    try {
+      metrics.webhookDeliveries++
       const body = JSON.stringify(event)
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-Event-Id': event.eventId,
+        'X-Event-Type': event.type,
+        'X-Correlation-Id': event.correlationId,
+      }
 
       // HMAC signing če ima secret
       if (wh.secret) {
@@ -232,21 +273,67 @@ class EventBus {
 
       const res = await fetch(wh.url, { method: 'POST', headers, body, signal: AbortSignal.timeout(5000) })
 
-      // Update webhook status
-      await db.webhook.update({
-        where: { id: wh.id },
-        data: {
-          lastFired: new Date(),
-          lastStatus: res.status,
-          failCount: res.ok ? 0 : { increment: 1 },
-        },
+      if (res.ok) {
+        // Success — update delivery + webhook
+        await db.webhookDelivery.update({
+          where: { id: deliveryId! },
+          data: { status: 'delivered', lastStatus: res.status, deliveredAt: new Date(), attemptCount: { increment: 1 } },
+        })
+        await db.webhook.update({
+          where: { id: wh.id },
+          data: { lastFired: new Date(), lastStatus: res.status, failCount: 0 },
+        })
+      } else {
+        // HTTP error — check retry policy
+        await this.handleWebhookFailure(deliveryId!, wh, event, res.status, `HTTP ${res.status}`)
+      }
+    } catch (err) {
+      // Network error — check retry policy
+      const errMsg = err instanceof Error ? err.message : 'Network error'
+      await this.handleWebhookFailure(deliveryId!, wh, event, 0, errMsg)
+    }
+  }
+
+  /** Handle webhook failure z exponential backoff + DLQ */
+  private async handleWebhookFailure(
+    deliveryId: number,
+    wh: { id: number },
+    event: BroadcastEvent,
+    statusCode: number,
+    error: string,
+  ): Promise<void> {
+    metrics.webhookFailures++
+
+    // Get current attempt count
+    const delivery = await db.webhookDelivery.findUnique({ where: { id: deliveryId } })
+    if (!delivery) return
+
+    const attemptCount = delivery.attemptCount + 1
+    const MAX_RETRIES = 3
+
+    if (attemptCount >= MAX_RETRIES) {
+      // Send to DLQ
+      metrics.webhookDLQ++
+      await db.webhookDelivery.update({
+        where: { id: deliveryId },
+        data: { status: 'dlq', lastStatus: statusCode, lastError: error, attemptCount },
       })
-    } catch {
-      // Network error — increment fail count
       await db.webhook.update({
         where: { id: wh.id },
-        data: { failCount: { increment: 1 } },
-      }).catch(() => {})
+        data: { failCount: { increment: 1 }, lastStatus: statusCode },
+      })
+    } else {
+      // Schedule retry z exponential backoff: 1s, 5s, 30s
+      const backoffMs = [1000, 5000, 30000][attemptCount - 1] ?? 30000
+      const nextRetry = new Date(Date.now() + backoffMs)
+      await db.webhookDelivery.update({
+        where: { id: deliveryId },
+        data: { status: 'failed', lastStatus: statusCode, lastError: error, attemptCount, nextRetry },
+      })
+      await db.webhook.update({
+        where: { id: wh.id },
+        data: { failCount: { increment: 1 }, lastStatus: statusCode },
+      })
     }
   }
 
@@ -280,6 +367,108 @@ class EventBus {
 
 // Singleton — ena instanca za celoten sistem
 export const eventBus = new EventBus()
+
+// ============================================================================
+// Event Schema Validation (Zod)
+// ============================================================================
+
+const eventSchema = z.object({
+  eventId: z.string().uuid(),
+  version: z.number().int().positive().default(1),
+  type: z.string().min(1),
+  timestamp: z.number().int().positive(),
+  source: z.string().min(1),
+  correlationId: z.string().uuid(),
+  data: z.record(z.unknown()),
+})
+
+/** Validate event against schema — throws if invalid */
+export function validateEvent(event: unknown): BroadcastEvent {
+  return eventSchema.parse(event) as BroadcastEvent
+}
+
+/** Safe validate — returns null on invalid */
+export function safeValidateEvent(event: unknown): BroadcastEvent | null {
+  const result = eventSchema.safeParse(event)
+  return result.success ? (result.data as BroadcastEvent) : null
+}
+
+// ============================================================================
+// Metrics (Prometheus-compatible)
+// ============================================================================
+
+interface Metrics {
+  eventsTotal: number
+  eventsFailed: number
+  eventsByType: Record<string, number>
+  webhookDeliveries: number
+  webhookFailures: number
+  webhookDLQ: number
+  eventLatencyMs: number[]
+  startTime: number
+}
+
+const metrics: Metrics = {
+  eventsTotal: 0,
+  eventsFailed: 0,
+  eventsByType: {},
+  webhookDeliveries: 0,
+  webhookFailures: 0,
+  webhookDLQ: 0,
+  eventLatencyMs: [],
+  startTime: Date.now(),
+}
+
+function recordMetric(event: BroadcastEvent): void {
+  metrics.eventsTotal++
+  metrics.eventsByType[event.type] = (metrics.eventsByType[event.type] ?? 0) + 1
+  const latency = Date.now() - event.timestamp
+  metrics.eventLatencyMs.push(latency)
+  if (metrics.eventLatencyMs.length > 100) metrics.eventLatencyMs.shift()
+}
+
+export function getMetrics() {
+  const avgLatency = metrics.eventLatencyMs.length > 0
+    ? Math.round(metrics.eventLatencyMs.reduce((a, b) => a + b, 0) / metrics.eventLatencyMs.length)
+    : 0
+  return {
+    ...metrics,
+    avgEventLatencyMs: avgLatency,
+    uptime: Math.round((Date.now() - metrics.startTime) / 1000),
+  }
+}
+
+/** Export metrics v Prometheus formatu */
+export function getPrometheusMetrics(): string {
+  const m = getMetrics()
+  const lines: string[] = []
+  lines.push('# HELP events_total Total events published')
+  lines.push('# TYPE events_total counter')
+  lines.push(`events_total ${m.eventsTotal}`)
+  lines.push('# HELP events_failed Total events that failed processing')
+  lines.push('# TYPE events_failed counter')
+  lines.push(`events_failed ${m.eventsFailed}`)
+  lines.push('# HELP webhook_deliveries Total webhook deliveries attempted')
+  lines.push('# TYPE webhook_deliveries counter')
+  lines.push(`webhook_deliveries ${m.webhookDeliveries}`)
+  lines.push('# HELP webhook_failures Total webhook delivery failures')
+  lines.push('# TYPE webhook_failures counter')
+  lines.push(`webhook_failures ${m.webhookFailures}`)
+  lines.push('# HELP webhook_dlq Total webhooks sent to dead letter queue')
+  lines.push('# TYPE webhook_dlq counter')
+  lines.push(`webhook_dlq ${m.webhookDLQ}`)
+  lines.push('# HELP event_latency_ms Average event processing latency in ms')
+  lines.push('# TYPE event_latency_ms gauge')
+  lines.push(`event_latency_ms ${m.avgEventLatencyMs}`)
+  lines.push('# HELP uptime_seconds Server uptime in seconds')
+  lines.push('# TYPE uptime_seconds gauge')
+  lines.push(`uptime_seconds ${m.uptime}`)
+  // Per-type counters
+  for (const [type, count] of Object.entries(m.eventsByType)) {
+    lines.push(`events_by_type{type="${type}"} ${count}`)
+  }
+  return lines.join('\n')
+}
 
 // ============================================================================
 // Helper funkcije za publishanje tipičnih eventov (z auto correlationId)

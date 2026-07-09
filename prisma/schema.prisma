@@ -113,13 +113,36 @@ model EventStore {
 /// Webhook subscriptions — Event Bus → external systems (Discord, Slack, Spotify)
 model Webhook {
   id          Int      @id @default(autoincrement())
-  name        String   // e.g. "Discord #now-playing"
-  url         String   // webhook URL
-  secret      String?  // HMAC signing secret
-  events      String   // comma-separated event types to subscribe (* = all)
+  name        String
+  url         String
+  secret      String?
+  events      String
   active      Boolean  @default(true)
   lastFired   DateTime?
-  lastStatus  Int?     // HTTP status code od zadnjega klica
+  lastStatus  Int?
   failCount   Int      @default(0)
   createdAt   DateTime @default(now())
+
+  deliveries  WebhookDelivery[]
+}
+
+/// Webhook delivery attempts — za retry policy + DLQ
+model WebhookDelivery {
+  id           Int      @id @default(autoincrement())
+  webhookId    Int
+  webhook      Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  eventId      String
+  eventType    String
+  payload      String
+  status       String   @default("pending")
+  attemptCount Int      @default(0)
+  lastStatus   Int?
+  lastError    String?
+  nextRetry    DateTime?
+  deliveredAt  DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([webhookId])
+  @@index([status])
+  @@index([eventId])
 }
