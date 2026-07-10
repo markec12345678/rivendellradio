@@ -9,6 +9,8 @@
 #   - Grafana      → http://localhost:3001   (admin / admin)
 #   - Prometheus   → http://localhost:9090
 #   - Alertmanager → http://localhost:9093
+#   - Loki         → http://localhost:3100
+#   - Promtail     → http://localhost:9080/metrics
 # ============================================================================
 
 name: rock887-observability
@@ -60,6 +62,60 @@ services:
       - grafana-data:/var/lib/grafana
     depends_on:
       - prometheus
+      - loki
+    restart: unless-stopped
+    networks:
+      - rock887-obs
+
+  # --------------------------------------------------------------------------
+  # Loki — log aggregation backend. Receives pushes from Promtail on :3100
+  # and serves LogQL queries to Grafana. Single-node TSDB + filesystem store.
+  # --------------------------------------------------------------------------
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: rock887-loki
+    profiles: ["observability"]
+    ports:
+      - "3100:3100"
+      - "9096:9096"
+    volumes:
+      - ./loki/loki.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/tmp/loki
+    command:
+      - '-config.file=/etc/loki/local-config.yaml'
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3100/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - rock887-obs
+
+  # --------------------------------------------------------------------------
+  # Promtail — ships logs to Loki. Tails dev.log + broadcast-feed logs,
+  # discovers rock887-* containers via docker_sd_configs, and reads
+  # journald. The Docker socket is mounted read-only for container discovery.
+  # --------------------------------------------------------------------------
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: rock887-promtail
+    profiles: ["observability"]
+    ports:
+      - "9080:9080"
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/log:/var/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./promtail/promtail.yml:/etc/promtail/config.yml:ro
+      - ./dev.log:/home/z/my-project/dev.log:ro
+      - ./mini-services/broadcast-feed:/home/z/my-project/mini-services/broadcast-feed:ro
+      - promtail-data:/tmp
+    command:
+      - '-config.file=/etc/promtail/config.yml'
+    depends_on:
+      - loki
     restart: unless-stopped
     networks:
       - rock887-obs
@@ -91,6 +147,10 @@ volumes:
   grafana-data:
     driver: local
   alertmanager-data:
+    driver: local
+  loki-data:
+    driver: local
+  promtail-data:
     driver: local
 
 networks:

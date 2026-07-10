@@ -17,6 +17,7 @@ import { TopologyPanel } from '@/components/rivendell/topology-panel'
 import { ReplayStudio } from '@/components/rivendell/replay-studio'
 import { UpgradesPanel } from '@/components/rivendell/upgrades-panel'
 import { EasPanel } from '@/components/rivendell/eas-panel'
+import { InfrastructurePanel } from '@/components/rivendell/infrastructure-panel'
 import { formatHms, formatClock, formatNumber } from '@/lib/rivendell/format'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -278,6 +279,9 @@ export function SystemTab() {
 
       {/* EAS / CAP Compliance — FCC 47 CFR Part 11 */}
       <EasPanel />
+
+      {/* Infrastructure & DR — Sprint 3 */}
+      <InfrastructurePanel />
 
       {/* Broadcast Topology */}
       <TopologyPanel />

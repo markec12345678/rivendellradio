@@ -1,0 +1,17 @@
+apiVersion: 1
+
+datasources:
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: false
+    editable: false
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        # Auto-extract correlationId from log lines and link to Replay Studio
+        - datasourceUid: prometheus
+          name: correlationId
+          matcherRegex: 'correlationId[=:]\s*([a-z0-9-]+)'
+          url: '/api/v1/replay?correlationId=$${__value.raw}'
