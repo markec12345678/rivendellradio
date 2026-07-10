@@ -1,0 +1,74 @@
+[
+  {
+    "url": "https://medium.com/@vyakymenko/react-server-components-in-practice-next-js-d1c3c8a4971f",
+    "name": "React Server Components in practice (Next.js App Router patterns",
+    "snippet": "4) Streaming with Suspense, loading.js, and nested layouts ... features, improvements, and best practices to leverage in your projects.",
+    "host_name": "medium.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.hrishidigital.com.au/blog/react-server-components-nextjs-16-migration",
+    "name": "React Server Components in Next.js 16: Complete Migration Guide",
+    "snippet": "Best Practices for React Server Components · Default to Server Components. Only use 'use client' when necessary. · Keep boundaries shallow.",
+    "host_name": "www.hrishidigital.com.au",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/nextjs/comments/1jyk3w5/hype_around_react_server_components_am_i_missing",
+    "name": "r/nextjs on Reddit: Hype Around React Server Components Am I Missing",
+    "snippet": "I've been working with Next.js for about 2 years now, and I've been trying to wrap my head around Server Components for the past few weeks.",
+    "host_name": "www.reddit.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=MZbwu3-uz3Y",
+    "name": "Next.js 16 Full Stack Course (8+ Hours) | Auth, Caching  - YouTube",
+    "snippet": "Next.js is one of the most powerful React frameworks available and with the release of Next.js 16, it just got even better. New features ...",
+    "host_name": "www.youtube.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://nextjs.org/blog",
+    "name": "Next.js by Vercel - The React Framework",
+    "snippet": "This guide will cover how you can build APIs with Next.js, including setting up your project, understanding the App Router and Route Handlers, handling ...",
+    "host_name": "nextjs.org",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.digitalapplied.com/blog/nextjs-16-performance-server-components-guide",
+    "name": "Next.js 16 Performance: Server Components Guide - Digital Applied",
+    "snippet": "Streaming SSR with Suspense enables progressive page rendering: Wrapping slow data-fetching components in Suspense boundaries lets Next.js stream static shell ...",
+    "host_name": "www.digitalapplied.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://stackoverflow.com/questions/79171525/why-use-server-actions-in-server-components-in-nextjs",
+    "name": "Why use server actions in server components in NextJS?",
+    "snippet": "For example, you could disable a button or show a small loading spinner next to the button without wrapping the entire component in Suspense .",
+    "host_name": "stackoverflow.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/vercel/next.js/discussions/52119",
+    "name": "Is server component default always a performance win? Or should it be",
+    "snippet": "Recommend that users of server components check the Network tab to see what props/markup are being spit out (and maybe even have smarter tooling around this), ...",
+    "host_name": "github.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  }
+]

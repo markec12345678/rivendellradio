@@ -1,0 +1,74 @@
+[
+  {
+    "url": "https://apu.software/ebu-r128-loudness-target",
+    "name": "EBU R128, Broadcast Loudness Target - APU Software",
+    "snippet": "The official loudness target for EBU R128, Broadcast is -23 LUFS with a True Peak limit of -1 dBTP. European Broadcasting Union standard.",
+    "host_name": "apu.software",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.facebook.com/groups/774808419197163/posts/2822087907802527",
+    "name": "What are EBU R128 standards for TV audio mix delivery? - Facebook",
+    "snippet": "Hi everyone, I want to open a discusion abour LUFs, and true peak levels. I figure out that people who works im broadcast, follows the EBU r128 ...",
+    "host_name": "www.facebook.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://tech.ebu.ch/publications/r128",
+    "name": "Loudness normalisation and permitted maximum level of audio signals",
+    "snippet": "Recommendation to use an average programme loudness of -23 LUFS and the 'Loudness Range' and 'Maximum True Peak Level' descriptors.",
+    "host_name": "tech.ebu.ch",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://en.wikipedia.org/wiki/EBU_R_128",
+    "name": "EBU R 128 - Wikipedia",
+    "snippet": "The maximum true peak level permitted by R 128 in production is −1 dBTP. dBTP, True Peak level referenced to full scale, Level in of the audio signal that ...",
+    "host_name": "en.wikipedia.org",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.audiokinetic.com/library/2025.1.3_9037/?source=Help&id=monitoring_signal_level",
+    "name": "Monitoring the signal level - Audiokinetic",
+    "snippet": "The Maximum Permitted True Peak Level recommended in EBU R 128 is -1 dBTP. To monitor the true peak on the Main Audio Bus: Open one of four Meter views ...",
+    "host_name": "www.audiokinetic.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/topics/ebu-r128",
+    "name": "ebu-r128 · GitHub Topics",
+    "snippet": "A loudness and true peak tool that runs in your browser and follows EBU R128 and ITU-R BS.1770. Compare files, check delivery targets, export results. react ...",
+    "host_name": "github.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://doc.flux.audio/mira/Metering_Loudness.html",
+    "name": "Loudness metering – MiRA",
+    "snippet": "The EBU R128 is European TV Broadcasting standard. It is defined as a maximum integrated level of -23 LUFS with a tolerance of 0.5 LUFS and a maximum True Peak ...",
+    "host_name": "doc.flux.audio",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://apps.apple.com/il/app/broadcast-meter-lufs-loudness/id6763360069?platform=ipad",
+    "name": "broadcast METER: LUFS Loudness - App Store - Apple",
+    "snippet": "Now free. Broadcast-grade loudness metering to EBU R128 ITU-R BS.1770: LUFS, True Peak, LRA & real-time spectrum. The mobile companion to broadcast METER ...",
+    "host_name": "apps.apple.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  }
+]

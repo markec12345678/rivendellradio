@@ -1,0 +1,74 @@
+[
+  {
+    "url": "https://link.springer.com/article/10.1007/s11042-024-20448-9",
+    "name": "A systematic review on WebRTC for potential applications and",
+    "snippet": "Tools like Google Remote Procedure Call (gRPC) support fast, low-latency communication between distributed systems. However, compared to WebRTC ...",
+    "host_name": "link.springer.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://norsk.video/webrtc-for-ultra-low-latency-live-streaming",
+    "name": "WebRTC for Ultra-Low Latency Live Streaming - Norsk Video",
+    "snippet": "Learn how WebRTC simplifies real-time media with low latency and peer-to-peer connections for diverse applications.",
+    "host_name": "norsk.video",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.researchgate.net/publication/386077344_A_systematic_review_on_WebRTC_for_potential_applications_and_challenges_beyond_audio_video_streaming",
+    "name": "A systematic review on WebRTC for potential applications and",
+    "snippet": "WebRTC is a technology designed to provide real-time communication through web and mobile browsers. Its low latency and P2P communication ...",
+    "host_name": "www.researchgate.net",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.quicklink.tv/remote-guests-in-broadcast",
+    "name": "Integrating Remote Guests In Broadcast - QuickLink",
+    "snippet": "Platforms like StudioCall™, a WebRTC-based solution, also enable simple, browser-based guest contribution, but with added production controls ...",
+    "host_name": "www.quicklink.tv",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://antmedia.io/webrtc-use-cases-for-real-time-communication",
+    "name": "5 WebRTC Use Cases Revolutionizing Real-Time Communication",
+    "snippet": "WebRTC enables ultra-low latency audio, video, and data transmission directly in web browsers and mobile applications — without plugins or third-party ...",
+    "host_name": "antmedia.io",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.wowza.com/blog/what-is-webrtc",
+    "name": "WebRTC (Web Real-Time Communication) Ultimate Guide 2025",
+    "snippet": "More specifically, WebRTC is the lowest-latency streaming format around with sub-500-millisecond video delivery. Native browser support also ...",
+    "host_name": "www.wowza.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://dev.to/ag2ai/real-time-voice-interactions-over-webrtc-1p81",
+    "name": "Real-Time Voice Interactions over WebRTC - DEV Community",
+    "snippet": "This example demonstrates using WebRTC to establish low-latency, real-time interactions with OpenAI Realtime API with WebRTC from a web browser.",
+    "host_name": "dev.to",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.red5.net/blog/7-ways-webrtc-solves-ultra-low-latency-streaming",
+    "name": "7 Ways WebRTC Solves Ultra-Low Latency Streaming - Red5 Pro",
+    "snippet": "Discover how WebRTC revolutionizes ultra-low latency streaming in six key ways, enhancing real-time communication and media sharing.",
+    "host_name": "www.red5.net",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  }
+]

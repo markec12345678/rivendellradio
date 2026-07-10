@@ -1,0 +1,74 @@
+[
+  {
+    "url": "https://www.speakeasy.com/api-design/api-compliance",
+    "name": "API Compliance Best Practices in REST API Design - Speakeasy",
+    "snippet": "Learn how to ensure your API meets industry standards, regulatory requirements, and accessibility guidelines for wider adoption and market success.",
+    "host_name": "www.speakeasy.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.apibricks.io/blog/security-and-compliance-are-foundations-of-api-bricks-infrastructure",
+    "name": "APIBricks.io Blog - Security and Compliance Are Foundations of API",
+    "snippet": "Encryption is always on; Authentication is layered; Access can be restricted by the network; Activity is traceable through audit logs; Security ...",
+    "host_name": "www.apibricks.io",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://group107.com/blog/rest-api-security-best-practices",
+    "name": "10 Essential REST API Security Best Practices for 2025 - Group 107",
+    "snippet": "Secure your applications with our definitive guide to REST API security best practices. Learn to implement OAuth 2.0, rate limiting, ...",
+    "host_name": "group107.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://curity.io/resources/learn/api-security-best-practices",
+    "name": "API Security Best Practices - Curity Identity Server",
+    "snippet": "Below, we cover top API protection best practices, which are good things to keep in mind when designing and creating APIs.",
+    "host_name": "curity.io",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.linkedin.com/pulse/rbac-rate-limits-audit-logs-enterprise-security-ezgte",
+    "name": "RBAC, Rate Limits, and Audit Logs: Enterprise Security Built In",
+    "snippet": "Key takeaway: Combining RBAC, rate limiting, and audit logs creates a secure API environment that protects sensitive data, prevents abuse, and ...",
+    "host_name": "www.linkedin.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://oneuptime.com/blog/post/2026-02-09-rbac-audit-logging-permissions/view",
+    "name": "How to Implement RBAC Audit Logging for Permission Changes",
+    "snippet": "Learn how to configure comprehensive audit logging for RBAC permission changes and access attempts, enabling security monitoring and ...\nLearn how to configure comprehensive audit logging for RBAC permission changes and access attempts, enabling security monitoring and compliance ...",
+    "host_name": "oneuptime.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://docs.anuket.io/projects/RM/en/stable-moselle/chapters/chapter07.html",
+    "name": "7. Security — Anuket Reference Model (RM) documentation",
+    "snippet": "These best practices must be applied at all layers of the infrastructure stack and across all points of interconnections (internal or with outside networks), ...",
+    "host_name": "docs.anuket.io",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.osohq.com/learn/rbac-best-practices",
+    "name": "10 RBAC Best Practices You Should Know in 2025 - Oso Security",
+    "snippet": "Learn how to implement Role-Based Access Control (RBAC) with real-world tips, design patterns, pros & cons, and tools like Oso for secure, ...",
+    "host_name": "www.osohq.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  }
+]

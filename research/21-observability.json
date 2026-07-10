@@ -1,0 +1,74 @@
+[
+  {
+    "url": "https://grafana.com/oss/prometheus",
+    "name": "Prometheus Monitoring OSS | Store large amounts of metrics",
+    "snippet": "Centralize the analysis, visualization, and alerting on all of your Prometheus metrics with Grafana. Install, administer, and maintain your own instance.",
+    "host_name": "grafana.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://prometheus.io",
+    "name": "Prometheus - Monitoring system & time series database",
+    "snippet": "An open-source monitoring system with a dimensional data model, flexible query language, efficient time series database and modern alerting approach.",
+    "host_name": "prometheus.io",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=_mSXnYEewU0",
+    "name": "Grafana & Prometheus Use Cases: Bringing Situational Awareness to",
+    "snippet": "Chapters: 00:00 – Intro: Monitoring Kiosks 01:12 – Network Scale & Metrics ... grafana) #Grafana #Observability #Prometheus.\nChapters: 00:00 – Intro: Monitoring Kiosks 01:12 – Network Scale & Metrics 02:14 – Eclipse as a Metric 03:07 – From Machine to Experience 03 ...",
+    "host_name": "www.youtube.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://rohitarya18.medium.com/logging-alerting-and-monitoring-with-prometheus-and-grafana-a-production-guide-42594ca91a22",
+    "name": "Logging, Alerting, and Monitoring with Prometheus and Grafana - Rohit Arya",
+    "snippet": "This blog explains how these work together using Prometheus and Grafana, and how real systems use them in production. Captures errors, requests ...\nThis blog explains how these work together using Prometheus and Grafana, and how real. Captures errors, requests, and system activity Used for ...",
+    "host_name": "rohitarya18.medium.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dash0.com/guides/prometheus-monitoring",
+    "name": "Prometheus Monitoring: From Zero to Hero, The Right Way - Dash0",
+    "snippet": "This complete guide covers setup metrics alerting dashboards and scaling. Prometheus is an open-source monitoring and alerting toolkit. The ...",
+    "host_name": "www.dash0.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.researchgate.net/publication/393544298_Prometheus_Grafana_A_Metrics-focused_Monitoring_Stack",
+    "name": "(PDF) Prometheus & Grafana: A Metrics-focused Monitoring Stack",
+    "snippet": "Prometheus is used for collecting and storing time-series data for metrics, enabling precise and real-time performance analysis and anomaly ...\nPrometheus pulls metrics based on specific scraping time. Grafana creates interactive visualizations and dashboards. the implementation of ...",
+    "host_name": "www.researchgate.net",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://docs.platformatic.dev/docs/guides/metrics",
+    "name": "Monitoring with Prometheus and Grafana - Platformatic",
+    "snippet": "Prometheus is open source system and alerting toolkit for monitoring and alerting. It's a time series database that collects metrics from configured targets ...",
+    "host_name": "docs.platformatic.dev",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://grafana.com/docs/grafana-cloud/introduction/what-is-observability/prometheus",
+    "name": "What is Prometheus? | Grafana Cloud documentation",
+    "snippet": "Prometheus is a core technology for monitoring and observability of systems, but the term “Prometheus” can be confusing because it is used in different contexts ...\nPrometheus is a core technology for monitoring and observability of systems, it is also considered an open source systems monitoring and alerting toolkit.",
+    "host_name": "grafana.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  }
+]

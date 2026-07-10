@@ -1,0 +1,74 @@
+[
+  {
+    "url": "https://www.tencentcloud.com/techpedia/143814?lang=en",
+    "name": "The Ultimate Guide to Choosing the Right Live Streaming Protocol in 2026",
+    "snippet": "This guide compares the four major protocols — WebRTC, RTMP, SRT, and HLS — with clear recommendations for each use case.",
+    "host_name": "www.tencentcloud.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=muz9NUnLsSM",
+    "name": "HLS, DASH, WebRTC, SRT & More (2025 Guide) - YouTube",
+    "snippet": "Every time you press play on Netflix, YouTube, or a live sports stream, video streaming protocols are working behind the scenes to deliver ...",
+    "host_name": "www.youtube.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.wowza.com/blog/streaming-protocols",
+    "name": "Streaming Protocols: Everything You Need to Know (Update) - Wowza",
+    "snippet": "HLS, MPEG-DASH, RTMP, and WebRTC are the most common video streaming protocols today. Here's how these media delivery technologies compare.",
+    "host_name": "www.wowza.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.mux.com/articles/rtmp-vs-srt-vs-webrtc-live-streaming-ingest-protocols",
+    "name": "RTMP vs. SRT vs. WebRTC: Choosing the Right Live Streaming Ingest",
+    "snippet": "Compare RTMP, SRT, and WebRTC live streaming ingest protocols—learn how each works, where they excel, and which to choose for your use case.",
+    "host_name": "www.mux.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://softvelum.com/2025/09/convert-icecast-webrtc-whep",
+    "name": "Converting Icecast audio into WebRTC WHEP streams with",
+    "snippet": "Converting Icecast audio into WebRTC WHEP streams with Nimble Streamer. September 3, 2025. Organizations working with online audio often ...",
+    "host_name": "softvelum.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=UFKgLt0jMxY",
+    "name": "RTMP, SRT, HLS & Go Backend Integration for OTT - YouTube",
+    "snippet": "Want to master live streaming ingestion for OTT platforms or scalable media services? This video is your beginner-to-advanced guide to the ...",
+    "host_name": "www.youtube.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.linkedin.com/pulse/ndi-srt-rist-rtp-hls-rtmp-when-use-which-protocol-2025-ebytelogic-5ycqf",
+    "name": "NDI, SRT, RIST, RTP, HLS, RTMP — When to Use Which Protocol in 2025",
+    "snippet": "SRT bridges the gap between unreliable public networks and broadcast grade video delivery- ensuring secure, low latency streaming from any ...",
+    "host_name": "www.linkedin.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.100ms.live/blog/rtmp-vs-webrtc-vs-hls",
+    "name": "RTMP vs WebRTC vs HLS : Live Video Streaming Protocols Compared",
+    "snippet": "RTMP? WebRTC? HLS? Which video streaming protocol would work best for you? Dive into our in-depth comparison of the most popular video streaming protocols, ...",
+    "host_name": "www.100ms.live",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  }
+]

@@ -1,0 +1,65 @@
+[
+  {
+    "url": "https://www.postforme.dev",
+    "name": "Post for Me – Unified Social Media Posting API",
+    "snippet": "Quickly integrate social media platforms directly into your product with the unified social media posting API. Power posting, feeds, analytics, and more through a single, simple endpoint.",
+    "host_name": "www.postforme.dev",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://zernio.com",
+    "name": "Zernio - Social Media & Messaging API for Developers & AI Agents",
+    "snippet": "Unified social media & messaging API: post, schedule, message and engage across 15 platforms with one REST call. Free up to 2 accounts, then usage-based per account.",
+    "host_name": "zernio.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.blotato.com",
+    "name": "Blotato - Social Media Automation & API",
+    "snippet": "Blotato is the AI social media automation tool with a native API and MCP. Create, schedule, and publish a week of content to all platforms in minutes.",
+    "host_name": "www.blotato.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.ayrshare.com",
+    "name": "Unified Social Media API for Apps, Platforms, and AI Agents",
+    "snippet": "The Ayrshare API lets you post, schedule, analyze, and manage engagement across 13+ social networks through a single integration. Includes publishing, history, analytics, moderation, and MCP servers for AI agents.",
+    "host_name": "www.ayrshare.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://zernio.com/social-media-api",
+    "name": "Social Media Posting API | 15 Platforms, One Call | Zernio",
+    "snippet": "Instead of building separate integrations, a unified posting API like Zernio handles auth, media formatting, and rate limits across 15 platforms with one endpoint.",
+    "host_name": "zernio.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://buffer.com/resources/social-media-api-multi-platform-posting",
+    "name": "Which Social Media APIs Support Multi-Platform Posting? 6",
+    "snippet": "When it comes to that multi-plugs unified posting API, you have several options. In this article, I’ll walk you through them.",
+    "host_name": "buffer.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://posteverywhere.ai/blog/automate-social-media-posting-api",
+    "name": "Automate Social Media Posting with an API (Guide)",
+    "snippet": "If you are building a content pipeline, an AI agent, a CMS integration, or anything that produces social content at scale — you need an API. This guide walks you through automating social media posting with a REST API, step by step.",
+    "host_name": "posteverywhere.ai",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  }
+]

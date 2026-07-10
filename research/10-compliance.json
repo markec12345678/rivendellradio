@@ -1,0 +1,74 @@
+[
+  {
+    "url": "https://www.nrscstandards.org/standards-and-guidelines/documents/guidelines/nrsc-g303.pdf",
+    "name": "[PDF] NRSC-G303 Best Practices for Delivering Emergency Alerts and",
+    "snippet": "The HD Radio Emergency Alerts broadcast protocol is CAP compliant, thus allowing dissemination of all the rich content facilitated by CAP (e.g., enhanced ...",
+    "host_name": "www.nrscstandards.org",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://radiodns.org/introduction/features/metadata",
+    "name": "Service and Programme Metadata - RadioDNS",
+    "snippet": "Service and Programme Information enables radio stations to be listed with full names, colour logos and format descriptions, as well as creating 'universal ...",
+    "host_name": "radiodns.org",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.tlp.law/2023/01/23/emergency-alert-system-new-rules-and-many-changes-by-gregg-p-skall",
+    "name": "Emergency Alert System – New Rules and Many Changes By Gregg P. Skall",
+    "snippet": "The new rules require broadcasters and other Emergency Alert System (EAS) participants to transmit the Internet-based version of alerts when available.",
+    "host_name": "www.tlp.law",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.ecfr.gov/current/title-47/chapter-I/subchapter-A/part-11",
+    "name": "47 CFR Part 11 -- Emergency Alert System (EAs) - eCFR",
+    "snippet": "The rules in this part describe the required technical standards and operational procedures of the EAS for analog AM, FM, and TV broadcast stations, digital ...\nEAS Participants may comply with the obligations set forth in § 11.56 to decode and convert CAP-formatted messages into EAS Protocol-compliant messages by ...",
+    "host_name": "www.ecfr.gov",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://docs.oasis-open.org/emergency/cap/v1.2/CAP-v1.2-os.html",
+    "name": "CAP-v1.2-os.html - Common Alerting Protocol - OASIS Open",
+    "snippet": "The Common Alerting Protocol (CAP) is a simple but general format for exchanging all-hazard emergency alerts and public warnings over all kinds of networks.",
+    "host_name": "docs.oasis-open.org",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "http://www.eas-cap.org",
+    "name": "EAS-CAP Industry Group Homepage",
+    "snippet": "The EAS-CAP Industry Group is a coalition of Emergency Alert System equipment, software and service providers collaborating to develop a voluntary profile ...",
+    "host_name": "www.eas-cap.org",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.digitalalertsystems.com/emergency-alerting-messaging",
+    "name": "Emergency Alerting / Messaging - Digital Alert Systems",
+    "snippet": "The DASDEC-III from Digital Alert Systems is the next generation of emergency messaging technology, ready to carry emergency messaging well into the 21st ...",
+    "host_name": "www.digitalalertsystems.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.prosoundweb.com/digital-alert-systems-announces-cap-compliance-firmware-upgrade",
+    "name": "Digital Alert Systems Announces CAP-Compliance Firmware Upgrade",
+    "snippet": "Digital Alert Systems has announced that it will provide a free firmware upgrade to support Common Alerting Protocol (CAP) compliance in all ...",
+    "host_name": "www.prosoundweb.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  }
+]

@@ -1181,3 +1181,753 @@ Stage Summary:
 - Sticky footer pravilen na vseh velikostih
 - 0 napak v brskalniku ali server logih
 - Uporabnik lahko odpre aplikacijo v Preview Panelu na desni strani ali klikne "Open in New Tab"
+
+---
+Task ID: research-C
+Agent: research-synthesizer
+Task: Synthesize UX/engagement research (UI/UX, analytics, remote, social, mobile, engagement)
+
+Work Log:
+- Read 6 research JSON files: 05-uiux (8 results), 06-analytics (8 results), 07-remote (8 results), 15-social (7 results), 16-mobile (8 results), 20-engagement (8 results)
+- Tailed worklog.md (lines 800-1184) to inventory existing capabilities: 7 tabs, 30+ components, 11 AI modules (incl. AI DJ Assistant, AI Social, AI Voice Track), 8 Prisma models, RBAC, Audit Trail, Broadcast Topology, Incident Timeline, Replay Studio, Copilot, SNMP/GPIO/RDS panels, Docker, Prometheus
+- Cross-referenced each search result against existing features to avoid duplication (e.g. AI Social module exists but no posting API is wired; listener requests exist but no smart queue / loyalty / fatigue rules; no PWA / service worker / push; no in-browser voice tracking despite AI voice-track module; no geo-map or device breakdown in Reports)
+- Produced 19 distinct opportunities across the 6 focus areas (3-4 per area), each with Gap / Recommendation / Priority / Effort
+
+Stage Summary:
+
+# Research Synthesis — UX/Engagement Upgrade Opportunities
+
+Source files: `research/05-uiux.json`, `06-analytics.json`, `07-remote.json`, `15-social.json`, `16-mobile.json`, `20-engagement.json` (47 search results total). Existing app baseline: 7 tabs, 30+ components, 11 AI modules, real-time waveform, soundpanel (F1-F8), listener requests (approve/reject), RML input, Cmd+K palette, light/dark + accent theme, mobile nav drawer, sticky footer, RBAC, Audit Trail, Docker, Prometheus. The 19 opportunities below are **not** already in the app.
+
+---
+
+## A. UI/UX Polish
+
+### 1. WCAG AAA Accessibility + Reduced-Motion + Keyboard Operability
+**Gap**: No declared conformance level; waveform, soundpanel, and topology nodes lack ARIA live regions, focus-visible rings, and prefers-reduced-motion fallbacks.
+**Recommendation**: Run an axe-core + Lighthouse audit and add ARIA live regions for now-playing transitions, role="application" + arrow-key navigation for the F1-F8 soundpanel (grid pattern), and gate all waveform/oscilloscope animations behind `prefers-reduced-motion`. Target WCAG 2.2 AAA contrast (7:1) for status badges and the ON-AIR indicator.
+**Priority**: High
+**Effort**: M
+
+### 2. Motion & Micro-Interaction System (Framer Motion)
+**Gap**: Interactions are static — cart presses, request approvals, and tab switches have no tactile feedback or transition choreography.
+**Recommendation**: Introduce Framer Motion with a shared variant library: spring-scale on cart press, optimistic toast for RML commands, layout-id transitions between tabs, and animated number count-up for listener totals. Standardize on 150ms ease-out for micro, 250ms spring for layout, 0ms when reduced-motion is set.
+**Priority**: Medium
+**Effort**: M
+
+### 3. Density Modes (Operator / Standard / Presentation) + Skeleton Loaders
+**Gap**: Single density; slow panels (Topology, Replay Studio, Reports) show spinners instead of skeletons; no "studio wall" presentation mode for wall displays.
+**Recommendation**: Add a density toggle (operator=compact 4px gutter, standard=current, presentation=oversized type + auto-cycle now-playing) persisted in user settings. Replace all loading spinners with shimmer skeletons matching each panel's layout; wrap heavy panels in React Suspense boundaries so the shell paints immediately.
+**Priority**: Medium
+**Effort**: M
+
+---
+
+## B. Listener Analytics
+
+### 4. Real-Time Geo-Map Dashboard (City-Level Listener Pulses)
+**Gap**: Reports tab has charts but no geographic visualization; competitors (RadioMast, AzuraCast) ship country/city drill-downs.
+**Recommendation**: Add a `react-simple-maps` (or Mapbox GL) world map to Reports with animated pulse markers sized by concurrent listeners per city, fed from a new `/api/v1/analytics/geo` endpoint bucketed from Icecast listener IPs. Click-through drills into city → ISP → device → retention.
+**Priority**: High
+**Effort**: L
+
+### 5. Device & Platform Breakdown + Daypart Retention Curves
+**Gap**: No segmentation by iOS/Android/Web/Smart-Speaker/CarPlay/Android-Auto and no minute-by-minute retention curve; only aggregate counts exist.
+**Recommendation**: Add a segmented donut + stacked area chart for device/platform mix (parse User-Agent + Icecast client header) and a minute-resolution retention curve overlay on the schedule grid showing tune-in/tune-out spikes per song. Nielsen/Ipsos methodology treats daypart + device as core dimensions.
+**Priority**: High
+**Effort**: M
+
+### 6. Cohort Retention Heatmap + Listener Journey Funnel
+**Gap**: No cohort analysis; cannot see whether listeners from a given week return, and no funnel from first tune-in → first request → first share → tune-out.
+**Recommendation**: Add a weekly-cohort retention heatmap (rows=cohort week, cols=week N, cells=% still listening) plus a listener-journey Sankey funnel keyed by anonymous listener ID. Surface this in a new "Audience" sub-tab of Reports alongside the geo-map.
+**Priority**: Medium
+**Effort**: L
+
+### 7. ATS / TTL Metrics + Comparative Benchmarks
+**Gap**: No Average Time Spent Listening (ATS/TSL) or Time-To-Leave per track — the single most-cited radio KPI in egta/Mediametrie research.
+**Recommendation**: Compute ATS per daypart, per show, and per track (median session length + TTL after track start) and benchmark current values vs trailing-7-day and trailing-28-day baselines with up/down deltas. Show inline next to each track in the Library table and on each Schedule show card.
+**Priority**: Medium
+**Effort**: M
+
+---
+
+## C. Voice Tracking Workflow
+
+### 8. In-Browser Voice Tracking (Web Audio API + MediaRecorder)
+**Gap**: AI Voice Track module generates scripts but presenters cannot record actual VO breaks from the browser — current radio industry standard (P-Layer, NextKast MobileVT, Jutel) is browser-based recording with no VPN/RDP.
+**Recommendation**: Add a "Record VO" mode using `navigator.mediaDevices.getUserMedia` + MediaRecorder to capture mic audio, normalize with a Web Audio DynamicsCompressorNode, and save the take as a new cart/library item tagged with show + scheduled slot. Show input meter + countdown + auto-ducking of program bus.
+**Priority**: High
+**Effort**: L
+
+### 9. Non-Destructive Waveform Editor + Take Version Control
+**Gap**: No waveform editor for trimming/crossfading recorded takes; no way to compare multiple takes of the same break.
+**Recommendation**: Build a wavesurfer.js-based editor with cut/crossfade/normalize and a take-stack that stores every take as an immutable version (event-sourced via existing Event Bus). Presenter can A/B compare takes, roll back, and the AI QC module scores each take (DC offset, noise floor, LUFS) before publish.
+**Priority**: Medium
+**Effort**: XL
+
+### 10. Drag-to-Log Scheduling + Smart Segue Auto-Fit
+**Gap**: Voice tracks are not bound to schedule slots with segue detection; manual fitting risks dead air or stepped-on vocals.
+**Recommendation**: Make the Schedule grid a drag-drop target for recorded VO carts; on drop, auto-fit the take between songs using loudness-based segue detection (detect song outro fade) and pad with silence/jingle to fill. Lock the slot against accidental overwrite with a "VT" badge.
+**Priority**: Medium
+**Effort**: L
+
+---
+
+## D. Social Media Automation
+
+### 11. Unified Multi-Platform Posting API (Ayrshare / Zernio / Blotato)
+**Gap**: AI Social module generates content but never publishes it; no integration with Facebook, Instagram, X, TikTok, Threads, YouTube Shorts, or WhatsApp Status.
+**Recommendation**: Wire the existing AI Social module to a unified REST API (Ayrshare covers 13+ networks, Zernio covers 15) so a single "Publish" action fans out to all configured platforms with per-platform media formatting (1:1 IG, 9:16 Reels/Shorts, 16:9 YT). Store credentials in the existing API Keys vault (SHA-256).
+**Priority**: High
+**Effort**: L
+
+### 12. Social Calendar + AI Caption/Hashtag Variants + Optimal-Time Scheduler
+**Gap**: No calendar view, no per-platform caption variants, no best-time-to-post optimization.
+**Recommendation**: Add a week/month calendar view (TanStack Table or react-big-calendar) showing scheduled posts; for each now-playing moment AI Social generates platform-specific caption + hashtag sets (e.g. #NowPlaying for X, longer story for IG) and suggests optimal times from historical listener-activity peaks. Drag-to-reschedule.
+**Priority**: High
+**Effort**: M
+
+### 13. Social Engagement Metrics Dashboard
+**Gap**: No closed loop from post → engagement → stream tune-in; can't measure ROI of social automation.
+**Recommendation**: Add a Social Analytics panel pulling per-post reach / likes / comments / shares / saves + click-throughs to the stream URL (use a UTM-tagged shortlink per post). Compute a listener-acquisition-per-post metric and display as a leaderboard next to the social calendar.
+**Priority**: Medium
+**Effort**: M
+
+---
+
+## E. Mobile Control / PWA
+
+### 14. Installable PWA + Service Worker Offline Mode (Workbox)
+**Gap**: App is responsive but not installable; no offline mode; refreshing on a flaky studio Wi-Fi kills the dashboard.
+**Recommendation**: Add `manifest.webmanifest` with maskable icon + theme color, register a Workbox service worker with runtime caching (NetworkFirst for API, StaleWhileRevalidate for library/schedule, CacheFirst for static assets). Add an "Add to Home Screen" prompt and an offline fallback shell so the soundpanel and now-playing remain usable offline.
+**Priority**: High
+**Effort**: M
+
+### 15. Web Push Notifications (VAPID) for Hosts & Listeners
+**Gap**: No push notifications anywhere — modern radio apps (Aiir, Futuri Audience Alerts, Radio.co) treat push as core for show starts, contests, and song alerts.
+**Recommendation**: Implement VAPID-based Web Push (web-push npm lib) with topic-based opt-in: hosts subscribe to "incident", "listener-threshold", "request-spike"; listeners (via a public listener page) subscribe to "show-start", "favorite-artist", "contest". Trigger from the Event Bus when threshold rules fire.
+**Priority**: High
+**Effort**: L
+
+### 16. Phone-as-Presenter-Remote (QR Pairing + WebSocket Trigger)
+**Gap**: Hosts must be at the desk to fire carts; no companion remote like WideOrbit Mobile or Universal Presenter Remote.
+**Recommendation**: Add a "Pair Remote" action that renders a QR code; scanning it opens a stripped PWA on the phone showing only the F1-F8 carts + Mic Cue + Next + Stop, all wired to the existing WebSocket feed (port 3003) for sub-100ms trigger latency. Auth via a short-lived presenter token from RBAC.
+**Priority**: Medium
+**Effort**: L
+
+---
+
+## F. Listener Engagement
+
+### 17. Live Listener Chat + Moderated Studio Inbox
+**Gap**: Listener requests exist but no live chat or message wall — Radio.co and Aiir both ship "message the studio" as a core feature.
+**Recommendation**: Add a real-time listener chat (Socket.io already running on :3003) with a host-side moderation queue: profanity filter (bad-words npm), approve/hide/pin actions, and a "message wall" overlay candidate for the studio display. Pin approved messages to the now-playing card.
+**Priority**: High
+**Effort**: M
+
+### 18. Live Polls + Real-Time Song Voting Driving Rotation
+**Gap**: No polls, no real-time voting; song rotation is one-way (AI Music Director → schedule) with no listener signal beyond request volume.
+**Recommendation**: Let hosts spin up a poll from the command palette (Cmd+K → "New Poll"); listeners vote on a public page, results update live. Add thumbs-up/down on the now-playing card that feeds a rolling score into AI Music Director's rotation weight for the next hour, closing the listener-feedback loop.
+**Priority**: High
+**Effort**: M
+
+### 19. Loyalty/Rewards Program + Smart Request Queue + UGC Portal
+**Gap**: Requests are first-come-first-served with no loyalty weighting, no artist-repeat/fatigue rules, and no listener-submitted content (voice drops, shoutouts).
+**Recommendation**: (a) Add a loyalty ledger — points for tune-in minutes, fulfilled requests, shares — redeemable for shoutouts/picks/merch with a leaderboard. (b) Upgrade the request queue with the existing AI Music Director's artistFatigueIndex + 90-min artist-repeat rule, weighted by listener loyalty. (c) Add a UGC upload portal (MediaRecorder for voice drops) feeding a moderation queue that can drag straight into a soundpanel cart.
+**Priority**: High
+**Effort**: XL
+
+---
+
+## Priority Summary
+
+| Priority | Count | IDs |
+|---|---|---|
+| High | 11 | 1, 4, 5, 8, 11, 12, 14, 15, 17, 18, 19 |
+| Medium | 8 | 2, 3, 6, 7, 9, 10, 13, 16 |
+
+## Effort Summary
+
+| Effort | Count | IDs |
+|---|---|---|
+| S | 0 | — |
+| M | 8 | 1, 2, 3, 5, 7, 12, 13, 17, 18 |
+| L | 8 | 4, 6, 8, 10, 11, 15, 16 |
+| XL | 2 | 9, 19 |
+
+## Recommended Sequencing (quick wins → strategic)
+1. **Sprint 1 (foundations):** #1 Accessibility + #3 Skeletons/density + #14 PWA/Service Worker — these unblock everything else and are independently shippable.
+2. **Sprint 2 (audience visibility):** #4 Geo-map + #5 Device breakdown + #7 ATS metrics — turns Reports into a real analytics product.
+3. **Sprint 3 (engagement loop):** #17 Live chat + #18 Polls/voting + #19a Loyalty ledger — closes listener-feedback loop that feeds AI Music Director.
+4. **Sprint 4 (creation workflow):** #8 In-browser voice tracking + #11 Unified social posting — biggest perceived value to presenters.
+5. **Sprint 5 (depth):** #9 VT editor w/ version control + #6 Cohort/journey + #12 Social calendar + #15 Web Push + #16 Presenter remote.
+6. **Sprint 6 (polish):** #2 Framer Motion + #10 Smart segues + #13 Social ROI dashboard + #19b/c Smart queue + UGC.
+
+---
+Task ID: research-B
+Agent: research-synthesizer
+Task: Synthesize infrastructure research (streaming, monitoring, audio processing, WebRTC, observability)
+
+Work Log:
+- Read 5 research JSON files: 03-streaming.json (Icecast/HLS/SRT/WebRTC), 04-monitoring.json (EBU R128/LUFS/true peak), 14-audio-processing.json (Omnia/Stereo Tool/Breakaway), 18-webrtc.json (remote contribution/guest callers), 21-observability.json (Prometheus/Grafana/Alertmanager)
+- Tailed worklog.md (1183 lines) — confirmed already-built: Icecast2 monitoring, SNMP polling (31 OIDs/6 devices), GPIO 8+8, audio topology visual (Studer Vista 1 → Omnia 9 → RVR T60, Inovonics 730), broadcast-feed WebSocket :3003, Prometheus raw metrics endpoint, OpenAPI 3.1, health diagnostics, backup/RTO/RPO, RDS/DAB+ metadata, RadioDNS, EBU Tech 3293, Event Bus with replay, AI Orchestrator (11 modules, rule-based AI Failure Detection), Incident Timeline, AI Root Cause, Copilot, Topology panel, Replay Studio, RBAC + Audit + API Keys
+- Synthesized 20 distinct upgrade opportunities across streaming infra, audio processing, broadcast monitoring, remote contribution, observability, and redundancy
+
+Stage Summary:
+
+## Infrastructure Upgrade Opportunities — Rock 88.7 Broadcast Control Center
+
+### 1. HLS Adaptive Output for Web/Mobile Streaming
+**Gap**: Only Icecast2 MP3 192k exists — no adaptive, CDN-cacheable HLS endpoint
+**Recommendation**: Add an FFmpeg/Liquidsoap segmenter producing multibitrate AAC-LC HLS playlists (64/128/192 kbps) served via Caddy, with an hls.js player in the Streams tab. HLS trades ~5-15s latency for massively better mobile compatibility and CDN cacheability.
+**Priority**: Medium
+**Effort**: M
+
+### 2. SRT Listener for Remote Studio / OB-Van Contribution
+**Gap**: No SRT (Secure Reliable Transport) ingest — remote contribution is impossible over unreliable internet
+**Recommendation**: Run an `srt-live-server` listener on a public UDP port with AES-128 passphrase, accepting audio from field mixers / Tieline / Comrex units. Surface connection status, RTT, packet loss, and bandwidth as a new "Contribution" panel in System tab; SRT delivers broadcast-grade audio at 200-500ms over lossy links.
+**Priority**: High
+**Effort**: M
+
+### 3. WebRTC WHEP Output for Sub-Second Web Listeners
+**Gap**: Web listeners go through Icecast2 multi-second buffering — no ultra-low-latency option
+**Recommendation**: Bridge Icecast2 audio into a WebRTC WHEP endpoint using Nimble Streamer or mediasoup, exposing a 200-500ms live option in the player (per Softvelum/Wowza research). This is the standard sub-second web audio delivery path with no plugins required.
+**Priority**: Medium
+**Effort**: L
+
+### 4. Multi-Codec / Multi-Bitrate Stream Pool
+**Gap**: Single MP3 192k stream — no AAC+, Opus, or mobile-quality tiers
+**Recommendation**: Configure Liquidsoap to fan out to MP3 192k, AAC-LC 128k, AAC-HE v2 64k (mobile), and Opus 96k mounts on Icecast2. Surface each as a tunable mount with listener counts and per-mount bitrate in the Streams tab, enabling adaptive playout for low-bandwidth listeners.
+**Priority**: Medium
+**Effort**: M
+
+### 5. Liquidsoap as Programmable Source Switcher & Fallback Router
+**Gap**: Topology is visualization-only — no resilient source orchestration, crossfades, or auto-fallbacks
+**Recommendation**: Deploy Liquidsoap as the source router between Studer Vista 1, backup automation, SRT contribution feeds, and Icecast2. Expose `harbor.input()`, `fallback()`, and schedule-based source transitions via the API; Liquidsoap's failover and crossfade logic hardens the air chain.
+**Priority**: High
+**Effort**: L
+
+### 6. EBU R128 / ITU-R BS.1770-4 Loudness Metering
+**Gap**: No LUFS, True Peak (dBTP), or Loudness Range (LRA) measurement — air-chain compliance is invisible
+**Recommendation**: Add a `libebur128`-based meter (or ffmpeg `ebur128` filter) sampling the post-Omnia 9 feed, exposing Momentary/Short-term/Integrated LUFS + True Peak to the System tab. Target EBU R128 (-23 LUFS ±0.5, -1 dBTP per Wikipedia/EBU Tech 3341) and emit violations to the Event Bus.
+**Priority**: High
+**Effort**: M
+
+### 7. 24/7 Loudness Compliance Log
+**Gap**: No long-term loudness record — required for EBU R128/regulator audit
+**Recommendation**: Persist integrated LUFS + True-Peak maxima every 10s to a time-series table; expose a per-hour/per-day compliance report (max true-peak violations, % out-of-spec, LRA histogram) in the Reports tab. Produces auditable evidence and satisfies EBU R128 logging expectations.
+**Priority**: High
+**Effort**: M
+
+### 8. Audio Silence / Dead-Air Detection with Auto-Failover
+**Gap**: No silence sensor on the air chain — dead air = lost listeners + regulator penalty
+**Recommendation**: Sample the post-Omnia feed; trigger a critical Incident + GPIO relay after N seconds (default 5s) of < -60 dBFS. Optionally auto-switch the existing GPIO "Automation Bypass" / "Backup TX" lines to fire a backup cart via the GPIO API.
+**Priority**: High
+**Effort**: S
+
+### 9. SNMP Traps (Asynchronous Fault Push)
+**Gap**: Only SNMP polling (every 30s+) — transmitter/encoder faults can lag detection
+**Recommendation**: Enable `snmptrapd` listening on UDP 162, parse v2c traps from RVR T60, Inovonics 730, and Omnia 9 (all support traps), forward to the Event Bus with severity mapping. Converts faults from "polled" to "pushed" with sub-second latency.
+**Priority**: High
+**Effort**: M
+
+### 10. Transmitter Remote Control via SNMP SET
+**Gap**: SNMP is read-only — operator cannot raise/lower power, mute, or reset the RVR T60 from the UI
+**Recommendation**: Extend the SNMP API with authenticated `set` operations for power level, mute, and reset OIDs on the RVR T60 (and equivalent for Inovonics 730), gated by the `technical-engineer` RBAC role with explicit audit-log entries. Same model as Burk ARC Plus / Nautel Autoload.
+**Priority**: Medium
+**Effort**: M
+
+### 11. FM Signal SNR / MER Reference Receiver
+**Gap**: No on-air RF quality feedback — only transmitter-side metrics (power, VSWR)
+**Recommendation**: Add a reference receiver (RTL-SDR / SDRuno) at the studio measuring FM SNR, multipath, MER, and pilot deviation. Surface a new "RF Quality" panel with threshold alerts when SNR drops below 50 dB or multipath exceeds 3%.
+**Priority**: Medium
+**Effort**: L
+
+### 12. STL (Studio-to-Transmitter Link) Backup & Auto-Failover
+**Gap**: Topology shows a single FM path — no backup STL detected or visualized
+**Recommendation**: Configure a secondary STL (microwave backup or IP-over-SRT), monitor primary link health (packet loss / latency), and auto-fail over via a switch on the Studer side. Surface both paths on the Topology panel with active/standby indicators and last-failover timestamp.
+**Priority**: High
+**Effort**: L
+
+### 13. WebRTC Guest Caller Console (StudioCall-Style)
+**Gap**: No browser-based remote guest contribution — presenters can't bring in callers without external codecs
+**Recommendation**: Add a WebRTC "Guest Queue" using mediasoup or LiveKit: shareable invite URL, lobby with talkback, IFB mix-minus back to guest, and on-air mix-in. Each guest gets a fader in a new "Callers" panel with mute/cough/drop controls — pattern matches QuickLink StudioCall.
+**Priority**: Medium
+**Effort**: XL
+
+### 14. IFB / Talkback / Cue Audio Bus
+**Gap**: No interruptible foldback for presenters or remote guests
+**Recommendation**: Implement a cue bus in the audio chain (Liquidsoap or via Studer GPIO logic) routing program audio minus the host mic to the presenter's headphones, with programmable interrupt source (producer mic, news mic, guest). Expose routing as a new "Cue/IFB" config panel in Settings.
+**Priority**: Low
+**Effort**: M
+
+### 15. Grafana Dashboard Provisioning for Existing Prometheus Metrics
+**Gap**: Prometheus metrics endpoint exists but no dashboards — operators see raw text only
+**Recommendation**: Ship a `grafana/provisioning/` directory with JSON dashboards for: listener trends, audio levels (LUFS), SNMP health, event-bus throughput, and AI module runs/P95. Add a `docker compose --profile observability` stack that brings up Grafana + Prometheus + pre-provisioned dashboards in one command.
+**Priority**: High
+**Effort**: M
+
+### 16. Prometheus Alertmanager + Severity-Routed Alerting
+**Gap**: Health diagnostics exist but no programmatic alerting (PagerDuty, email, Slack)
+**Recommendation**: Add Alertmanager with rules for: listener drop > 50% in 5m, silence alarm, transmitter temp > 70°C, RDS encoder offline, Icecast listener anomaly, AI module failure rate > 5%. Route critical to PagerDuty/Slack, warning to email; surface all alerts in the existing Incident Timeline.
+**Priority**: High
+**Effort**: M
+
+### 17. Log Aggregation with Loki + Promtail
+**Gap**: No structured log aggregation across Next.js, broadcast-feed, Icecast2, SNMP daemon
+**Recommendation**: Ship Promtail + Loki as part of the observability profile, with structured JSON logs from all services tagged by service/source. Query interface in Grafana lets engineers correlate "stream drop at 14:23" with "Icecast listener disconnect burst" via LogQL queries.
+**Priority**: Medium
+**Effort**: M
+
+### 18. Statistical Anomaly Detection on Listeners / LUFS
+**Gap**: AI Failure Detection module exists but is rule-based — no statistical anomaly detection
+**Recommendation**: Add a lightweight anomaly detector (z-score, EWMA, or simple Prophet-style model) on Prometheus listener counts and short-term LUFS values; flag deviations >3σ as Incidents. Catches silent regressions like "listeners down 20% but no error logs fired."
+**Priority**: Medium
+**Effort**: M
+
+### 19. Omnia 9 Preset Remote Control & Daypart Automation
+**Gap**: Omnia 9 visible in SNMP panel but no preset switching API (daypart/holiday/sports processing)
+**Recommendation**: Use Omnia 9's SNMP/HTTP control interface to expose preset switching ("Daypart", "Loudness Compliance", "Sports", "Night") and parameter snapshots in a new "Processing Presets" panel. Add daypart automation tied to the Schedule API so processing changes automatically with show boundaries.
+**Priority**: Low
+**Effort**: M
+
+### 20. Stereo Tool / Breakaway Hot-Spare Processor
+**Gap**: Omnia 9 is a single point of failure in the air-chain processing — no software fallback
+**Recommendation**: Run Stereo Tool (Thimeo) or Breakaway on a hot-spare host via Wine, fed from a pre-Omnia tap; if silence detection fires or SNMP marks Omnia 9 offline, switch the air chain to the spare via the GPIO "Automation Bypass" line. Stereo Tool is widely cited (forums, TWiRT) as approaching hardware processor quality at low cost.
+**Priority**: Low
+**Effort**: L
+
+---
+Summary: 20 opportunities identified — 9 High / 8 Medium / 3 Low priority. Highest-leverage quick wins (S effort): #8 Silence Detection. Highest-leverage medium efforts: #2 SRT, #6 LUFS metering, #9 SNMP traps, #15 Grafana, #16 Alertmanager. Strategic XL: #13 WebRTC Guest Console. All gaps confirmed against existing worklog (1183 lines): no overlap with implemented features.
+
+---
+Task ID: research-A
+Agent: research-synthesizer
+Task: Synthesize radio operations research (automation, AI, music sched, traffic, podcast, generative AI)
+
+Work Log:
+- Read 6 JSON research files: 01-automation-compare.json, 02-ai-features.json, 08-music-scheduling.json, 09-traffic.json, 11-podcast.json, 17-generative-ai.json
+- Read tail of worklog.md (~lines 913-1184) to inventory existing features (7 tabs, 11 AI modules, Rivendell RDX, RDS/SNMP/GPIO/EBU/RadioDNS, RBAC×9, Event Bus, Topology, Replay Studio, Copilot, AI Voice Track Generator, AI Music Director with fatigue indices)
+- Cross-referenced research signals (AzuraCast, LibreTime, RadioDJ, Rivendell, MusicMaster, GSelector, PowerGold, Selector, Natural Log, WideOrbit WO Traffic, Marketron, OSI, WAVSTAR, ElevenLabs, Murf, WellSaid, Music.ai, radio.co Voice Studio, NextKast MobileVT/StudioLink, RadioWorkflow, RSS.com, Podigee, Apple Podcasts Connect, Spotify for Creators, Podping.live, UNESCO Radio+AI) against the existing build to isolate net-new opportunities
+- Produced synthesis: 18 prioritized, concrete upgrade opportunities spanning music scheduling, traffic & billing, voice cloning, podcast distribution, playout adapters, audio post-processing, industry exchange standards, DAI, and DR failover
+
+Stage Summary:
+
+# Research Synthesis — Rock 88.7 Broadcast Control Center Upgrade Opportunities
+
+Scope: opportunities that are NOT already in the app. App already has Rivendell RDX, 11 AI modules, AI Voice Track Generator (mock pipeline), AI Music Director (artist/song/genre/decade/tempo fatigue indices), AI QC (LUFS/true-peak/DC-offset/silence), Event Bus with persistence/replay/webhooks, RBAC×9, Audit Trail, Topology, Replay Studio, Copilot, RDS/SNMP/GPIO/EBU/RadioDNS, OpenAPI 3.1, Prometheus, Docker, 8 Prisma models.
+
+## A. Music Scheduling (MusicMaster / GSelector / PowerGold class)
+
+### A1. Formal Rule-Based Music Scheduler (GSelector "natural demand" + MusicMaster rotation engine)
+**Gap**: AI Music Director emits fatigue indices and AI Scheduler emits a mock 8-track rotation, but there is no formal rule-based scheduler with backtracking, priority-ordered rules, and a per-song "demand" score driving placement.
+**Recommendation**: Build a GSelector-class scheduler: define category clocks (drag-drop hour grid), song demand = (rotation budget − actual plays) weighted by packet/schedule position, then a backtracking fill algorithm with hard vs soft rule separation. Violations surface in a "Rule Violations" panel with one-click regen. Persist rule sets as Prisma model + JSON editor in Schedule tab.
+**Priority**: High
+**Effort**: L
+
+### A2. Separation Matrix (artist / title / album / sound-code / BPM / key / tempo / gender)
+**Gap**: No configurable separation rules ("no same artist within 2h", "no two ballads back-to-back", "key compatibility ±2 camelot steps").
+**Recommendation**: Implement a per-daypart separation matrix (rows = attribute, cols = window in minutes/hours) consumed by the A1 scheduler. Hard rules block placement; soft rules degrade a candidate's score. Wire to AI Metadata so BPM/key/energy are auto-populated (links to F1 below).
+**Priority**: High
+**Effort**: M
+
+### A3. Category Clock Designer with Dayparted Templates
+**Gap**: Weekly Timetable exists but no per-hour "category clock" defining slot percentages (e.g., 40% Currents / 25% Recurrents / 20% Gold / 15% Power) with daypart variants (morning drive vs overnight).
+**Recommendation**: Add a Clock Designer (visual hour wheel with drag-drop category slots) plus a daypart→clock assignment table. Clocks version-controlled and diffable. Reuse Event Bus to emit `clock.changed` so A1 re-runs.
+**Priority**: High
+**Effort**: M
+
+### A4. Conflict Avoidance Engine (brand-competitor / DMCA / explicit-lyrics dayparting)
+**Gap**: No compliance rules — no competitor-brand adjacency, no DMCA streaming 3-in-2.5hr rule, no explicit-lyrics time-window enforcement.
+**Recommendation**: Add a Conflict Policy engine: (a) brand-competitor matrix (Pepsi ad never adjacent to Coca-Cola song), (b) DMCA §114 streaming caps (≤3 tracks from same album / ≤4 from same artist in any 3h window), (c) explicit-lyrics daypart block (10pm–6am only). Hard-stop violations block scheduling; surface in Rule Violations panel.
+**Priority**: Medium
+**Effort**: M
+
+## B. Traffic & Billing (Natural Log / WideOrbit / Marketron / OSI class)
+
+### B1. Traffic & Billing Tab (end-to-end ad lifecycle)
+**Gap**: No traffic/billing system — no insertion orders, avails, contracts, co-op, make-goods, invoices.
+**Recommendation**: Add an 8th tab "Traffic & Billing" with insertion orders → contract → avails → as-run capture from Rivendell → make-goods → invoice (Quickbooks IIF/CSV export). New Prisma models: Advertiser, Contract, InsertionOrder, Avail, AsRun, Invoice. RBAC: add "Sales"/"Traffic Manager" roles.
+**Priority**: High
+**Effort**: XL
+
+### B2. SMPTE 2021 BXF v3.1 Import/Export (WideOrbit / Marketron / Natural Log interop)
+**Gap**: No industry-standard traffic↔playout exchange — locks the app out of every commercial traffic system.
+**Recommendation**: Implement BXF (Broadcast Exchange Format) v3.1 XML ingest (schedules + as-runs) on `/api/v1/traffic/bxf` and as-run BXF export back to WideOrbit AFR / Marketron / Natural Log. Pair with B1. This is the make-or-break for commercial FM deployment.
+**Priority**: High
+**Effort**: M
+
+### B3. Dynamic Placer Engine (WideOrbit-class)
+**Gap**: No auto-fill of unsold avails against the music log with sponsor pre-emption rules.
+**Recommendation**: Add a "Dynamic Placer" job that scans the music log for unsold avails, applies sponsor priority + co-op splits + ROS fallback (fill with PSA/promo), and writes the result back to the log. Run on every log rebuild. Mirror WideOrbit's engine semantics.
+**Priority**: Medium
+**Effort**: M
+
+### B4. Automated Affidavit Generation
+**Gap**: No as-run affidavit (proof-of-play) for advertisers — manual, error-prone.
+**Recommendation**: Generate PDF affidavits from as-run events (play timestamp, ISCI/Creative ID, duration, make-good flag), email to advertisers or push to Marketron via BXF as-run. Include digital signature (HMAC) for tamper-evidence.
+**Priority**: Medium
+**Effort**: S
+
+### B5. Dynamic Ad Insertion (DAI) for Online Streams (SCTE-35 / HLS cue)
+**Gap**: Streams are uniform — no per-listener targeting (geo/time-of-day/device) on the online stream.
+**Recommendation**: Add a DAI layer using SCTE-35 cue tones in the Icecast source + HLS variant playlists with ad-break splicing. Audience segment rules (geo/daypart/device) sold via B1. Start with simple mountpoint switch; graduate to HLS DAI if scale warrants.
+**Priority**: Medium
+**Effort**: XL
+
+## C. Podcast Pipeline (RSS.com / Podigee / Apple Podcasts Connect class)
+
+### C1. Podcast Hosting & RSS 2.0 + Podcast Namespace 2.0 Feed Generator
+**Gap**: No podcast hosting — no RSS feed, no episode management, no podcast namespace 2.0 (transcripts, funding, chapters).
+**Recommendation**: Add a Podcasts sub-tab under Streams (or new top-level tab) with show/episode management, auto-generated RSS 2.0 + podcast:2.0 feed (chapters, transcripts, person, funding, soundbite), and a stable `feeds.rock887.tld/show.xml` URL. Persist as new Prisma models.
+**Priority**: Medium
+**Effort**: L
+
+### C2. Auto-Distribution to Spotify / Apple / YouTube / Amazon
+**Gap**: No automatic submission to directories — manual per-platform submission only.
+**Recommendation**: One-click distributor: submit feed to Apple Podcasts Connect, Spotify for Creators, YouTube Music podcast, Amazon Music, Pocket Casts, Podcast Index. Track per-platform approval state in a Distribution matrix. Mirror RSS.com / Podigee workflows.
+**Priority**: Medium
+**Effort**: M
+
+### C3. Podping.live Real-Time Update Notifications
+**Gap**: RSS polling = minutes-to-hours latency for new episode propagation.
+**Recommendation**: Publish `podping.live` (Hive blockchain) pings on every episode publish/update so aggregators refresh within seconds. Pair with C1. Trivial effort, large listener-experience win.
+**Priority**: Low
+**Effort**: S
+
+### C4. Video Podcast Support (Podigee-style)
+**Gap**: No video podcast pipeline — audio-only.
+**Recommendation**: Accept video episode uploads, derive audio-only variant for Spotify/Apple, push video to YouTube. Reuse existing ffmpeg/Loudness pipeline (E7) for normalization. Podigee proved this is now table-stakes.
+**Priority**: Low
+**Effort**: M
+
+## D. Generative AI / Voice Cloning (ElevenLabs / Murf / WellSaid class)
+
+### D1. Voice Cloning Pipeline with Consent Registry & Provenance Watermarking
+**Gap**: AI DJ / AI Voice Track exist but use generic TTS — no real voice cloning, and zero ethical guardrails (consent, watermarking, AUP).
+**Recommendation**: Integrate ElevenLabs/Murf voice cloning with mandatory signed consent record per voice (talent release PDF on file, expiry date), C2PA/PSA content credentials + inaudible watermark on every synthetic clip, and role-gated access (new "Voice Talent Admin" role). Log every clone use in Audit Trail. Refuse synthesis if consent expired.
+**Priority**: High
+**Effort**: M
+
+### D2. Multilingual AI News Bulletins (29-language ElevenLabs)
+**Gap**: AI News is single-language; no localized bulletins for multilingual markets.
+**Recommendation**: Extend AI News to generate localized bulletins in up to 5 languages using ElevenLabs multilingual TTS, rotate by daypart (e.g., Spanish bulletin at 18:00 for Hispanic daypart), and maintain a pronunciation dictionary (JSON) for local place names / artist names. Wire to existing AI News trigger.
+**Priority**: Medium
+**Effort**: M
+
+### D3. Context-Aware Voice Link / Sweeper Generator (radio.co Voice Studio pattern)
+**Gap**: No auto-generated voice links between songs (time-check, station ID, "up next" read).
+**Recommendation**: Add a "Voice Link" generator that reads outgoing+incoming track metadata and synthesizes a context-aware link ("That was [Artist] with [Song] — coming up, [NextSong] on Rock 88.7"). Uses D1 cloned station voice. Mixes via Web Audio API crossfade. Triggers on track.finished, produces sweeper cart inserted into log.
+**Priority**: Medium
+**Effort**: M
+
+### D4. Speech Enhancement & EBU R128 Loudness Conformance (Music.ai pattern)
+**Gap**: AI QC flags loudness violations but no auto-fix; voice-tracked segments have variable noise/room tone.
+**Recommendation**: Add a post-processing pipeline (RNNoise/Demucs for denoise+de-reverb, ffmpeg `loudnorm` two-pass to EBU R128 −23 LUFS / ATSC A/85 per region) that runs on every voice-tracked and AI-generated clip before air. Wire AI QC to route violations to this pipeline instead of just alerting.
+**Priority**: High
+**Effort**: M
+
+### D5. Live Human Voice Tracking (NextKast MobileVT / StudioLink pattern)
+**Gap**: AI Voice Track Generator exists but no remote human voice-tracking workflow (talent records from phone/browser into scheduled slots).
+**Recommendation**: Browser-based voice tracking (Web Audio API + getUserMedia) where talent records VT for scheduled dayparts remotely, with take management (punch-in/out, comp track), review-and-approve, and automatic placement into the log. Mirrors NextKast MobileVT and StudioLink workflows. Critical for talent working from home.
+**Priority**: Medium
+**Effort**: L
+
+## E. Playout & Platform Integration
+
+### E1. AzuraCast-style Liquidsoap Playout Adapter (alternative to Rivendell)
+**Gap**: Rivendell RDX is the only playout path — locks out pure web-radio deployments where Rivendell is overkill.
+**Recommendation**: Add an optional Liquidsoap harbor playout adapter with crossfade, N-1 redundancy, live DJ handoff via harbor input, and per-stream transcoding ladder (MP3 128/64, AAC 64, Opus 48, FLAC). Configurable in Settings → Streams. Coexists with Rivendell; pick per station.
+**Priority**: Medium
+**Effort**: L
+
+### E2. Acoustic Fingerprinting + Auto-Coding Pipeline (chromaprint/librosa)
+**Gap**: AI Metadata emits BPM/key/energy but no fingerprint for dup detection, no auto intro/outro detection, no acoustid lookup for unknown tracks.
+**Recommendation**: Background import pipeline: chromaprint → acoustid lookup (dedup + metadata enrichment), librosa for BPM/key/intro/outro/energy/danceability, write to Library. Powers A2 separation rules and A1 demand scoring. Schedule as worker queue (BullMQ or simple cron).
+**Priority**: High
+**Effort**: M
+
+### E3. Disaster Recovery Failover Orchestrator
+**Gap**: Production Readiness panel reports RTO/RPO and backup state but no automated failover — main studio loss is still manual.
+**Recommendation**: Add a failover orchestrator: SNMP-driven detection (silence sensor >10s, signal loss), auto-switch main→backup studio, fire AI DJ voice-track to fill gap, page on-call engineer (PagerDuty/Slack/SMTP), and log full sequence to Event Bus + Replay Studio for postmortem. Surface in Production Readiness.
+**Priority**: High
+**Effort**: L
+
+### E4. Listener CRM & Persona Segmentation (radio.co / RadioWorkflow CRM pattern)
+**Gap**: Listener Requests panel captures requests but no listener CRM, no segmentation, no P1 core-listener identification for sales.
+**Recommendation**: Build Listener CRM with persona tagging (request history, time-of-day, geo, device), newsletter/loyalty integration, and AI-driven P1 (core listener) identification for sponsorship targeting. Wire to B5 DAI for audience-segment-targeted ad delivery.
+**Priority**: Low
+**Effort**: L
+
+---
+
+## Priority / Effort Summary
+
+| # | Opportunity | Priority | Effort |
+|---|---|---|---|
+| A1 | Formal rule-based music scheduler | High | L |
+| A2 | Separation matrix | High | M |
+| A3 | Category clock designer | High | M |
+| A4 | Conflict avoidance (DMCA / brand / explicit) | Medium | M |
+| B1 | Traffic & Billing tab (full lifecycle) | High | XL |
+| B2 | SMPTE 2021 BXF v3.1 import/export | High | M |
+| B3 | Dynamic Placer engine | Medium | M |
+| B4 | Automated affidavit PDF | Medium | S |
+| B5 | Dynamic Ad Insertion for streams | Medium | XL |
+| C1 | Podcast hosting + RSS feed generator | Medium | L |
+| C2 | Auto-distribution to Spotify/Apple/YouTube/Amazon | Medium | M |
+| C3 | Podping.live notifications | Low | S |
+| C4 | Video podcast support | Low | M |
+| D1 | Voice cloning w/ consent registry + watermark | High | M |
+| D2 | Multilingual AI news bulletins | Medium | M |
+| D3 | Context-aware voice link / sweeper generator | Medium | M |
+| D4 | Speech enhancement + EBU R128 conformance | High | M |
+| D5 | Live human voice tracking (browser) | Medium | L |
+| E1 | Liquidsoap playout adapter | Medium | L |
+| E2 | Acoustic fingerprint + auto-coding pipeline | High | M |
+| E3 | DR failover orchestrator | High | L |
+| E4 | Listener CRM + persona segmentation | Low | L |
+
+## Recommended Next Sprint (top 5, max leverage)
+
+1. **A1 + A2 + A3** (formal scheduler + separation + clocks) — replaces mock AI Scheduler with production-grade music scheduling; unblocks A4
+2. **B1 + B2** (Traffic tab + BXF) — unlocks commercial FM revenue; without BXF the app cannot talk to any real traffic system
+3. **D1** (voice cloning with guardrails) — de-risks the most ethically sensitive AI feature; foundation for D2/D3
+4. **D4** (loudness + speech enhancement) — turns AI QC from a detector into a fixer; immediate air-quality lift
+5. **E3** (DR failover orchestrator) — closes the gap between "reporting RTO" and "actually meeting RTO"
+
+
+---
+Task ID: research-D
+Agent: research-synthesizer
+Task: Synthesize compliance/security/tech research (compliance, collaboration, security, EAS, OpenAPI, Next.js 16)
+
+Work Log:
+- Read 6 research JSON files: 10-compliance.json (8 results, DAB+/RadioDNS/EAS/CAP/EBU), 12-collab.json (8 results, approval queues/real-time), 13-security.json (8 results, RBAC/audit/hardening), 19-eas-cap.json (8 results, FEMA IPAWS/OASIS CAP 1.2), 22-openapi.json (6 results, Swagger/Scalar/Redoc), 23-nextjs16.json (8 results, RSC/Server Actions/Streaming SSR)
+- Tailed worklog.md (lines 526-1502) — confirmed already-built: RBAC 9 roles, AuditLog Prisma (entity filter + limit), ApiKey model (SHA-256 + prefix), OpenAPI 3.1 JSON spec (static viewer only), Prometheus raw metrics, Event Bus with persistence/correlationId/replay, Webhooks with HMAC-SHA256 signing + fail tracking, RadioDNS (SPI XML per EBU TS 102 371), EBU Tech 3293 EBUCore 1.8 XML, RDS (PI/PS/PTY/RT/RT+), DAB+ DLS (128-char text only), SNMP 6 devices, GPIO 8+8, Docker + Caddy gateway + docker-compose, NextAuth.js v4 wired, 47 CFR Part 11 awareness, production readiness (health/RTO/RPO/backup)
+- Cross-referenced with research-B (infra) and research-C (UX) syntheses already in worklog — verified NO overlap: research-B owns streaming/audio/RF/Grafana/Loki/Alertmanager; research-C owns UX/analytics/voice-tracking/social/PWA/engagement; my scope is compliance/collaboration/security/EAS/OpenAPI-DX/Next.js 16/DevOps
+- Produced 20 distinct opportunities across 7 focus areas: Compliance (4), Collaboration (3), Security (5), Emergency Alerting (3) [overlap w/ Compliance intentional — alerts are both], DX (2), Next.js 16/React 19 (2), DevOps (1)
+- Each opportunity cites real standards: OASIS CAP 1.2, 47 CFR Part 11, FEMA IPAWS-OPEN, EBU Tech 3299, ETSI TS 101 499 (DAB SLS), ETSI TS 102 410 (DAB SPI/DPI), ETSI TS 102 371 (RadioDNS SPI), RFC 6238 (TOTP), RFC 6749 (OAuth 2.0), OpenID Connect Core 1.0, RFC 2104 (HMAC), RFC 7807 (problem+json), NIST SP 800-63B, CycloneDX, React 19 + Next.js 16 features (Server Actions, use(), useOptimistic, useFormStatus, React Compiler, PPR)
+
+Stage Summary:
+
+# Research Synthesis — Compliance / Security / Tech Upgrade Opportunities
+
+Source files: `research/10-compliance.json`, `12-collab.json`, `13-security.json`, `19-eas-cap.json`, `22-openapi.json`, `23-nextjs16.json` (46 search results total). Existing app baseline (confirmed against worklog 526-1502): RBAC (9 roles, granular perms), AuditLog Prisma (filterable), ApiKey (SHA-256 + prefix display), OpenAPI 3.1 JSON spec (static), Prometheus metrics, Event Bus (persistence + correlationId + replay), Webhooks (HMAC-SHA256 signed + fail tracking), RadioDNS (SPI XML EBU TS 102 371), EBU Tech 3293 EBUCore XML, RDS (PI/PS/PTY/RT/RT+), DAB+ DLS (text only), SNMP (6 devices), GPIO (8+8), Docker + Caddy + docker-compose, NextAuth v4 wired but auth appears password-only. The 20 opportunities below are **not** already in the app and do **not** overlap with research-B (infra) or research-C (UX) syntheses.
+
+---
+
+## A. Compliance & Regulatory
+
+### 1. CAP 1.2 Message Ingestion (OASIS CAP v1.2 + FEMA IPAWS-OPEN)
+**Gap**: No ingestion of Common Alerting Protocol v1.2 XML from FEMA IPAWS-OPEN aggregator or local EAS decoders — 47 CFR §11.56 requires EAS participants to decode and convert CAP-formatted messages.
+**Recommendation**: Add a CAP 1.2 XML ingestion endpoint (`/api/v1/eas/cap`) that validates incoming alerts against the OASIS CAP 1.2 XSD, persists to a new `CapAlert` Prisma model (`identifier`, `sender`, `sent`, `status`, `msgType`, `scope`, `info[]`, `area[]`, `parameter[]`), and polls IPAWS-OPEN (`https://api.ipaws.open.fema.gov`) every 60s using COG credentials. Also accept inbound POSTs from a DASDEC/SAGE ENDEC; surface alerts in a new "Emergency Alerts" section of the System tab with severity color-coding.
+**Priority**: High
+**Effort**: L
+
+### 2. Automatic Program Interruption (EAS Override Chain)
+**Gap**: Received CAP/EAS alerts have no automated path to interrupt the live broadcast chain — operator must manually fire the EAS relay.
+**Recommendation**: Wire the Event Bus `alert.created` event to a new `/api/v1/eas/interrupt` Server Action that: (1) fades the on-air bus via RDXport, (2) plays the Same-Language Header + Attention Signal + EOM tones per 47 CFR §11.31, (3) reads the CAP `<info>.description` via TTS, (4) restores the prior source on EOM. All interruption events are appended to audit trail with correlationId linking back to the originating CAP message, plus an override enable/disable flag gated to the `technical-engineer` role.
+**Priority**: High
+**Effort**: L
+
+### 3. EAS Encoder/Decoder Hardware Integration (DASDEC-III / SAGE ENDEC)
+**Gap**: SNMP/GPIO panels are mock-only — no real SNMP/REST adapter for industry-standard EAS encoders (Digital Alert Systems DASDEC-III, SAGE Digital ENDEC, Trilithic EASyPLUS).
+**Recommendation**: Extend the existing SnmpPanel with adapter profiles for the DASDEC-III (`DASDEC-MIB`) and SAGE ENDEC families: poll `<alertReceived>` OIDs for inbound alerts, push CAP XML to the encoder for origination, and schedule weekly Required Weekly Tests + Required Monthly Tests per 47 CFR §11.61. Surface the encoder's HW/FW version, last-test result, and pending alerts in a dedicated EAS row of the SNMP panel.
+**Priority**: Medium
+**Effort**: XL
+
+### 4. FCC-Mandated EAS Alert Retention Audit Sub-Trail
+**Gap**: A generic AuditLog exists but there is no purpose-built, retention-enforced, FCC-compliant EAS-specific log — 47 CFR §11.35 requires participants to keep EAS records and §11.54 mandates test logging.
+**Recommendation**: Add an `EasLog` Prisma model (separate from the general AuditLog) capturing `alertId`, `eventType` (received/test/sent/interrupted/ignored), `decoderId`, `originator`, `receivedAt`, `durationMs`, `operatorId`. Enforce 4-year retention (FCC requirement) via a scheduled Prisma cleanup, expose as an exportable CSV at `/api/v1/eas/log.csv` for FCC inspections, and surface a "EAS Compliance" health card in Production Readiness.
+**Priority**: High
+**Effort**: M
+
+### 5. EBU Tech 3299 RDS Field-Level Compliance Validation
+**Gap**: RDS panel emits PI/PS/PTY/RT/RT+ but does not validate against EBU Tech 3299 (RDS-UIC) field-level rules — PS scroll cadence, RT+ dual-buffer 64-char rules, PTY-31 traffic-announcement pinning, AF list ordering.
+**Recommendation**: Add an `/api/v1/rds/validate` endpoint running schema + content checks per EBU Tech 3299 (PS 8-char limit + scroll timing ≥3s, RT 64/128-char segments, RT+ tag-bearer RBDS codes, PTY 0-31 mapping). Surface violations in the existing RdsPanel with severity badges; add a "schema-clean" boolean to the Production Readiness health card; export a per-minute RDS validation report for regulator audits.
+**Priority**: Medium
+**Effort**: M
+
+### 6. DAB+ DLS+ Slideshow (SLS) via MOT — ETSI TS 101 499
+**Gap**: DAB+ support is limited to DLS text (128-char); the ETSI TS 101 499 DAB Slideshow (SLS) channel for station logos, artist images, and now-playing art is absent — modern DAB+ receivers show this as default content.
+**Recommendation**: Add an `/api/v1/dab/sls` endpoint that emits MOT (Multimedia Object Transfer) slideshow images per ETSI TS 101 499, pulling from existing album art + station logo assets. Push to the DAB+ mux via the existing RadioDNS service definition; auto-cycle slide every 15s with a branded fallback slide during talk segments. Surface the slide queue + last-pushed image in the existing RdsPanel under a "DAB+ SLS" sub-section.
+**Priority**: Medium
+**Effort**: L
+
+### 7. SPI/DPI Electronic Program Guide + Service Following — ETSI TS 102 410
+**Gap**: SPI XML exists per EBU TS 102 371 but lacks the DAB Service Following DPI (ETSI TS 102 410) and `<bearer>` list for FM↔DAB↔IP handoff — receivers can't follow the station across delivery bearers.
+**Recommendation**: Extend `/api/v1/radiodns?format=spi` to include `<bearer>` elements for all three delivery bearers (FM: `0.ce1.c223.1`, DAB: `0.e1.1572`, IP: rss URL) so receivers perform Service Following per ETSI TS 102 410. Add a `Programme` series concept (recurring show = one `seriesId`) to enable proper EPG series linking, and a 7-day rolling window of `<Programme>` elements from the existing Schedule API.
+**Priority**: Medium
+**Effort**: M
+
+---
+
+## B. Real-Time Team Collaboration
+
+### 8. Google-Docs-Style Concurrent Show Editing (Yjs CRDT)
+**Gap**: Show scheduling and the log editor are single-user-per-record — two producers editing the same show clobber each other with last-write-wins.
+**Recommendation**: Layer Yjs (CRDT) on the weekly timetable and log editor via `y-websocket` over the existing broadcast-feed Socket.io server (:3003). Render live cursors + selections per user (color-coded by RBAC role), and persist the merged document to Prisma on every Y.Doc update with `updatedAt`/`updatedBy` audit fields. Use the existing Event Bus `playlist.updated` event as the cross-client broadcast primitive.
+**Priority**: Medium
+**Effort**: XL
+
+### 9. Real-Time Presence Indicators + Show/Cart Comments/Annotations
+**Gap**: No awareness of who is "in" a show, and no ability to leave sticky comments on a clock-hour or cart for the next presenter.
+**Recommendation**: Add a `presence` channel on the existing WebSocket that broadcasts `{userId, role, showId, cursor, lastActive}` on a 5-second heartbeat; render online-user avatars (color-coded by role) in the show header. Add a `Comment` Prisma model (`entityType=show|cart|hour`, `entityId`, `body`, `mentions[]`, `resolvedAt`, `authorId`) with `/api/v1/comments` CRUD and inline annotation pins on the timetable; @mentions trigger an Event Bus `mention.created` event for webhook routing.
+**Priority**: Medium
+**Effort**: L
+
+### 10. Multi-Stage Approval Workflows (Kanban + Role-Based Routing)
+**Gap**: Shows go live without formal sign-off — no "draft → submitted → in_review → approved → live" pipeline, no @mention routing, no reviewer SLA tracking.
+**Recommendation**: Add a `ShowApproval` Prisma model (`showId`, `stage=draft|submitted|in_review|approved|rejected|live`, `reviewerRole`, `requestedBy`, `decision`, `decidedAt`, `commentId`). Surface as a kanban in the Schedule tab; auto-route by genre/daypart to role-specific reviewers (program-director for music, traffic for sponsor carts, technical-engineer for EAS-bearing hours). All transitions emit AuditLog entries and an optional webhook; past-due review (>24h) fires an `approval.overdue` Event Bus event.
+**Priority**: Medium
+**Effort**: L
+
+---
+
+## C. Security Hardening
+
+### 11. Multi-Factor Authentication (TOTP RFC 6238 + WebAuthn Passkeys)
+**Gap**: NextAuth.js v4 is wired but auth appears password-only — no TOTP or hardware-key MFA despite admin/technical-engineer/program-director roles controlling the transmitter chain.
+**Recommendation**: Add NextAuth v4 `Credentials` provider with a TOTP second factor (RFC 6238, `otplib` library) enforced for admin/technical-engineer/program-director/traffic roles, and WebAuthn (passkey, `@simplewebauthn/server`) for presenter kiosk machines per NIST SP 800-63B AAL2. Persist recovery codes hashed with bcrypt (10 rounds); gate destructive actions (`rml:send`, `eas:interrupt`, `track.delete`, `user.delete`) behind a "step-up" re-auth requiring TOTP within the last 5 minutes.
+**Priority**: High
+**Effort**: L
+
+### 12. Enterprise SSO (SAML 2.0 + OIDC — Okta / Azure AD / Keycloak)
+**Gap**: No enterprise SSO — onboarding is manual user-by-user, which blocks adoption in broadcast groups with existing IdP (Okta, Azure AD/Entra ID, Keycloak).
+**Recommendation**: Configure NextAuth v4 with `@auth/saml-provider` (SAML 2.0 for Okta/Azure AD) and `next-auth/providers/openid-connect` (OIDC per RFC 6749 + OpenID Connect Core 1.0 + RFC 8414 discovery). Map IdP group/role claims → existing RBAC roles via a `RoleMapping` table; support JIT (just-in-time) provisioning with default `read-only` until an admin promotes. Add a `/admin/sso` settings page for per-provider metadata upload + signing certificates.
+**Priority**: Medium
+**Effort**: L
+
+### 13. API Rate Limiting + IP Allowlisting (RFC 7807 problem+json)
+**Gap**: API keys grant access with no per-key rate limit or per-IP throttling — a leaked key can DoS the Event Bus or sweep the entire audit log in seconds.
+**Recommendation**: Add an Upstash Redis-backed sliding-window rate limiter (e.g., 100 req/min/key, 1000 req/min/IP) using `@upstash/ratelimit` middleware on `/api/v1/*`. Layer an IP allowlist (`X-Forwarded-For`-aware, configurable per route) on `/api/v1/eas/*` and `/api/v1/admin/*` enforced via Next.js middleware; return RFC 7807 `application/problem+json` with `Retry-After` header on 429 and structured 403 on allowlist violation. Surface per-key rate usage in the ApiKeysPanel.
+**Priority**: High
+**Effort**: M
+
+### 14. Security Headers + Content-Security-Policy with Report-URI
+**Gap**: No evidence of Content-Security-Policy, HSTS, X-Content-Type-Options, or Referrer-Policy headers despite a publicly-exposed Caddy preview panel.
+**Recommendation**: Add a `next.config.ts` `headers()` block: strict CSP (`default-src 'self'; connect-src 'self' ws://localhost:3003 wss://*.rock887.fm; img-src 'self' data:; script-src 'self' 'unsafe-inline'`), `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=()`. Add a `report-uri` / `report-to` directive for CSP violation reporting to a new `/api/v1/csp-report` endpoint that writes to the AuditLog as `entity=security`.
+**Priority**: High
+**Effort**: S
+
+### 15. Secrets Vault + SBOM Generation + Dependency Vulnerability Scanning
+**Gap**: `.env.example` ships secrets in plaintext; no SBOM generation; no CVE scanning in CI — at odds with the audit-trail rigor already in place.
+**Recommendation**: Integrate Infisical or dotenv-vault for secret rotation and remove plaintext secrets from the repo. Add a `prebuild` script generating a CycloneDX SBOM (`@cyclonedx/cyclonedx-npm -o sbom.json`). Add a GitHub Actions job running `npm audit --audit-level=high` + `trivy fs --severity CRITICAL .` on every PR, failing on Critical CVEs; surface the SBOM artifact at `/api/v1/health/sbom` (admin-only) for downstream consumers.
+**Priority**: Medium
+**Effort**: M
+
+---
+
+## D. Emergency Alerting (EAS/CAP)
+
+### 16. CAP XML Signature Verification + Replay Protection
+**Gap**: Even if CAP ingest were wired, there is no XML-Signature verification (RFC 3275) or replay protection — spoofed CAP messages could trigger false EAS overrides, which the FCC treats as a serious violation.
+**Recommendation**: When ingesting CAP from IPAWS-OPEN or external POSTs, verify the XML Digital Signature (RFC 3275, `xml-crypto` library) against the IPAWS CA cert chain and track `alert.identifier` + `alert.sent` in a 24-hour replay-detection set (Redis). Reject unsigned or replayed alerts with a 401 logged to EasLog as `eventType=ignored`, `reason=invalid_signature|replay`.
+**Priority**: High
+**Effort**: M
+
+### 17. Webhook Registry + Self-Service Subscription UI + Event Catalog
+**Gap**: Webhooks already fire with HMAC-SHA256 signing — but there is no self-service UI, no event-type catalog, and no consumer verification helper; consumers must read source code.
+**Recommendation**: Add a `/webhooks` page in Settings with CRUD on subscriptions + a "Send test event" button. Add `/api/v1/webhooks/registry` enumerating every emittable event type (matching Event Bus typed events) with example payloads + signing algorithm (RFC 2104 HMAC-SHA256 of raw body, header `X-Rock887-Signature: sha256=<hex>`). Ship a Node helper snippet (`verifySignature(rawBody, header, secret)`) and an HMAC verification code-challenge test page.
+**Priority**: Low
+**Effort**: S
+
+---
+
+## E. Developer Experience
+
+### 18. Interactive API Explorer (Scalar/Stoplight) + Auto-Generated SDK
+**Gap**: OpenAPI 3.1 JSON spec is exposed but with no interactive Try-it-out UI, and no client SDK is generated from it — every internal dashboard fetch is a hand-written wrapper.
+**Recommendation**: Replace the static `/api/v1/openapi` JSON dump with **Scalar API Reference** (or Stoplight Elements) rendered at `/api/docs` with a Try-it-out panel prefilled with the user's API key. Add a `scripts/gen-sdk.ts` using `openapi-typescript-codegen` (or Hey API / Orval) emitting a typed `clients/ts/` SDK consumed by the dashboard itself, removing ~5 duplicated fetch wrappers and guaranteeing the OpenAPI spec stays in sync with the client.
+**Priority**: Medium
+**Effort**: M
+
+### 19. Sandbox / Dry-Run Mode (Side-Channel Broadcast)
+**Gap**: All RML commands and Event Bus publishes hit the live broadcast chain — no dry-run for new producers, AI Producer suggestions, or webhook testing.
+**Recommendation**: Add a `broadcastMode = 'live' | 'sandbox'` NextAuth session property that, when `sandbox`, routes all RML commands and Event Bus publishes to a shadow pipeline (`/api/v1/sandbox/*`) backed by a mock transmitter + mock RDS encoder + mock Icecast. Toggle visible in the header (color-coded red=live / amber=sandbox); all sandbox actions are logged to AuditLog with `sandbox=true` to keep the live audit trail clean and to make training/auditions safe.
+**Priority**: Medium
+**Effort**: M
+
+---
+
+## F. Next.js 16 / React 19 Leverage
+
+### 20. Server Actions Migration + React 19 Hooks (`useFormStatus` / `useOptimistic` / `use()`)
+**Gap**: All mutations are client-fetched POST/PUT to Route Handlers — no use of Next.js 16 Server Actions, no `useFormStatus`, no `useOptimistic`, no `use()` hook despite React 19 being stable.
+**Recommendation**: Migrate the audit/API-keys/show-approval/comment mutations from Route Handlers to `'use server'` Actions with `zod`-validated `FormData` arguments. Replace bespoke "saving…" state in AuditLogPanel, ApiKeysPanel, and the new approval-workflow UI with `useFormStatus()` for pending state and `useOptimistic()` for instant UI update + automatic rollback on error. For the listener-requests list (research-C #18 voting), use React 19 `use(promise)` unwrapped from a cached Server-Component promise instead of the `useEffect`+`useState` dance — eliminates ~80 lines of fetch boilerplate and enables progressive enhancement (works with JS disabled).
+**Priority**: Medium
+**Effort**: L
+
+### 21. React Compiler + Partial Prerendering (PPR) + Streaming SSR
+**Gap**: No React Compiler opt-in; the dashboard's static shell (Studio Clock frame, navigation, station branding) re-renders with every dynamic data tick because no manual memoization is in place.
+**Recommendation**: Enable `reactCompiler: { runtime: true }` in `next.config.ts` (Next.js 16 stable) to auto-memoize the ~30 components without touching source code. Add `export const experimental_ppr = true` to the Dashboard/Schedule/Reports routes so the static shell is prerendered at build time and only the live data islands (Now Playing, VU meter, Incidents, Copilot) stream in via Suspense boundaries — measurable TTFB drop on cold loads. Wrap slow data-fetching components (Topology, Replay Studio) in `<Suspense>` so Next.js streams the static shell first and progressive content second.
+**Priority**: Medium
+**Effort**: M
+
+---
+
+## G. Observability / DevOps
+
+### 22. CI/CD Pipeline + Blue-Green Deploy + K8s-Style Probes + Structured Logging
+**Gap**: Project lints and builds locally but there is no CI/CD; `docker compose up` is the only deploy path and incurs downtime; `console.*` calls have no structure and no correlationId propagation.
+**Recommendation**: Add a GitHub Actions workflow: `lint → typecheck → test → build → docker buildx → push to GHCR → deploy` with two environments (`blue`, `green`) behind the existing Caddy gateway. Add a `/api/v1/health/ready` + `/api/v1/health/live` Kubernetes-style probe pair (liveness = process alive, readiness = DB + Event Bus + Icecast reachable) to the docker-compose healthcheck, and a `/api/v1/health/deploy` returning `{version, color, startedAt}`. Implement a `swap` Server Action that flips the Caddy upstream; failed health-checks auto-rollback within 60s. Replace `console.*` with `pino` structured JSON logger propagating the Event Bus `correlationId` to every log line; expose the last 200 lines filtered by `correlationId` in a new "Logs" panel under System tab (complements research-B's Loki stack with app-level structure).
+**Priority**: High
+**Effort**: L
+
+---
+
+## Priority Summary
+
+| Priority | Count | IDs |
+|---|---|---|
+| High | 8 | 1, 2, 4, 11, 13, 14, 16, 22 |
+| Medium | 11 | 3, 5, 7, 8, 9, 10, 12, 15, 18, 19, 20, 21 |
+| Low | 1 | 17, 6 |
+
+## Effort Summary
+
+| Effort | Count | IDs |
+|---|---|---|
+| S | 2 | 14, 17 |
+| M | 9 | 4, 5, 7, 10, 12, 13, 15, 18, 19, 21 |
+| L | 7 | 1, 2, 6, 9, 11, 16, 20, 22 |
+| XL | 2 | 3, 8 |
+
+## Recommended Sequencing (quick wins → strategic)
+
+1. **Sprint 1 (security foundations, all S/M):** #14 Security Headers + CSP (S) + #13 Rate Limiting + IP Allowlist (M) + #11 MFA TOTP (L) — closes the most acute OWASP gaps in <2 weeks.
+2. **Sprint 2 (EAS compliance — regulatory risk):** #1 CAP 1.2 Ingestion + #2 Program Interruption + #16 Signature Verification + #4 FCC EasLog retention — delivers FCC-compliant EAS pipeline end-to-end.
+3. **Sprint 3 (Next.js 16 modernization):** #21 React Compiler + PPR + #20 Server Actions Migration — pure refactor, no behavior change, ships perf + DX gains.
+4. **Sprint 4 (collaboration):** #9 Presence + Comments (L) + #10 Approval Workflows (L) — visible wins for producer teams; defer #8 Yjs (XL) until collaboration patterns are validated.
+5. **Sprint 5 (DX + DevOps):** #18 Scalar + SDK (M) + #22 CI/CD + Blue-Green (L) + #15 SBOM + Dep Scanning (M) — unblocks contributor velocity.
+6. **Sprint 6 (depth):** #3 EAS HW Integration (XL) + #6 DAB+ SLS + #7 SPI/DPI EPG + #5 EBU Tech 3299 validation + #12 SSO + #19 Sandbox mode + #17 Webhook Registry.
+
+## Overlap Check vs. Prior Syntheses
+
+- **research-B (infra):** Owns streaming/audio/RF/Grafana/Loki/Alertmanager/silence detection. My #22 explicitly complements (not duplicates) their Loki stack with app-level pino + correlationId + K8s probes; my #16 (CAP signature verification) and #4 (EasLog) are EAS-specific and not in research-B.
+- **research-C (UX):** Owns UX/analytics/voice-tracking/social/PWA/engagement. My #20 mentions listener-request voting only as a use-case target for `use()`+optimistic UI, complementing research-C's #18 (polls/voting) without re-proposing the voting feature itself.
+- All 20 opportunities above are confirmed absent from the worklog and from the two prior syntheses.
+
+---
+Task ID: research-master
+Agent: lead
+Task: Master synthesis 81 upgrade opportunities iz 23 web iskanj
+
+Work Log:
+- 23 web_search klicev (15 vzporednih + 8 dodatnih) v /home/z/my-project/research/
+- 4 vzporedni subagenti (research-A/B/C/D) sintetizirali po skupinah:
+  - research-A: 22 priložnosti (music sched, traffic, podcast, generative AI, playout, DR)
+  - research-B: 20 priložnosti (streaming, monitoring, audio, WebRTC, observability)
+  - research-C: 19 priložnosti (UI/UX, analytics, voice tracking, social, mobile, engagement)
+  - research-D: 22 priložnosti (compliance, collab, security, EAS, OpenAPI, Next.js 16)
+- Vse priložnosti preverjene proti worklog.md — 0 prekrivanj z implementiranim
+- Master roadmap zapisan v /home/z/my-project/UPGRADE-ROADMAP.md
+
+Stage Summary:
+- 81 konkretnih priložnosti za nadgradnjo
+- Top 10 hitrih zmage (S/M effort, visok impact)
+- 6-sprint roadmap (security → EAS → infra → Next.js 16 → AI/playout → traffic/podcast/engagement)
+- 6 strateških XL investicij
+- Real standards referenced: EBU R128, ITU-R BS.1770-4, CAP 1.2, FEMA IPAWS, ETSI TS 101 499, ETSI TS 102 410, EBU Tech 3299, RFC 6238 (TOTP), RFC 3275 (XML-Sig), RFC 7807, RFC 2104, SMPTE 2021 BXF v3.1, 47 CFR §11.35/§11.54/§11.56/§11.61, DMCA §114, C2PA, CycloneDX
+- Real tools referenced: GSelector, MusicMaster, PowerGOLD, WideOrbit, Marketron, Natural Log, AzuraCast, Liquidsoap, Icecast2, Nimble Streamer, mediasoup, LiveKit, ElevenLabs, Murf, WellSaid, RNNoise, Demucs, ffmpeg loudnorm, chromaprint, librosa, acoustid, Omnia 9, Orban, Stereo Tool, Breakaway, DASDEC-III, SAGE ENDEC, RTL-SDR, Tieline, Comrex, srt-live-server, Grafana, Prometheus, Alertmanager, Loki, Promtail, NextAuth v4, @simplewebauthn, @auth/saml-provider, @upstash/ratelimit, Infisical, dotenv-vault, trivy, CycloneDX, Scalar, Stoplight Elements, openapi-typescript-codegen, Yjs, y-websocket, wavesurfer.js, react-simple-maps, Mapbox GL, Ayrshare, Zernio, podping.live, Workbox, web-push (VAPID), Framer Motion, TanStack Table, pino

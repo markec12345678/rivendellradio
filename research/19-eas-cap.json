@@ -1,0 +1,74 @@
+[
+  {
+    "url": "https://www.fema.gov/emergency-managers/practitioners/integrated-public-alert-warning-system/technology-developers/common-alerting-protocol",
+    "name": "Common Alerting Protocol | FEMA.gov",
+    "snippet": "The Common Alerting Protocol (CAP), a digital format for exchanging emergency alerts, allows a consistent alert message to be disseminated simultaneously over ...",
+    "host_name": "www.fema.gov",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://en.wikipedia.org/wiki/Common_Alerting_Protocol",
+    "name": "Common Alerting Protocol - Wikipedia",
+    "snippet": "The Common Alerting Protocol (CAP) is an XML-based data format for exchanging public warnings and emergencies between alerting technologies.",
+    "host_name": "en.wikipedia.org",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://docs.oasis-open.org/emergency/cap/v1.2/CAP-v1.2-os.html",
+    "name": "CAP-v1.2-os.html - Common Alerting Protocol - OASIS Open",
+    "snippet": "The Common Alerting Protocol (CAP) is a simple but general format for exchanging all-hazard emergency alerts and public warnings over all kinds of networks.",
+    "host_name": "docs.oasis-open.org",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://etrp.wmo.int/pluginfile.php/16462/mod_resource/content/0/CAP-101-Notes.pdf",
+    "name": "[PDF] Common Alerting Protocol (CAP) - ETRP Moodle Site",
+    "snippet": "The Integrated Public Alert and Warning System (IPAWS) helps authorized officials to deliver alerts to the U.S. public through multiple communications pathways.",
+    "host_name": "etrp.wmo.int",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.dhs.gov/sites/default/files/publications/Alert-Protocol-TG_0215-508.pdf",
+    "name": "[PDF] Common Alerting Protocol Alert Origination Tools Technology Guide",
+    "snippet": "It is a legacy system jointly coordinated by FEMA, the FCC, and broadcasters, in partnership with public and private service providers (called EAS participants) ...",
+    "host_name": "www.dhs.gov",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "http://www.eas-cap.org",
+    "name": "EAS-CAP Industry Group Homepage",
+    "snippet": "The ECIG Implementation Guide is intended to facilitate the effective use and translation of the open, non-proprietary Common Alerting Protocol (CAP) for the ...",
+    "host_name": "www.eas-cap.org",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://tap.gallaudet.edu/Emergency/Nov05Conference/EmergencyReports/Advanced_EAS_Concept.pdf",
+    "name": "[PDF] An Advanced EAS Relay Network Using the Common Alerting",
+    "snippet": "The Common Alerting Protocol (CAP) is a simple data format for exchanging all-hazard emergency alerts among all kinds of networks and warning systems. By ...",
+    "host_name": "tap.gallaudet.edu",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.itu.int/en/ITU-D/Emergency-Telecommunications/Documents/2020/CAP-101.pdf?csf=1&e=4PKYty",
+    "name": "[PDF] Common Alerting Protocol (CAP) - ITU",
+    "snippet": "Typical CAP-based Alerting System. Alert methods supported: EAS (U.S.. Emergency Alert System), broadcast radio station, broadcast television, cable TV ...",
+    "host_name": "www.itu.int",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  }
+]
