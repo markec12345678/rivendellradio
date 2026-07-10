@@ -1095,3 +1095,37 @@ Končno stanje:
 - Vse na GitHubu (web-dashboard branch)
 - Lint: čist
 - 0 napak v brskalniku
+
+---
+Task ID: docker-deployment
+Agent: lead
+Task: Docker containerization + CONTRIBUTING.md + .env.example
+
+Work Log:
+- Dockerfile (multi-stage build z Bun):
+  - Stage 1: deps (install + Prisma generate)
+  - Stage 2: builder (Next.js standalone build)
+  - Stage 3: runner (slim image, non-root user, health check)
+- mini-services/broadcast-feed/Dockerfile:
+  - Bun-based, non-root, health check, port 3003
+- docker-compose.yml:
+  - web + broadcast-feed services
+  - Persistent volume (db-data)
+  - Internal bridge network
+  - Dependency ordering (web waits for feed)
+  - `docker compose up -d` = cel sistem
+- .env.example: DATABASE_URL, RDXport, API keys, theme defaults
+- .dockerignore: node_modules, .next, .git, logs, etc.
+- CONTRIBUTING.md:
+  - Development setup (Bun + Docker)
+  - Code style guide (TypeScript, React, Tailwind, API, Event Bus)
+  - PR process z checklist
+  - Clean-room policy
+  - Architecture decisions
+  - Issue reporting
+- Lint: čist
+
+Stage Summary:
+- Docker deployment: DONE
+- En ukaz za cel sistem: `docker compose up -d`
+- Projekt je sedaj popolnoma deployable
