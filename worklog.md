@@ -1129,3 +1129,55 @@ Stage Summary:
 - Docker deployment: DONE
 - En ukaz za cel sistem: `docker compose up -d`
 - Projekt je sedaj popolnoma deployable
+
+---
+Task ID: deploy-final
+Agent: lead
+Task: Končni deployment + validacija vseh servisov v sandboxu
+
+Work Log:
+- Lint: čist (eslint . — 0 errors, 0 warnings)
+- Servisi vsi zagnani in zdravi:
+  - Caddy gateway :81 (reverse proxy + XTransformPort query support)
+  - Next.js dev server :3000 (next-server v16.1.3)
+  - broadcast-feed mini-service :3003 (bun --hot index.ts, socket.io)
+- HTTP health checks:
+  - Caddy :81 / → 200
+  - Next.js :3000 / → 200
+  - Socket.io handshake direct :3003 → sid issued, upgrades=["websocket"]
+  - Socket.io handshake via Caddy gateway (?XTransformPort=3003) → sid issued
+- API validacija (preko Caddy gateway :81):
+  - GET /api/v1/ai → 11 modulov, 7 aktivnih, 1308783 runs, 100.00% success rate
+  - GET /api/v1/topology → 10 nodes (Studio A → Studer Vista 1 → Omnia 9 → Signal Split → FM/Stream paths), 9 connections, 1788 listeners
+  - GET /api/v1/replay → 20 events, 8 categories, 464s duration
+- Agent Browser validacija (http://localhost:81/):
+  - Stran se naloži čisto: "Rock 88.7 — Broadcast Control Center"
+  - 0 page errors, 0 console errors (samo React DevTools hint + HMR connected)
+  - Vsi 7 zavihki prisotni: Dashboard, Library, Schedule, Streams, Reports, System, Settings
+  - Now Playing: "Seven Nation Army" — The White Stripes (WebSocket feed aktivno)
+  - Soundpanel F1-F8 z cart imeni
+  - Listener Requests z Approve/Reject gumbi
+  - 11 AI modulov prikazanih (AI DJ, AI News, AI Scheduler, AI Metadata, AI Social, AI QC, AI DJ Assistant, AI Music Director, AI Producer, AI Failure Detection, AI Cost Optimizer)
+  - RML command input + Send button v footerju
+  - GitHub link v footerju
+- Interaktivnost:
+  - Library tab → track tabela z iskalnikom + filtri (ALL/MUSIC/JINGLES/ADS/PROMOS/Import)
+  - System tab → "System Status" heading, 10 topology nodes, AI Copilot input, Replay Studio date picker, Studio Clock
+- Responsive:
+  - Mobile 375x812: navigation drawer se odpre, vsi 7 zavihki dostopni
+  - Desktop 1440x900: full layout pravilen
+- Sticky footer:
+  - Mobile dashboard: viewport=812, docHeight=4808, footerBottom=4808 (pravilno potisnjen dol)
+  - Desktop dashboard: viewport=900, docHeight=2976, footerBottom=2976 (pravilno potisnjen dol)
+- dev.log: 0 napak, 0 warningov, 0 exceptionov v zadnjih 50 vrsticah
+
+Stage Summary:
+- DEPLOYMENT USPEŠEN
+- Aplikacija dostopna preko Caddy gateway na portu 81 (preview panel)
+- Vsi 3 servisi zagnani in zdravi
+- Vsi API-ji odzivni (35+ rut)
+- WebSocket feed dela (real-time now-playing data)
+- Mobile + desktop responsive
+- Sticky footer pravilen na vseh velikostih
+- 0 napak v brskalniku ali server logih
+- Uporabnik lahko odpre aplikacijo v Preview Panelu na desni strani ali klikne "Open in New Tab"
