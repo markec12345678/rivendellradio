@@ -146,3 +146,80 @@ model WebhookDelivery {
   @@index([status])
   @@index([eventId])
 }
+
+// ============================================================================
+// Phase 3: EAS/CAP Compliance (FCC 47 CFR Part 11 + OASIS CAP 1.2)
+// ============================================================================
+
+/// CAP 1.2 alert — ingestiran iz FEMA IPAWS-OPEN ali lokalnega EAS dekoderja.
+/// Spec: OASIS CAP 1.2 (https://docs.oasis-open.org/emergency/cap/v1.2/CAP-v1.2.html)
+model CapAlert {
+  id          Int      @id @default(autoincrement())
+  identifier  String   // CAP <identifier> — unikatno per sender
+  sender      String   // CAP <sender> — IPAWS COG ID ali lokalni sender
+  sent        DateTime // CAP <sent> — timestamp originalnega alerta
+  status      String   // CAP <status>: Actual | Exercise | System | Test | Draft
+  msgType     String   // CAP <msgType>: Alert | Update | Cancel | Ack | Error
+  scope       String   // CAP <scope>: Public | Restricted | Private
+  source      String?  // CAP <source> — humano berljiv source
+  code        String?  // CAP <code> — npr. "IPAWSv1.0"
+  infoXml     String   // original <info> blok kot JSON (lahko več jezikov)
+  category    String?  // Geo/Met/Safety/Security/Rescue/Fire/Env/Transport/Infra/CBRNE/Other
+  event       String?  // npr. "Tornado Warning", "Required Weekly Test"
+  urgency     String?  // Immediate | Expected | Future | Past | Unknown
+  severity    String?  // Extreme | Severe | Moderate | Minor | Unknown
+  certainty   String?  // Observed | Likely | Possible | Unlikely | Unknown
+  effective   DateTime? // kdaj alert začne veljati
+  onset       DateTime? // kdaj se pojavi
+  expires     DateTime? // kdaj poteče
+  areaDesc    String?  // CAP <areaDesc> — geografski opis
+  geocode     String?  // CAP <geocode> — SAME/FIPS kode kot JSON
+  parameters  String?  // CAP <parameter> — BHZ5, FLW, itd. kot JSON
+  // Signature verification
+  signatureValid Boolean @default(false)
+  signatureError  String?
+  rawXml      String   // originalen CAP XML za audit
+  // Routing
+  origin     String   // ipaws | local | manual | test
+  receivedAt DateTime @default(now())
+  // Povezava z EasLog (1:1 — en alert = en log entry po ingestu)
+  easLog     EasLog?   @relation("CapAlertEasLog")
+
+  @@unique([sender, identifier])
+  @@index([sent])
+  @@index([severity])
+  @@index([status])
+  @@index([expires])
+  @@index([receivedAt])
+}
+
+/// FCC EAS log — 47 CFR §11.35 zahteva evidenco vseh EAS dogodkov.
+/// Retencija: 4 leta (FCC zahteva). Cron job briše starejše.
+model EasLog {
+  id          Int      @id @default(autoincrement())
+  // Povezava s CAP alertom (lahko je null za ročne/testne dogodke)
+  capAlertId  Int?     @unique
+  capAlert    CapAlert? @relation("CapAlertEasLog", fields: [capAlertId], references: [id])
+  // Event classification
+  eventType   String   // received | test | sent | interrupted | ignored | manual | weekly-test | monthly-test
+  alertId     String?  // reference na <identifier>
+  originator  String?  // kdo je sprožil (FCC origination code)
+  decoderId   String?  // kateri dekoder/encoder je prejel (DASDEC-III, SAGE ENDEC)
+  // Timing
+  receivedAt  DateTime @default(now())
+  durationMs  Int?     // koliko časa je trajala oddaja alerta
+  // Operator info
+  operatorId  String?  // kateri uporabnik je potrdil/akciral
+  // Result
+  result      String   // success | failed | ignored | pending
+  resultDetail String? // npr. "broadcast interrupted 45s", "duplicate ignored"
+  // FCC compliance fields
+  fccStatusCode String? // SAME originator code (EAN, EAT, NPT, RMT, RWT, etc.)
+  sameCode      String? // SAME event code (TOR, SVR, FFW, RWT, RMT, etc.)
+  // Audit
+  notes       String?
+
+  @@index([eventType])
+  @@index([receivedAt])
+  @@index([result])
+}

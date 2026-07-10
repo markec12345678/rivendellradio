@@ -16,6 +16,7 @@ import { IncidentTimeline, CopilotChat } from '@/components/rivendell/incident-c
 import { TopologyPanel } from '@/components/rivendell/topology-panel'
 import { ReplayStudio } from '@/components/rivendell/replay-studio'
 import { UpgradesPanel } from '@/components/rivendell/upgrades-panel'
+import { EasPanel } from '@/components/rivendell/eas-panel'
 import { formatHms, formatClock, formatNumber } from '@/lib/rivendell/format'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -274,6 +275,9 @@ export function SystemTab() {
 
       {/* Upgrades & Hardening — Top 10 quick wins */}
       <UpgradesPanel />
+
+      {/* EAS / CAP Compliance — FCC 47 CFR Part 11 */}
+      <EasPanel />
 
       {/* Broadcast Topology */}
       <TopologyPanel />

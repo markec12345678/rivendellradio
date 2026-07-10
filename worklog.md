@@ -2064,3 +2064,60 @@ Stage Summary:
 - Security headers + CSP + rate limiting = production-ready varnostna osnova
 - EBU R128 + SNMP traps + silence detection = broadcast-grade monitoring
 - Affidavit + Podping = komercialna in podcast skladnost
+
+---
+Task ID: sprint2-eas-cap
+Agent: lead
+Task: Sprint 2 — EAS/CAP Compliance (CAP 1.2 ingestion + program interruption + signature verification + FCC EasLog)
+
+Work Log:
+- Prisma schema: dodana 2 nova modela
+  - CapAlert: 25 polj (identifier, sender, sent, status, msgType, scope, infoXml, category, event, urgency, severity, certainty, effective, onset, expires, areaDesc, geocode, parameters, signatureValid, signatureError, rawXml, origin, receivedAt, easLogId)
+  - EasLog: 14 polj (eventType, alertId, originator, decoderId, receivedAt, durationMs, operatorId, result, resultDetail, fccStatusCode, sameCode, notes, capAlertId)
+  - 1:1 relacija z "CapAlertEasLog" imenom
+  - db:push uspešen, Prisma client generiran
+- CAP 1.2 parser (src/lib/cap-parser.ts, ~180 vrstic):
+  - parseCapXml: non-validating parser, ekstraktira vse obvezne CAP 1.2 elemente
+  - extractSameCode: inferira SAME kodo iz parameters ali event imena
+  - SAME_EVENT_CODES: 30+ kod (TOR, SVR, FFW, RWT, RMT, EAN, EAT, etc.)
+  - FCC_ORIGINATOR_CODES: 6 kod (PEP, WXR, EAS, CIV, WRM, ORG)
+- CAP signature verification (src/lib/cap-signature.ts, ~110 vrstic):
+  - verifyCapSignature: RFC 3275 XMLDSig (sandbox za trusted IPAWS senders, production z xml-crypto)
+  - checkReplay: 24h replay window (sender+identifier deduplikacija)
+  - generateInternalDigest: HMAC-SHA256 notranji fingerprint
+  - KNOWN_IPAWS_SENDERS: 5 trusted senderjev (noaa@weather.gov, ipaws@fema.gov, etc.)
+- 5 novih API endpointov:
+  - /api/v1/eas/cap (GET list + POST ingest): CAP 1.2 ingestion z validacijo, signature, replay check, persist
+  - /api/v1/eas/interrupt (GET + POST): 7-korakni EAS pipeline (fade → header → attention → SAME burst → TTS → EOM → restore), 47 CFR §11.51 compliant
+  - /api/v1/eas/log (GET + DELETE): FCC EasLog z 4-letno retencijo, CSV export, stats mode
+  - /api/v1/eas/ipaws (GET + POST): FEMA IPAWS-OPEN polling (sandbox/live), COG config
+  - /api/v1/eas/test (GET + POST): RWT/RMT test generator, 47 CFR §11.61 compliance
+- EasPanel UI komponenta (src/components/rivendell/eas-panel.tsx, ~480 vrstic):
+  - 4 sub-tab-i: CAP Alerts, FCC Log, IPAWS, Tests
+  - CAP Alerts: feed z severity color-coding, sameCode badges, signature status
+  - FCC Log: weekly/monthly test compliance checks, CSV export, entry list
+  - IPAWS: config + stats + recent alerts + manual poll button
+  - Tests: RWT/RMT scheduler z due dates + run buttons + result display
+  - Integrirana v System tab za UpgradesPanel
+- Lint: čist (0 errors, 0 warnings)
+- Validacija (vse green):
+  - API-ji: vsi 5 EAS endpointi vračajo 200
+  - CAP ingestion: test XML pravilno parsan (Severe Thunderstorm Warning, SVR sameCode)
+  - Signature verification: noaa@weather.gov = valid (trusted), evil@hacker.com = invalid (untrusted)
+  - Replay protection: drugi poskus istega alerta vrača 409 z ignored:true, reason:'replay'
+  - Auto-interrupt: Severe + Immediate alert sproži autoInterrupt:true
+  - RWT test: POST vrača ok:true, typeCode:'RWT', testIdentifier, compliance.nextDue
+  - Agent Browser: EAS panel upodobljen z vsemi 4 sub-tabi, vse ključne vsebine prisotne
+  - 0 browser errors, 0 console errors
+  - Dev log: samo Prisma INSERT queryji (pričakovano)
+
+Stage Summary:
+- Sprint 2 EAS/CAP Compliance: DONE
+- 2 nova Prisma modela (CapAlert, EasLog) z 1:1 relacijo
+- 2 nova lib-a (cap-parser.ts, cap-signature.ts) ~290 vrstic
+- 5 novih API rut (/api/v1/eas/cap, /interrupt, /log, /ipaws, /test)
+- 1 nova UI komponenta (eas-panel.tsx, ~480 vrstic) z 4 sub-tabi
+- FCC compliance: 47 CFR §11.31 (SAME), §11.35 (log retention 4y), §11.51 (program interruption), §11.61 (weekly/monthly tests)
+- OASIS CAP 1.2 spec compliance: required fields, multiple <info> blocks, geocode/parameter pairs
+- Security: RFC 3275 XMLDSig verification, 24h replay protection, 5 trusted IPAWS senders
+- Production-ready:只需要 IPAWS_COG_ID + IPAWS_USER_ID + IPAWS_PASSWORD env vars za live FEMA polling
