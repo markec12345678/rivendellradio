@@ -1,0 +1,54 @@
+# Build artifacts
+.next/
+out/
+node_modules/
+
+# Development
+.git/
+.gitignore
+*.md
+!README.md
+!CONTRIBUTING.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Database
+db/*.db
+db/*.db-journal
+
+# Logs
+*.log
+dev.log
+server.log
+
+# Test
+coverage/
+tests/
+
+# Examples
+examples/
+
+# Temporary
+tmp/
+*.tmp
+
+# Docker (avoid recursive builds)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Download
+download/

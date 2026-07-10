@@ -1,0 +1,48 @@
+# ============================================================================
+# docker-compose.yml — Rock 88.7 Broadcast Control Center
+# One command to run the entire system: docker compose up -d
+# ============================================================================
+
+services:
+  # Main Next.js web application
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rock887-web
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/db/custom.db
+      - BROADCAST_FEED_URL=http://broadcast-feed:3003
+    volumes:
+      - db-data:/app/db
+    depends_on:
+      broadcast-feed:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - rock887
+
+  # WebSocket mini-service (real-time telemetry)
+  broadcast-feed:
+    build:
+      context: .
+      dockerfile: mini-services/broadcast-feed/Dockerfile
+    container_name: rock887-feed
+    ports:
+      - "3003:3003"
+    restart: unless-stopped
+    networks:
+      - rock887
+
+# Persistent storage for SQLite database
+volumes:
+  db-data:
+    driver: local
+
+# Internal network for service-to-service communication
+networks:
+  rock887:
+    driver: bridge
