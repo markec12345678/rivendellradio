@@ -1,0 +1,18 @@
+# ============================================================================
+# Grafana dashboard provider provisioning
+# Auto-loads every *.json file under /var/lib/grafana/dashboards into Grafana
+# ============================================================================
+apiVersion: 1
+
+providers:
+  - name: 'Rock 88.7 — dashboards'
+    orgId: 1
+    folder: 'Rock 88.7'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      recurseEnabled: true
+      foldersFromFilesStructure: false

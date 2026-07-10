@@ -1,0 +1,254 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {"type": "grafana", "uid": "-- Grafana --"},
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Per-module cost, token usage, success rate, cache efficiency and queue depth for the Rock 88.7 AI orchestrator (Copilot / voice-track / metadata / compliance).",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "id": 1,
+      "title": "AI Runs by Module (1h sum)",
+      "type": "bargauge",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [
+            {"color": "blue", "value": null},
+            {"color": "green", "value": 10},
+            {"color": "yellow", "value": 100},
+            {"color": "red", "value": 500}
+          ]},
+          "color": {"mode": "thresholds"}
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "reduceOptions": {"calcs": ["sum"], "fields": "", "values": false},
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "minVizWidth": 0,
+        "minVizHeight": 16,
+        "text": {"titleSize": 16, "valueSize": 22},
+        "sizing": "auto",
+        "legend": {"displayMode": "list", "placement": "bottom", "showLegend": false}
+      },
+      "targets": [
+        {"refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"},
+         "expr": "sum by (module) (increase(ai_module_runs_total[1h]))",
+         "legendFormat": "{{module}}", "range": true, "instant": true, "format": "table"}
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Token Usage Trend (tokens / min)",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "spanNulls": false,
+            "showPoints": "never",
+            "stacking": {"mode": "normal", "group": "A"},
+            "axisPlacement": "auto",
+            "axisLabel": "tokens / min",
+            "scaleDistribution": {"type": "linear"}
+          },
+          "color": {"mode": "palette-classic"},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {"calcs": ["lastNotNull", "sum"], "displayMode": "table", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "multi", "sort": "desc"}
+      },
+      "targets": [
+        {"refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"},
+         "expr": "sum by (module, kind) (rate(ai_module_tokens_total[1m]) * 60)",
+         "legendFormat": "{{module}} / {{kind}}", "range": true}
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Cost per Module (USD, 24h)",
+      "type": "bargauge",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [
+            {"color": "green", "value": null},
+            {"color": "yellow", "value": 5},
+            {"color": "orange", "value": 20},
+            {"color": "red", "value": 50}
+          ]},
+          "color": {"mode": "thresholds"}
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "reduceOptions": {"calcs": ["sum"], "fields": "", "values": false},
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "minVizWidth": 0,
+        "minVizHeight": 16,
+        "text": {"titleSize": 16, "valueSize": 22},
+        "sizing": "auto"
+      },
+      "targets": [
+        {"refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"},
+         "expr": "sum by (module) (increase(ai_module_cost_usd_total[24h]))",
+         "legendFormat": "{{module}}", "range": true, "instant": true, "format": "table"}
+      ]
+    },
+    {
+      "id": 4,
+      "title": "AI Module Success Rate (5-min)",
+      "type": "gauge",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 6, "x": 12, "y": 8},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 1,
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [
+            {"color": "red", "value": null},
+            {"color": "yellow", "value": 0.85},
+            {"color": "green", "value": 0.95}
+          ]},
+          "color": {"mode": "thresholds"}
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
+      },
+      "targets": [
+        {"refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"},
+         "expr": "sum(rate(ai_module_success_total[5m])) / clamp_min(sum(rate(ai_module_runs_total[5m])), 1)",
+         "legendFormat": "success rate", "range": true, "instant": true}
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Cache Hit Rate (5-min)",
+      "type": "gauge",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 6, "x": 18, "y": 8},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 1,
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [
+            {"color": "red", "value": null},
+            {"color": "yellow", "value": 0.3},
+            {"color": "green", "value": 0.6}
+          ]},
+          "color": {"mode": "thresholds"}
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
+      },
+      "targets": [
+        {"refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"},
+         "expr": "sum(rate(ai_module_cache_hits_total[5m])) / clamp_min(sum(rate(ai_module_runs_total[5m])), 1)",
+         "legendFormat": "cache hit rate", "range": true, "instant": true}
+      ]
+    },
+    {
+      "id": 6,
+      "title": "AI Orchestrator Queue Depth",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [
+            {"color": "green", "value": null},
+            {"color": "yellow", "value": 10},
+            {"color": "orange", "value": 25},
+            {"color": "red", "value": 50}
+          ]},
+          "color": {"mode": "thresholds"}
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "percentChangeColorMode": "standard",
+        "orientation2": "auto"
+      },
+      "targets": [
+        {"refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"},
+         "expr": "ai_module_queue_depth",
+         "legendFormat": "queue depth ({{priority}})", "range": true, "instant": true}
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["rock887", "ai", "cost", "copilot"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Rock 88.7 — AI Module Cost & Performance",
+  "uid": "rock887-ai-cost",
+  "version": 1,
+  "weekStart": ""
+}

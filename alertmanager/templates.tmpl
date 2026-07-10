@@ -1,0 +1,72 @@
+{{/*
+  =============================================================================
+  Rock 88.7 Broadcast Control Center — Alertmanager Templates
+  =============================================================================
+  Consumed by alertmanager.yml via:
+      templates:
+        - '/etc/alertmanager/templates/*.tmpl'
+
+  Templates exposed:
+    rock887.title         — one-line alert title with severity emoji
+    rock887.summary       — single-sentence summary (used in PagerDuty desc)
+    rock887.description   — multi-line Slack/email body with alert list
+
+  Severity emojis:
+    🚨 critical   ⚠️ warning   🔒 security   🚨 eas (emergency)
+
+  Slack templating reference:
+    https://prometheus.io/docs/alerting/latest/notifications/
+*/}}
+
+{{/* ---------------------------------------------------------------------------
+   rock887.title — Slack attachment title.
+   Emits the severity emoji, alertname, and (if grouped) the count.
+---------------------------------------------------------------------------- */}}
+{{ define "rock887.title" -}}
+{{- $severity := .CommonLabels.severity | default "warning" -}}
+{{- $category := .CommonLabels.category | default "" -}}
+{{- $emoji := "⚠️" -}}
+{{- if eq $severity "critical" }}{{- $emoji = "🚨" -}}{{- end -}}
+{{- if eq $category "security" }}{{- $emoji = "🔒" -}}{{- end -}}
+{{- if eq $category "eas" }}{{- $emoji = "🚨" -}}{{- end -}}
+{{ $emoji }} {{ .CommonLabels.alertname }}{{ if gt (len .Alerts.Firing) 1 }} ×{{ .Alerts.Firing | len }}{{ end }} — {{ $severity | upper }}{{ if .CommonLabels.service }} · {{ .CommonLabels.service }}{{ end }}
+{{- end -}}
+
+{{/* ---------------------------------------------------------------------------
+   rock887.summary — single-sentence summary (PagerDuty description field).
+   Picks the first firing alert's annotation `summary`, falling back to a
+   generated string. Used in PagerDuty + email subject lines.
+---------------------------------------------------------------------------- */}}
+{{ define "rock887.summary" -}}
+{{- with index .Alerts.Firing 0 -}}
+{{- .Annotations.summary | default (printf "%s alert firing on %s" .Labels.alertname (.Labels.service | default "rock887")) -}}
+{{- else -}}
+{{- with index .Alerts.Resolved 0 -}}
+{{- printf "RESOLVED: %s" (.Annotations.summary | default (printf "%s alert resolved" .Labels.alertname)) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/* ---------------------------------------------------------------------------
+   rock887.description — multi-line Slack text / email body.
+   Shows status counts, then a per-alert block with labels + annotations,
+   then a footer with runbook link(s).
+---------------------------------------------------------------------------- */}}
+{{ define "rock887.description" -}}
+{{- $firing := .Alerts.Firing -}}
+{{- $resolved := .Alerts.Resolved -}}
+*Rock 88.7 Broadcast Control Center*
+{{ if $firing }}🚨 *{{ $firing | len }} firing*{{ end }}{{ if $resolved }}{{ if $firing }} · {{ end }}✅ *{{ $resolved | len }} resolved*{{ end }}{{ if not (or $firing $resolved) }}⚪ no active alerts{{ end }}
+
+{{ range $firing }}
+• *{{ .Labels.alertname }}* {{ if .Labels.service }}(`{{ .Labels.service }}`){{ end }} — {{ .Annotations.summary }}
+  {{ .Annotations.description | trimSuffix "\n" | replace "\n" "\n  " }}
+  {{ if .Annotations.runbook_url }}📖 <{{ .Annotations.runbook_url }}|runbook>{{ end }}
+  `{{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}`{{ end }}
+{{ range $resolved }}
+• ✅ *{{ .Labels.alertname }}* {{ if .Labels.service }}(`{{ .Labels.service }}`){{ end }} — RESOLVED
+  {{ .Annotations.summary }}
+  `{{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}` → `{{ .EndsAt.Format "2006-01-02 15:04:05 MST" }}`{{ end }}
+
+{{ if .ExternalURL }}_<{{ .ExternalURL }}|Alertmanager>_{{ end }}{{ if .Receiver }} · receiver: `{{ .Receiver }}`{{ end }}
+{{- end -}}

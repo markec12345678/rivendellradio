@@ -15,6 +15,7 @@ import { ProductionReadinessPanel } from '@/components/rivendell/production-read
 import { IncidentTimeline, CopilotChat } from '@/components/rivendell/incident-copilot'
 import { TopologyPanel } from '@/components/rivendell/topology-panel'
 import { ReplayStudio } from '@/components/rivendell/replay-studio'
+import { UpgradesPanel } from '@/components/rivendell/upgrades-panel'
 import { formatHms, formatClock, formatNumber } from '@/lib/rivendell/format'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -270,6 +271,9 @@ export function SystemTab() {
 
       {/* Production Readiness — Health + Backup */}
       <ProductionReadinessWrapper />
+
+      {/* Upgrades & Hardening — Top 10 quick wins */}
+      <UpgradesPanel />
 
       {/* Broadcast Topology */}
       <TopologyPanel />

@@ -1,0 +1,372 @@
+# =============================================================================
+# Rock 88.7 Broadcast Control Center — Prometheus Alerting Rules
+# =============================================================================
+# Loaded by Prometheus via:
+#   rule_files:
+#     - /etc/prometheus/rules/alerts.yml
+#
+# Scrape target:
+#   - job_name: 'rock887-app'
+#     metrics_path: /api/v1/metrics
+#     static_configs:
+#       - targets: ['app:3000']
+#
+# METRIC EXPOSURE STATUS
+# ----------------------
+# Currently /api/v1/metrics (src/lib/event-bus.ts → getPrometheusMetrics())
+# only exposes these metrics:
+#     events_total              (counter)
+#     events_failed             (counter)
+#     webhook_deliveries        (counter)
+#     webhook_failures          (counter)
+#     webhook_dlq               (counter)   ← cumulative, NOT a depth gauge
+#     event_latency_ms          (gauge)
+#     uptime_seconds            (gauge)
+#     events_by_type{type=".."} (counter)
+#
+# Every metric referenced in the rules below that is NOT in the list above is
+# flagged with a `# TODO: expose this metric in /api/v1/metrics` comment.
+# Until those metrics are wired up, the rules will evaluate to "no data" and
+# never fire — Prometheus will surface them as `... == 0`-style empty
+# evaluations, which is fine for staging.
+# =============================================================================
+
+groups:
+  # ---------------------------------------------------------------------------
+  # GROUP 1 — On-Air / Broadcast Chain (dead air is the worst-case scenario)
+  # ---------------------------------------------------------------------------
+  - name: broadcast_chain
+    interval: 10s
+    rules:
+      # --- SilenceAlarm: dead air — CRITICAL after 5s -------------------------
+      # TODO: expose this metric in /api/v1/metrics
+      # Suggested source: silence-detector mini-service (Rivendell pypad/silence)
+      # exporting a 0/1 gauge that flips to 1 when audio RMS < -60dBFS for >2s.
+      - alert: SilenceAlarm
+        expr: silence_detector_alarm_active == 1
+        for: 5s
+        labels:
+          severity: critical
+          category: broadcast
+          service: silence-detector
+        annotations:
+          summary: "Dead air detected — silence alarm active on the broadcast chain"
+          description: >
+            The silence detector has reported continuous silence for at least
+            5 seconds. The transmitter is on-air but no audio is reaching the
+            output. This is an FCC reportable outage if it exceeds 60s — start
+            the dead-air runbook NOW.
+          runbook_url: "https://wiki.rock887.local/runbooks/dead-air"
+
+      # --- ListenerDrop50pct: sudden audience loss — CRITICAL ----------------
+      # TODO: expose this metric in /api/v1/metrics
+      # Suggested source: Icecast XML stats polled by the metrics exporter and
+      # exposed as `listener_total{stream="main|mobile|skill"}`.
+      - alert: ListenerDrop50pct
+        expr: |
+          (listener_total offset 5m - listener_total)
+            / clamp_min(listener_total offset 5m, 1) > 0.5
+        for: 1m
+        labels:
+          severity: critical
+          category: broadcast
+          service: icecast
+        annotations:
+          summary: "Listener count dropped >50% in 5 minutes"
+          description: >
+            Total listeners fell from {{ $values.A }} (5m ago) to
+            {{ $values.B }} — a >50% drop. Investigate Icecast mount points,
+            upstream encoder health, and CDN/stream-host reachability.
+          runbook_url: "https://wiki.rock887.local/runbooks/listener-drop"
+
+      # --- RDS Encoder Offline: WARNING after 30s ----------------------------
+      # TODO: expose this metric in /api/v1/metrics
+      # Suggested source: /api/v1/rds health probe, exported as a 0/1 gauge.
+      - alert: RDSEncoderOffline
+        expr: rds_encoder_online == 0
+        for: 30s
+        labels:
+          severity: warning
+          category: broadcast
+          service: rds
+        annotations:
+          summary: "RDS encoder is offline"
+          description: >
+            The RDS encoder has been unreachable for >30s. FM carriers still
+            transmit audio but the 57 kHz RDS subcarrier is dark — listeners'
+            radios show no PI/PS/RT. Not on-air critical but a regulatory
+            hygiene issue (EBU RDS).
+          runbook_url: "https://wiki.rock887.local/runbooks/rds-encoder-offline"
+
+      # --- Icecast Listener Anomaly: stream-outage warning -------------------
+      # TODO: expose this metric in /api/v1/metrics
+      # Suggested source: same poller as ListenerDrop50pct but as a single
+      # `icecast_listeners` aggregate gauge (no labels).
+      - alert: IcecastListenerAnomaly
+        expr: icecast_listeners < 10
+        for: 2m
+        labels:
+          severity: warning
+          category: broadcast
+          service: icecast
+        annotations:
+          summary: "Icecast listeners below 10 (possible stream outage)"
+          description: >
+            Icecast reports fewer than 10 connected listeners for 2 minutes.
+            During normal daytime hours this is abnormal — verify the stream
+            URL, mount health, and CDN edge reachability.
+          runbook_url: "https://wiki.rock887.local/runbooks/icecast-anomaly"
+
+  # ---------------------------------------------------------------------------
+  # GROUP 2 — Transmitter & SNMP Polled Hardware
+  # ---------------------------------------------------------------------------
+  - name: transmitter_hardware
+    interval: 30s
+    rules:
+      # --- TransmitterOverheat: WARNING at >50°C -----------------------------
+      # TODO: expose this metric in /api/v1/metrics
+      # Suggested source: extend /api/v1/snmp poller to expose a labelled
+      # gauge: snmp_device_metric{device="fm-tx",metric="temperature"}.
+      - alert: TransmitterOverheat
+        expr: |
+          snmp_device_metric{metric="temperature"} > 50
+            and on ()
+              snmp_device_metric{metric="temperature"} <= 60
+        for: 1m
+        labels:
+          severity: warning
+          category: snmp
+          service: transmitter
+        annotations:
+          summary: "Transmitter temperature above 50°C ({{ $value }}°C)"
+          description: >
+            FM transmitter temperature is {{ $value }}°C, above the 50°C
+            warning threshold. Cooling-system degradation suspected — check
+            HVAC, air filters, and fan RPMs.
+          runbook_url: "https://wiki.rock887.local/runbooks/tx-overheat"
+
+      # --- TransmitterCriticalOverheat: CRITICAL at >60°C --------------------
+      # TODO: expose this metric in /api/v1/metrics (same source as above).
+      - alert: TransmitterCriticalOverheat
+        expr: snmp_device_metric{metric="temperature"} > 60
+        for: 30s
+        labels:
+          severity: critical
+          category: snmp
+          service: transmitter
+        annotations:
+          summary: "Transmitter CRITICAL overheat ({{ $value }}°C) — power-down imminent"
+          description: >
+            Transmitter temperature has exceeded 60°C. Automatic foldback /
+            shutdown may engage within minutes. Reduce power or switch to the
+            backup transmitter immediately.
+          runbook_url: "https://wiki.rock887.local/runbooks/tx-critical-overheat"
+
+  # ---------------------------------------------------------------------------
+  # GROUP 3 — AI Modules
+  # ---------------------------------------------------------------------------
+  - name: ai_modules
+    interval: 30s
+    rules:
+      # --- AIModuleFailureRate: WARNING if >5% failures over 5m --------------
+      # TODO: expose this metric in /api/v1/metrics
+      # Suggested source: ai-orchestrator counters per module, exported as
+      # ai_module_failed_total{module="music-director|copilot|failure-detection"}
+      # and ai_module_runs_total{module="..."}.
+      - alert: AIModuleFailureRate
+        expr: |
+          (
+            sum by (module) (rate(ai_module_failed_total[5m]))
+              /
+            clamp_min(sum by (module) (rate(ai_module_runs_total[5m])), 0.001)
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          category: ai
+          service: ai-orchestrator
+        annotations:
+          summary: "AI module {{ $labels.module }} failure rate >5%"
+          description: >
+            AI module "{{ $labels.module }}" has a failure rate of
+            {{ $value | humanizePercentage }} over the last 5 minutes — above
+            the 5% SLO. Check the upstream LLM provider quota/billing and the
+            module's error log in the AI Orchestrator panel.
+          runbook_url: "https://wiki.rock887.local/runbooks/ai-module-failures"
+
+  # ---------------------------------------------------------------------------
+  # GROUP 4 — Webhooks & Event Bus
+  # ---------------------------------------------------------------------------
+  - name: webhooks_eventbus
+    interval: 30s
+    rules:
+      # --- WebhookDLQGrowing: WARNING at >10 in DLQ --------------------------
+      # TODO: expose this metric in /api/v1/metrics
+      # Currently the route exposes `webhook_dlq` (a counter). Add a
+      # `webhook_dlq_depth` GAUGE that equals the current DLQ length so this
+      # rule can fire on backlog, not cumulative count.
+      - alert: WebhookDLQGrowing
+        expr: |
+          webhook_dlq_depth > 10
+            and on ()
+              webhook_dlq_depth <= 50
+        for: 1m
+        labels:
+          severity: warning
+          category: webhook
+          service: event-bus
+        annotations:
+          summary: "Webhook DLQ depth {{ $value }} (>10) — backlog building"
+          description: >
+            The webhook dead-letter queue has {{ $value }} entries. Delivery
+            is retrying with exponential backoff but consumers may be down or
+            rejecting signatures. Inspect /api/v1/webhooks/dlq.
+          runbook_url: "https://wiki.rock887.local/runbooks/webhook-dlq"
+
+      # --- WebhookDLQCritical: CRITICAL at >50 -------------------------------
+      # TODO: expose this metric in /api/v1/metrics (same source as above).
+      - alert: WebhookDLQCritical
+        expr: webhook_dlq_depth > 50
+        for: 1m
+        labels:
+          severity: critical
+          category: webhook
+          service: event-bus
+        annotations:
+          summary: "Webhook DLQ depth {{ $value }} (>50) — critical backlog"
+          description: >
+            The webhook DLQ has {{ $value }} entries. Listeners (Discord,
+            podping, station website) are missing real-time track events.
+            Page the on-call integrations engineer.
+          runbook_url: "https://wiki.rock887.local/runbooks/webhook-dlq-critical"
+
+      # --- EventBusLag: queue depth >1000 — WARNING -------------------------
+      # TODO: expose this metric in /api/v1/metrics
+      # Suggested source: in-process event-bus queue length, exported as a
+      # gauge: event_bus_queue_depth{subscriber="audit|webhook|ai|replay"}.
+      - alert: EventBusLag
+        expr: event_bus_queue_depth > 1000
+        for: 2m
+        labels:
+          severity: warning
+          category: daemon
+          service: event-bus
+        annotations:
+          summary: "Event Bus queue depth {{ $value }} (>1000) — subscriber lag"
+          description: >
+            Event Bus subscriber queue "{{ $labels.subscriber }}" has
+            {{ $value }} pending events for 2 minutes. The subscriber is
+            falling behind — check for a slow or stuck consumer.
+          runbook_url: "https://wiki.rock887.local/runbooks/eventbus-lag"
+
+  # ---------------------------------------------------------------------------
+  # GROUP 5 — System / Host Health
+  # ---------------------------------------------------------------------------
+  - name: system_health
+    interval: 30s
+    rules:
+      # --- HighCPUOrMemory: >85% CPU for 5m — WARNING -----------------------
+      # TODO: expose this metric in /api/v1/metrics
+      # Suggested source: node_exporter (preferred) or a periodic
+      # os.cpus() / process.memoryUsage() sampler inside the app.
+      - alert: HighCPUOrMemory
+        expr: system_cpu_percent > 85
+        for: 5m
+        labels:
+          severity: warning
+          category: system
+          service: host
+        annotations:
+          summary: "Host CPU >85% for 5m ({{ $value }}%)"
+          description: >
+            CPU utilization has been above 85% for 5 minutes. Investigate
+            runaway playout, AI workers, or a stuck ffmpeg encode.
+          runbook_url: "https://wiki.rock887.local/runbooks/high-cpu"
+
+      # --- DiskSpaceLow: <10% free — CRITICAL -------------------------------
+      # TODO: expose this metric in /api/v1/metrics
+      # Suggested source: node_exporter filesystem collector, or a periodic
+      # fs.statfs() poll exposed as system_disk_free_percent{mount="/"}.
+      - alert: DiskSpaceLow
+        expr: system_disk_free_percent < 10
+        for: 1m
+        labels:
+          severity: critical
+          category: system
+          service: host
+        annotations:
+          summary: "Disk space critically low ({{ $value }}% free)"
+          description: >
+            Mount "{{ $labels.mount }}" has only {{ $value }}% free space.
+            Recording capture, podcast WAVs, and SQLite WAL all need room —
+            clear old logs/replays immediately to avoid a broadcast stop.
+          runbook_url: "https://wiki.rock887.local/runbooks/disk-space-low"
+
+  # ---------------------------------------------------------------------------
+  # GROUP 6 — Web API / TLS
+  # ---------------------------------------------------------------------------
+  - name: webapi_tls
+    interval: 30s
+    rules:
+      # --- APILatencyHigh: avg p50 >2s over 5m — WARNING --------------------
+      # TODO: expose this metric in /api/v1/metrics
+      # Suggested source: wrap Next.js Route Handlers with a histogram
+      # using prom-client: http_request_duration_seconds_{sum,count,bucket}.
+      - alert: APILatencyHigh
+        expr: |
+          (
+            sum(rate(http_request_duration_seconds_sum[5m]))
+              /
+            clamp_min(sum(rate(http_request_duration_seconds_count[5m])), 0.001)
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          category: system
+          service: webapi
+        annotations:
+          summary: "API average latency >2s over 5m ({{ $value }}s)"
+          description: >
+            Mean HTTP request duration across all routes is {{ $value }}s —
+            well above the 500ms SLO. Check Prisma connection pool, slow
+            queries, and Event Bus publish latency.
+          runbook_url: "https://wiki.rock887.local/runbooks/api-latency"
+
+      # --- CertExpiringSoon: <14 days — WARNING -----------------------------
+      # TODO: expose this metric in /api/v1/metrics
+      # Suggested source: a periodic tls.connect() probe per domain exported
+      # as ssl_cert_expiry_days{domain="rock887.fm|api.rock887.fm"}.
+      - alert: CertExpiringSoon
+        expr: |
+          ssl_cert_expiry_days < 14
+            and on (domain)
+              ssl_cert_expiry_days >= 7
+        for: 1h
+        labels:
+          severity: warning
+          category: security
+          service: tls
+        annotations:
+          summary: "TLS cert for {{ $labels.domain }} expires in <14 days"
+          description: >
+            The TLS certificate for {{ $labels.domain }} will expire in
+            {{ $value }} days. Renew via Let's Encrypt / Caddy ACME before
+            browsers start showing NET::ERR_CERT_DATE_INVALID.
+          runbook_url: "https://wiki.rock887.local/runbooks/cert-renewal"
+
+      # --- CertExpiringCritical: <7 days — CRITICAL -------------------------
+      # TODO: expose this metric in /api/v1/metrics (same source as above).
+      - alert: CertExpiringCritical
+        expr: ssl_cert_expiry_days < 7
+        for: 1h
+        labels:
+          severity: critical
+          category: security
+          service: tls
+        annotations:
+          summary: "TLS cert for {{ $labels.domain }} expires in <7 days — URGENT"
+          description: >
+            The TLS certificate for {{ $labels.domain }} will expire in
+            {{ $value }} days. On-air streaming endpoints, mobile apps, and
+            smart-speaker skills will fail cert validation. Renew NOW.
+          runbook_url: "https://wiki.rock887.local/runbooks/cert-renewal-urgent"

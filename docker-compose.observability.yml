@@ -1,0 +1,98 @@
+# ============================================================================
+# docker-compose.observability.yml — Rock 88.7 observability stack
+#   Prometheus + Grafana + Alertmanager
+#
+# Bring the stack up:
+#   docker compose -f docker-compose.observability.yml --profile observability up -d
+#
+# Then open:
+#   - Grafana      → http://localhost:3001   (admin / admin)
+#   - Prometheus   → http://localhost:9090
+#   - Alertmanager → http://localhost:9093
+# ============================================================================
+
+name: rock887-observability
+
+services:
+  # --------------------------------------------------------------------------
+  # Prometheus — scrapes the Next.js /api/v1/metrics endpoint every 10s
+  # --------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: rock887-prometheus
+    profiles: ["observability"]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/rules/alerts.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - rock887-obs
+
+  # --------------------------------------------------------------------------
+  # Grafana — auto-provisioned datasource + dashboards on first boot
+  # --------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:latest
+    container_name: rock887-grafana
+    profiles: ["observability"]
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/broadcast-overview.json
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+      - GF_INSTALL_PLUGINS=
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - rock887-obs
+
+  # --------------------------------------------------------------------------
+  # Alertmanager — receives alerts from Prometheus /api/v1/rules and routes them
+  # --------------------------------------------------------------------------
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: rock887-alertmanager
+    profiles: ["observability"]
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./alertmanager/templates.tmpl:/etc/alertmanager/templates/templates.tmpl:ro
+      - alertmanager-data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+    restart: unless-stopped
+    networks:
+      - rock887-obs
+
+volumes:
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  alertmanager-data:
+    driver: local
+
+networks:
+  rock887-obs:
+    driver: bridge

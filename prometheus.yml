@@ -1,0 +1,63 @@
+# ============================================================================
+# prometheus.yml — Rock 88.7 scrape config
+#
+# Targets the Next.js metrics endpoint exposed at /api/v1/metrics by
+# src/app/api/v1/metrics/route.ts (which calls lib/event-bus.ts →
+# getPrometheusMetrics()).
+#
+# Exposed metrics:
+#   events_total, events_failed, webhook_deliveries, webhook_failures,
+#   webhook_dlq, event_latency_ms, uptime_seconds, events_by_type{type=...}
+# ============================================================================
+
+global:
+  scrape_interval: 10s
+  scrape_timeout: 5s
+  evaluation_interval: 10s
+  external_labels:
+    cluster: 'rock887'
+    environment: 'prod'
+
+# Alerting rules + Alertmanager binding (rules files are loaded by Prometheus
+# on boot; alertmanager is referenced by the observability docker-compose).
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# Alerting rules — Prometheus evaluates the rules from /etc/prometheus/rules/
+# (mounted from ./prometheus/alerts.yml by docker-compose.observability.yml).
+# Firing alerts are pushed to Alertmanager via the alerting block above.
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+scrape_configs:
+  # --------------------------------------------------------------------------
+  # Rock 88.7 Next.js web app — main broadcast control center
+  # --------------------------------------------------------------------------
+  - job_name: 'rock887-web'
+    metrics_path: /api/v1/metrics
+    scrape_interval: 10s
+    static_configs:
+      - targets:
+          # When Prometheus runs inside Docker Compose and the Next.js app
+          # runs on the host (or in a separate compose project), use:
+          - host.docker.internal:3000
+          # When running Prometheus natively outside Docker, comment the line
+          # above and use this instead:
+          # - localhost:3000
+        labels:
+          service: 'rock887-web'
+          component: 'broadcast-control-center'
+
+  # --------------------------------------------------------------------------
+  # Optional: Prometheus self-monitoring
+  # --------------------------------------------------------------------------
+  - job_name: 'prometheus'
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - localhost:9090
+        labels:
+          service: 'prometheus'

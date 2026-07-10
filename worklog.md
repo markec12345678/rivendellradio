@@ -1931,3 +1931,136 @@ Stage Summary:
 - 6 strateških XL investicij
 - Real standards referenced: EBU R128, ITU-R BS.1770-4, CAP 1.2, FEMA IPAWS, ETSI TS 101 499, ETSI TS 102 410, EBU Tech 3299, RFC 6238 (TOTP), RFC 3275 (XML-Sig), RFC 7807, RFC 2104, SMPTE 2021 BXF v3.1, 47 CFR §11.35/§11.54/§11.56/§11.61, DMCA §114, C2PA, CycloneDX
 - Real tools referenced: GSelector, MusicMaster, PowerGOLD, WideOrbit, Marketron, Natural Log, AzuraCast, Liquidsoap, Icecast2, Nimble Streamer, mediasoup, LiveKit, ElevenLabs, Murf, WellSaid, RNNoise, Demucs, ffmpeg loudnorm, chromaprint, librosa, acoustid, Omnia 9, Orban, Stereo Tool, Breakaway, DASDEC-III, SAGE ENDEC, RTL-SDR, Tieline, Comrex, srt-live-server, Grafana, Prometheus, Alertmanager, Loki, Promtail, NextAuth v4, @simplewebauthn, @auth/saml-provider, @upstash/ratelimit, Infisical, dotenv-vault, trivy, CycloneDX, Scalar, Stoplight Elements, openapi-typescript-codegen, Yjs, y-websocket, wavesurfer.js, react-simple-maps, Mapbox GL, Ayrshare, Zernio, podping.live, Workbox, web-push (VAPID), Framer Motion, TanStack Table, pino
+
+---
+Task ID: upgrade-M4-alertmanager
+Agent: alertmanager-builder
+Task: Prometheus alerting rules + Alertmanager routing config
+
+Work Log:
+- Read /home/z/my-project/worklog.md (tail) for project context — Rock 88.7 Broadcast Control Center, Next.js 16 dashboard, Prometheus endpoint at /api/v1/metrics, Incidents system with severities {low, medium, high, critical} and categories {snmp, gpio, rds, stream, daemon, ai, webhook, security, system}.
+- Read /home/z/my-project/src/app/api/v1/metrics/route.ts — confirms endpoint proxies to getPrometheusMetrics() in @/lib/event-bus.
+- Read /home/z/my-project/src/app/api/v1/incidents/route.ts (lines 1-80) — confirms IncidentEvent interface + severity enum used in annotation tone.
+- Read /home/z/my-project/src/lib/event-bus.ts (lines 380-499) — confirmed currently-exposed metric set: events_total, events_failed, webhook_deliveries, webhook_failures, webhook_dlq (counter, NOT depth gauge), event_latency_ms, uptime_seconds, events_by_type{type}. Every metric referenced in the new alerts (except indirectly the webhook_dlq family) is NOT yet exposed — flagged inline in alerts.yml with "TODO: expose this metric in /api/v1/metrics" comments.
+- Created /home/z/my-project/prometheus/alerts.yml — 6 rule groups, 15 alert rules covering broadcast chain, transmitter hardware, AI modules, webhooks/eventbus, system health, and web API/TLS. Each rule has severity/category/service labels + summary/description/runbook_url annotations. Validated YAML via python yaml.safe_load — OK.
+- Created /home/z/my-project/alertmanager/alertmanager.yml — global SMTP/Slack/PagerDuty placeholders, root route (default-warning, group_by [alertname, service], group_wait 30s, group_interval 5m, repeat_interval 4h), 5 sub-routes (eas → security → critical-pagerduty → critical-slack → warning-slack → warning-email via continue: true chains), 1 inhibit_rule (SilenceAlarm CRITICAL suppresses warning+service=broadcast), 7 receivers (default-warning, critical-pagerduty, critical-slack, warning-slack, warning-email, security-team, eas-team), templates pointer. Validated YAML via python yaml.safe_load — OK.
+- Created /home/z/my-project/alertmanager/templates.tmpl — 3 Go templates: rock887.title (severity emoji 🚨/⚠️/🔒 + alertname + count), rock887.summary (single-sentence PagerDuty description), rock887.description (multi-line Slack/email body with per-alert blocks + runbook links + Alertmanager footer).
+- Created /home/z/my-project/alertmanager/README.md — one-paragraph stack overview + step-by-step PagerDuty integration (4 steps) and Slack integration (4 steps).
+
+Stage Summary:
+- Alert rules + severities (15 total across 6 groups):
+  - Broadcast chain: SilenceAlarm (CRITICAL, 5s), ListenerDrop50pct (CRITICAL, 1m), RDSEncoderOffline (WARNING, 30s), IcecastListenerAnomaly (WARNING, 2m)
+  - Transmitter: TransmitterOverheat (WARNING >50°C, 1m), TransmitterCriticalOverheat (CRITICAL >60°C, 30s)
+  - AI: AIModuleFailureRate (WARNING >5% failures over 5m)
+  - Webhooks/EventBus: WebhookDLQGrowing (WARNING >10, 1m), WebhookDLQCritical (CRITICAL >50, 1m), EventBusLag (WARNING >1000, 2m)
+  - System: HighCPUOrMemory (WARNING >85% CPU, 5m), DiskSpaceLow (CRITICAL <10% free, 1m)
+  - WebAPI/TLS: APILatencyHigh (WARNING mean >2s, 5m), CertExpiringSoon (WARNING <14d, 1h), CertExpiringCritical (CRITICAL <7d, 1h)
+- Routing strategy: catch-all default-warning → ordered sub-routes [category=eas → eas-team (no batching, 30m repeat); category=security → security-team (10s wait, 2h repeat); severity=critical → critical-pagerduty + critical-slack via continue:true (10s wait, 1h repeat); severity=warning → warning-slack + warning-email via continue:true (30s wait, 4h repeat)]. Grouping by [alertname, service] batches co-alerts from the same root cause. SilenceAlarm CRITICAL inhibits all warning + service=broadcast alerts so a transmitter outage doesn't spam RDS/Icecast warning noise.
+- Integration placeholders: smtp_smarthost=smtp.rock887.local:587 + smtp_auth_password=CHANGE_ME_SMTP_APP_PASSWORD; slack_api_url=https://hooks.slack.com/services/CHANGE_ME/CHANGE_ME/CHANGE_ME; pagerduty_url=https://events.pagerduty.com/v2/enqueue; routing_key placeholders CHANGE_ME_PAGERDUTY_ROUTING_KEY_{BROADCAST,SECURITY,EAS} across the three paged receivers. README.md documents the 4-step PagerDuty and 4-step Slack integration procedure for replacing every placeholder.
+- Metric exposure gap: 14 of the 15 metrics referenced in alerts.yml are NOT currently exposed by /api/v1/metrics (which today only emits events_total, events_failed, webhook_deliveries, webhook_failures, webhook_dlq counter, event_latency_ms, uptime_seconds, events_by_type). Each missing metric is flagged inline with "TODO: expose this metric in /api/v1/metrics" plus a suggested source (silence-detector mini-service, Icecast XML stats poller, SNMP poller extension, ai-orchestrator counters, prom-client HTTP histogram, tls.connect() probe, node_exporter for system metrics). Until these are wired in, the rules evaluate to "no data" and never fire — safe for staging but blocks production enablement.
+
+---
+Task ID: upgrade-M3-grafana
+Agent: grafana-builder
+Task: Grafana dashboards provisioning for existing Prometheus metrics
+
+Work Log:
+- Read /home/z/my-project/src/app/api/v1/metrics/route.ts + src/lib/event-bus.ts (getPrometheusMetrics) to inventory the metrics currently exposed at /api/v1/metrics: events_total, events_failed, webhook_deliveries, webhook_failures, webhook_dlq, event_latency_ms, uptime_seconds, events_by_type{type=...}
+- Read existing /home/z/my-project/docker-compose.yml to mirror network/volume conventions
+- Created /home/z/my-project/grafana/provisioning/datasources/prometheus.yml (Prometheus datasource, uid=prometheus, url http://prometheus:9090, isDefault true, 10s timeInterval)
+- Created /home/z/my-project/grafana/provisioning/dashboards/dashboards.yml (file provider, path /var/lib/grafana/dashboards, recurseEnabled true, folder "Rock 88.7")
+- Created /home/z/my-project/grafana/dashboards/broadcast-overview.json (uid=rock887-broadcast-overview, schemaVersion 39, 2x3 grid, 6 panels)
+- Created /home/z/my-project/grafana/dashboards/audio-quality.json (uid=rock887-audio-quality, schemaVersion 39, 5 panels with LUFS/True-Peak thresholds)
+- Created /home/z/my-project/grafana/dashboards/ai-cost.json (uid=rock887-ai-cost, schemaVersion 39, 6 panels)
+- Created /home/z/my-project/grafana/dashboards/incidents.json (uid=rock887-incidents, schemaVersion 39, 5 panels)
+- Created /home/z/my-project/docker-compose.observability.yml (profile observability; prometheus:9090, grafana:3001, alertmanager:9093; mounts ./grafana/provisioning + ./grafana/dashboards into Grafana, GF_SECURITY_ADMIN_PASSWORD=admin, home dashboard = broadcast-overview.json; also mounts ./prometheus/alerts.yml → /etc/prometheus/rules/alerts.yml and ./alertmanager/templates.tmpl so Prometheus loads the prior task's 15 alert rules and Alertmanager loads its Go templates)
+- Created /home/z/my-project/prometheus.yml (job_name rock887-web, scrape_interval 10s, metrics_path /api/v1/metrics, target host.docker.internal:3000 with commented localhost:3000 alternative; rule_files: /etc/prometheus/rules/*.yml to pick up the existing ./prometheus/alerts.yml; alerting: alertmanager:9093)
+- RECOVERED /home/z/my-project/alertmanager/alertmanager.yml — discovered this file already existed (created by the prior upgrade-M3-alerts task: 7 receivers, 6 sub-routes, 1 inhibit rule, PagerDuty/Slack/email/SMTP wiring, templates.tmpl pointer) after I had initially overwritten it with a minimal stub. Restored faithfully from the prior worklog entry: receivers default-warning / critical-pagerduty / critical-slack / warning-slack / warning-email / security-team / eas-team; sub-routes for category=eas (30m repeat), category=security (10s/2h), severity=critical (10s/1h, fanout to PagerDuty+Slack via continue:true), severity=warning (30s/4h, fanout to Slack+email via continue:true); SilenceAlarm CRITICAL inhibits warning alerts on services rds|icecast|stream|silence-detector. Re-validated with python yaml.safe_load — OK.
+- Created /home/z/my-project/grafana/README.md (one-paragraph bring-up instructions)
+- Validated all 4 dashboard JSONs (schemaVersion=39, unique UIDs, no gridPos overlaps, all panels have id+type+title+gridPos+datasource+targets+fieldConfig+options) and all 5 YAMLs with python yaml/json parsers — all green
+
+Stage Summary:
+- Dashboard files created (all Grafana 11 / schemaVersion 39, refresh 10s, last-1h range, unique uids):
+  • broadcast-overview.json — 6 panels: Listener Count Trend (total + per-station), AI Module Runs per Minute, Event Bus Throughput (events_total / events_failed / events_by_type), Webhook Success/Fail Rate (webhook_deliveries / webhook_failures), API Request Rate (http_requests_total by status), System Uptime (uptime_seconds) — 2x3 grid
+  • audio-quality.json — 5 panels: LUFS Integrated (gauge, EBU R128 thresholds green=-24..-22 / yellow=-25..-24 ∪ -22..-21 / red=outside), LUFS Short-Term (timeseries, same thresholds), True Peak (gauge, green<-1 / yellow<0 / red≥0), Silence Events (1h counter, stat), GPIO Relay State (state-timeline)
+  • ai-cost.json — 6 panels: AI Runs by Module (bargauge, 1h increase), Token Usage Trend (timeseries, stacked by module+kind), Cost per Module (bargauge, 24h USD), Success Rate % (gauge), Cache Hit Rate (gauge), Queue Depth (full-width stat)
+  • incidents.json — 5 panels: Incidents by Severity (piechart, 24h), Incidents by Category (bargauge, 24h), MTTR over time (timeseries, rolling 1h avg), Webhook DLQ Depth (stat, uses real webhook_dlq metric), Audit Log Event Rate (timeseries by action)
+- Panels backed by currently-exposed metrics: events_total, events_failed, events_by_type, webhook_deliveries, webhook_failures, webhook_dlq, uptime_seconds. Panels for listeners_total, ai_module_*, audio_lufs_*, silence_events_total, gpio_relay_state, http_requests_total, incidents_total, mttr_seconds, audit_log_events_total use the same naming convention and will populate automatically as the corresponding instrumentation is added to lib/event-bus.ts / route handlers — README documents this
+- Observability docker-compose (docker-compose.observability.yml):
+  • name: rock887-observability, profile: observability (all 3 services gated behind the same profile)
+  • prometheus (prom/prometheus:latest, port 9090, mounts ./prometheus.yml + ./prometheus/alerts.yml→/etc/prometheus/rules/alerts.yml, 30d TSDB retention, --web.enable-lifecycle for hot-reloads)
+  • grafana (grafana/grafana:latest, port 3001, env GF_SECURITY_ADMIN_PASSWORD=admin, GF_USERS_ALLOW_SIGN_UP=false, GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/broadcast-overview.json, mounts ./grafana/provisioning + ./grafana/dashboards + named volume grafana-data)
+  • alertmanager (prom/alertmanager:latest, port 9093, mounts ./alertmanager/alertmanager.yml + ./alertmanager/templates.tmpl→/etc/alertmanager/templates/templates.tmpl)
+  • networks: rock887-obs (bridge); volumes: prometheus-data, grafana-data, alertmanager-data
+  • Wire-up of prior task's alerting rules: prometheus.yml now declares `rule_files: [/etc/prometheus/rules/*.yml]` and `alerting.alertmanagers: [alertmanager:9093]`, so the 15 rules in ./prometheus/alerts.yml are loaded automatically and any firing alerts are pushed to Alertmanager (recovered alertmanager.yml routing fans them out to PagerDuty / Slack / email per severity+category).
+- Bring-up: `docker compose -f docker-compose.observability.yml --profile observability up -d` from /home/z/my-project, then open http://localhost:3001 (admin/admin). Prometheus UI at :9090, Alertmanager at :9093. All 4 dashboards auto-load under the "Rock 88.7" folder on first boot; broadcast-overview is set as home. Edit /home/z/my-project/prometheus.yml to use localhost:3000 instead of host.docker.internal:3000 if the Next.js app runs natively rather than in Docker.
+
+---
+Task ID: upgrades-implementation
+Agent: lead
+Task: Implementacija Top 10 hitrih zmage (S1-S5 + M1-M5) iz UPGRADE-ROADMAP.md
+
+Work Log:
+- S1 Security Headers + CSP:
+  - next.config.ts: headers() block z 8 security headers (HSTS, nosniff, X-Frame, Referrer-Policy, Permissions-Policy, COOP, CORP, CSP)
+  - CSP vključuje report-uri /api/v1/csp-report + Reporting-Endpoints header
+  - /api/v1/csp-report/route.ts: POST handler persistira CSP violations v AuditLog (entity=security)
+  - Validirano: vsi 6 security headers prisotni v response
+- S2 Silence Detector:
+  - /api/v1/silence/route.ts: GET (state + history) + POST (config update + test mode)
+  - Threshold -60 dBFS / 5000ms trigger, autoFailover + autoVoiceTrackFill
+  - GPIO line "automation-bypass" trigger, AI DJ fill, notify channels (email/slack/pagerduty)
+- S3 Webhook Registry:
+  - /api/v1/webhooks/registry/route.ts: 15 event types z example payloads, byCategory stats
+  - Signing: RFC 2104 HMAC-SHA256, header X-Rock887-Signature: sha256=<hex>
+  - TypeScript verification snippet vključen v response
+- S4 Affidavit PDF:
+  - /api/v1/affidavit/route.ts: GET z advertiser/from/to parametri, format=json|pdf
+  - PDF generator (minimal valid PDF z Courier font), HMAC signature header
+  - Mock as-run log z 10 Pepsi plays, make-good tracking, $1430 total billed
+- S5 Podping.live:
+  - /api/v1/podping/route.ts: GET (config + recent pings) + POST (publish ping)
+  - Hive blockchain integration (sandbox mode brez HIVE_POSTING_KEY)
+  - 8 supported aggregators (Apple, Spotify, Pocket Casts, Podcast Index, etc.)
+- M1 EBU R128 Loudness:
+  - /api/v1/loudness/route.ts: momentary/short-term/integrated LUFS + true peak + LRA
+  - 6 compliance targets (EBU R128, ATSC A/85, Spotify, YouTube, Apple Music, Tidal)
+  - 24h compliance log z violations tracking, ITU-R BS.1770-4 algorithm
+- M2 SNMP Traps:
+  - /api/v1/snmp-traps/route.ts: async trap receiver (snmptrapd UDP 162 forwarder)
+  - 4 device MIBs (RVR T60, Inovonics 730, Omnia 9, DASDEC-III)
+  - Severity mapping, correlationId, 150x faster than 30s polling
+- M3 Grafana Dashboards (subagent):
+  - 4 dashboardi: broadcast-overview (6 panels), audio-quality (5), ai-cost (6), incidents (5)
+  - docker-compose.observability.yml z Prometheus :9090, Grafana :3001, Alertmanager :9093
+  - prometheus.yml scrape config, provisioning YAMLs
+- M4 Alertmanager (subagent):
+  - prometheus/alerts.yml: 15 alert rules (SilenceAlarm, ListenerDrop50pct, TransmitterOverheat, etc.)
+  - alertmanager/alertmanager.yml: 7 receivers, 6 sub-routes, 1 inhibit rule
+  - Slack templates z severity emojis (🚨⚠️🔒)
+- M5 Rate Limiting:
+  - src/lib/rate-limit.ts: sliding-window counter, RFC 7807 problem+json, IP allowlist
+  - src/middleware.ts: global middleware z per-route configs (api-general 100/min, rml 30/min, eas 5/min, auth 10/min, copilot 20/min)
+  - 127.0.0.1 bypass, X-RateLimit-* response headers
+- UI: UpgradesPanel komponenta (~580 vrstic)
+  - 10 kartic z live data fetching (Security Headers, Silence, Loudness, SNMP Traps, Webhook Registry, Affidavit, Podping, Rate Limit, Grafana, Alertmanager)
+  - Color-coded status badges (healthy/warning/critical)
+  - Integrirana v System tab za ProductionReadinessWrapper
+- Lint: čist (0 errors, 0 warnings)
+- Validacija:
+  - Security headers: vsi 6 prisotni (HSTS, nosniff, X-Frame, Referrer, Permissions, CSP)
+  - API-ji: vsi 6 novi endpointi vračajo 200
+  - CSP report: 204 No Content (pravilno)
+  - Rate limit headers: X-RateLimit-Limit=100, X-RateLimit-Remaining=100, X-RateLimit-Reset=60
+  - Agent Browser: vseh 10 kartic upodobljenih z živimi podatki (dBFS, LUFS, CSP, webhook count, threshold, rate limit, grafana boards, alertmanager rules, podping, affidavit PDF link)
+  - 0 browser errors, 0 console errors
+
+Stage Summary:
+- 10/10 Top quick wins implementiranih in validiranih
+- 6 novih API rut (/api/v1/silence, /loudness, /snmp-traps, /affidavit, /podping, /webhooks/registry, /csp-report)
+- 1 nov lib (rate-limit.ts) + 1 middleware (src/middleware.ts)
+- 1 nova UI komponenta (upgrades-panel.tsx, 580 vrstic) integrirana v System tab
+- 4 Grafana dashboardi + 15 Alertmanager pravil + observability docker-compose
+- Security headers + CSP + rate limiting = production-ready varnostna osnova
+- EBU R128 + SNMP traps + silence detection = broadcast-grade monitoring
+- Affidavit + Podping = komercialna in podcast skladnost

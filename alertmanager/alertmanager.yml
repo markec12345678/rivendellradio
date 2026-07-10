@@ -1,0 +1,182 @@
+# =============================================================================
+# Rock 88.7 Broadcast Control Center — Alertmanager Routing
+# =============================================================================
+# Loaded by Alertmanager via --config.file=/etc/alertmanager/alertmanager.yml
+# (see /home/z/my-project/docker-compose.observability.yml).
+#
+# Templates consumed from templates.tmpl:
+#   rock887.title, rock887.summary, rock887.description
+#
+# Routing summary (see README.md for the full decision tree):
+#   every alert → default-warning (catch-all)
+#     ├─ category=eas           → eas-team            (no batching, 30m repeat)
+#     ├─ category=security      → security-team       (10s wait,   2h repeat)
+#     ├─ severity=critical      → critical-pagerduty
+#     │                           + critical-slack    (10s wait,   1h repeat)
+#     └─ severity=warning       → warning-slack
+#                                + warning-email      (30s wait,   4h repeat)
+#
+# Inhibition:
+#   SilenceAlarm (CRITICAL, service=silence-detector) suppresses all WARNING
+#   alerts whose service label is in the broadcast family so a transmitter
+#   outage doesn't spam RDS/Icecast warning noise.
+#
+# REPLACE every CHANGE_ME_* placeholder before going live (see README.md for
+# the 4-step PagerDuty + 4-step Slack integration procedures).
+# =============================================================================
+
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'smtp.rock887.local:587'
+  smtp_from: 'alerts@rock887.local'
+  smtp_auth_username: 'alerts@rock887.local'
+  smtp_auth_password: 'CHANGE_ME_SMTP_APP_PASSWORD'
+  smtp_require_tls: true
+  slack_api_url: 'https://hooks.slack.com/services/CHANGE_ME/CHANGE_ME/CHANGE_ME'
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+  http_config:
+    follow_redirects: true
+
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# -----------------------------------------------------------------------------
+# Routing tree — every alert first matches the root route, then descends.
+# -----------------------------------------------------------------------------
+route:
+  receiver: 'default-warning'
+  group_by: ['alertname', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+  routes:
+    # 1. EAS / emergency broadcast overrides — page immediately, no batching.
+    - matchers:
+        - category = "eas"
+      receiver: 'eas-team'
+      group_wait: 0s
+      group_interval: 5m
+      repeat_interval: 30m
+
+    # 2. Security incidents — dedicated team, fast escalation.
+    - matchers:
+        - category = "security"
+      receiver: 'security-team'
+      group_wait: 10s
+      group_interval: 5m
+      repeat_interval: 2h
+
+    # 3. Critical alerts — PagerDuty + dedicated critical Slack channel.
+    - matchers:
+        - severity = "critical"
+      receiver: 'critical-pagerduty'
+      group_wait: 10s
+      group_interval: 5m
+      repeat_interval: 1h
+      continue: true
+    - matchers:
+        - severity = "critical"
+      receiver: 'critical-slack'
+
+    # 4. Warnings — Slack #rock887-alerts + email digest.
+    - matchers:
+        - severity = "warning"
+      receiver: 'warning-slack'
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      continue: true
+    - matchers:
+        - severity = "warning"
+      receiver: 'warning-email'
+
+# -----------------------------------------------------------------------------
+# Receivers
+# -----------------------------------------------------------------------------
+receivers:
+  - name: 'default-warning'
+    slack_configs:
+      - channel: '#rock887-alerts'
+        send_resolved: true
+        title: '{{ template "rock887.title" . }}'
+        text: '{{ template "rock887.description" . }}'
+
+  - name: 'critical-pagerduty'
+    pagerduty_configs:
+      - routing_key: 'CHANGE_ME_PAGERDUTY_ROUTING_KEY_BROADCAST'
+        description: '{{ template "rock887.summary" . }}'
+        severity: critical
+        component: 'rock887-broadcast'
+        group: 'on-air'
+        send_resolved: true
+
+  - name: 'critical-slack'
+    slack_configs:
+      - channel: '#rock887-alerts-critical'
+        send_resolved: true
+        title: '{{ template "rock887.title" . }}'
+        text: '{{ template "rock887.description" . }}'
+
+  - name: 'warning-slack'
+    slack_configs:
+      - channel: '#rock887-alerts'
+        send_resolved: true
+        title: '{{ template "rock887.title" . }}'
+        text: '{{ template "rock887.description" . }}'
+
+  - name: 'warning-email'
+    email_configs:
+      - to: 'broadcast-ops@rock887.local'
+        send_resolved: true
+        headers:
+          Subject: '{{ template "rock887.title" . }}'
+
+  - name: 'security-team'
+    pagerduty_configs:
+      - routing_key: 'CHANGE_ME_PAGERDUTY_ROUTING_KEY_SECURITY'
+        description: '{{ template "rock887.summary" . }}'
+        severity: critical
+        component: 'rock887-security'
+        group: 'security'
+        send_resolved: true
+    slack_configs:
+      - channel: '#rock887-security'
+        send_resolved: true
+        title: '{{ template "rock887.title" . }}'
+        text: '{{ template "rock887.description" . }}'
+
+  - name: 'eas-team'
+    pagerduty_configs:
+      - routing_key: 'CHANGE_ME_PAGERDUTY_ROUTING_KEY_EAS'
+        description: '{{ template "rock887.summary" . }}'
+        severity: critical
+        component: 'rock887-eas'
+        group: 'eas'
+        send_resolved: true
+    slack_configs:
+      - channel: '#rock887-eas'
+        send_resolved: true
+        title: '{{ template "rock887.title" . }}'
+        text: '{{ template "rock887.description" . }}'
+    email_configs:
+      - to: 'eas@rock887.local'
+        send_resolved: true
+        headers:
+          Subject: '[EAS] {{ template "rock887.title" . }}'
+
+# -----------------------------------------------------------------------------
+# Inhibition rules
+# -----------------------------------------------------------------------------
+inhibit_rules:
+  # A SilenceAlarm (dead air) CRITICAL suppresses all WARNING-level alerts
+  # from the broadcast service family so the on-call engineer isn't double-
+  # paged for RDS / Icecast / stream warnings during a known transmitter
+  # outage.
+  - source_matchers:
+      - alertname = "SilenceAlarm"
+      - severity = "critical"
+    target_matchers:
+      - severity = "warning"
+      - service =~ "rds|icecast|stream|silence-detector"
+    equal: ['service']

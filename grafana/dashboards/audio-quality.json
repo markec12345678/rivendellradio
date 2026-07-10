@@ -1,0 +1,226 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {"type": "grafana", "uid": "-- Grafana --"},
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "EBU R128 / ITU-R BS.1770-4 loudness compliance and GPIO/silence telemetry for the Rock 88.7 on-air chain.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "id": 1,
+      "title": "LUFS Integrated (EBU R128 target = -23 LUFS)",
+      "type": "gauge",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 8, "x": 0, "y": 0},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dB",
+          "min": -30,
+          "max": -10,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "yellow", "value": -25},
+              {"color": "green", "value": -24},
+              {"color": "yellow", "value": -22},
+              {"color": "red", "value": -21}
+            ]
+          },
+          "color": {"mode": "thresholds"}
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
+      },
+      "targets": [
+        {"refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"},
+         "expr": "audio_lufs_integrated",
+         "legendFormat": "integrated LUFS", "range": true, "instant": true}
+      ]
+    },
+    {
+      "id": 2,
+      "title": "LUFS Short-Term (3-second windows)",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 16, "x": 8, "y": 0},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dB",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "spanNulls": false,
+            "showPoints": "never",
+            "stacking": {"mode": "none", "group": "A"},
+            "axisPlacement": "auto",
+            "axisLabel": "LUFS",
+            "scaleDistribution": {"type": "linear"}
+          },
+          "color": {"mode": "continuous-GrYlRd"},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "yellow", "value": -25},
+              {"color": "green", "value": -24},
+              {"color": "yellow", "value": -22},
+              {"color": "red", "value": -21}
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {"calcs": ["lastNotNull", "mean", "min", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "multi", "sort": "desc"}
+      },
+      "targets": [
+        {"refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"},
+         "expr": "audio_lufs_shortterm",
+         "legendFormat": "short-term LUFS ({{station}})", "range": true}
+      ]
+    },
+    {
+      "id": 3,
+      "title": "True Peak (dBFS, EBU R128 S1 max = -1 dBFS)",
+      "type": "gauge",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 8, "x": 0, "y": 9},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dB",
+          "min": -12,
+          "max": 3,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": -1},
+              {"color": "red", "value": 0}
+            ]
+          },
+          "color": {"mode": "thresholds"}
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
+      },
+      "targets": [
+        {"refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"},
+         "expr": "audio_true_peak_dbfs",
+         "legendFormat": "true peak", "range": true, "instant": true}
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Silence Events (last 1h counter)",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 8, "x": 8, "y": 9},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "mappings": [
+            {"options": {"0": {"text": "OK", "color": "green"}}, "type": "value"}
+          ],
+          "thresholds": {"mode": "absolute", "steps": [
+            {"color": "green", "value": null},
+            {"color": "yellow", "value": 1},
+            {"color": "red", "value": 3}
+          ]},
+          "color": {"mode": "thresholds"}
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {"refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"},
+         "expr": "increase(silence_events_total[1h])",
+         "legendFormat": "silence events (1h)", "range": true, "instant": true}
+      ]
+    },
+    {
+      "id": 5,
+      "title": "GPIO Relay State (on-air / off-air / aux)",
+      "type": "state-timeline",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 8, "x": 16, "y": 9},
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {"options": {"0": {"text": "OFF", "color": "red"}, "1": {"text": "ON-AIR", "color": "green"}, "2": {"text": "AUX", "color": "yellow"}}, "type": "value"}
+          ],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "transparent", "value": null}]},
+          "color": {"mode": "fixed", "fixedColor": "green"}
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "auto",
+        "alignValue": "center",
+        "rowHeight": 0.9,
+        "mergeValues": true,
+        "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "single", "sort": "none"}
+      },
+      "targets": [
+        {"refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"},
+         "expr": "gpio_relay_state",
+         "legendFormat": "relay {{relay}}", "range": true, "instant": true,
+         "format": "time_series"}
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["rock887", "audio", "compliance", "lufs"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Rock 88.7 — Audio Quality & Compliance",
+  "uid": "rock887-audio-quality",
+  "version": 1,
+  "weekStart": ""
+}

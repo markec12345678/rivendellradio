@@ -1,0 +1,22 @@
+# ============================================================================
+# Grafana datasource provisioning — Prometheus
+# Auto-loaded by Grafana on startup from /etc/grafana/provisioning/datasources
+# ============================================================================
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    # Inside Docker Compose the service DNS name is "prometheus".
+    # When running Grafana outside Docker, swap to http://localhost:9090
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      httpMethod: POST
+      manageAlerts: true
+      prometheusType: Prometheus
+      prometheusVersion: 2.54.0
+      timeInterval: 10s
