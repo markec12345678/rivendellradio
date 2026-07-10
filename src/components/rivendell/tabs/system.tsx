@@ -18,6 +18,7 @@ import { ReplayStudio } from '@/components/rivendell/replay-studio'
 import { UpgradesPanel } from '@/components/rivendell/upgrades-panel'
 import { EasPanel } from '@/components/rivendell/eas-panel'
 import { InfrastructurePanel } from '@/components/rivendell/infrastructure-panel'
+import { ModernizationPanel } from '@/components/rivendell/modernization-panel'
 import { formatHms, formatClock, formatNumber } from '@/lib/rivendell/format'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -282,6 +283,9 @@ export function SystemTab() {
 
       {/* Infrastructure & DR — Sprint 3 */}
       <InfrastructurePanel />
+
+      {/* Next.js 16 + React 19 Modernization — Sprint 4 */}
+      <ModernizationPanel />
 
       {/* Broadcast Topology */}
       <TopologyPanel />

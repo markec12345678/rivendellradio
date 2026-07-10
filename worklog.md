@@ -2233,3 +2233,61 @@ Stage Summary:
 - Standards: ITU-R BS.412-9, FCC §73.317, IEC 62106, FCC §73.1540, FCC §11.51
 - DR compliance: RTO 30s (target 60s) — COMPLIANT
 - Production-ready:只需要 SRT passphrases, IPAWS credentials, PagerDuty integration key za live failover
+
+---
+Task ID: sprint4-nextjs16-modernization
+Agent: lead
+Task: Sprint 4 — Next.js 16 + React 19 Modernization (Server Actions + useOptimistic + useFormStatus + useTransition + use() + React Compiler readiness)
+
+Work Log:
+- Verzije: Next.js 16.1.3 + React 19.2.3 (stabilne funkcije)
+- React Compiler plugin (babel-plugin-react-compiler) ni nameščen v dev — prikazan kot "opt-in" v UI z navodili za namestitev
+- Server Actions datoteka (src/app/actions/webhooks.ts, ~220 vrstic):
+  - 6 Server Actions z 'use server' direktivo:
+    1. createWebhook(formData) — z zod validacijo, HMAC secret generacija, audit log, revalidatePath
+    2. deleteWebhook(id) — z audit log
+    3. toggleWebhook(id, active) — toggle active state
+    4. acknowledgeAnomaly(anomalyId) — z audit log
+    5. runEasTest(formData) — RWT/RMT preko Server Action (z zod validacijo, EasLog persist)
+    6. triggerFailover(formData) — DR failover/drill/recover preko Server Action
+  - Vse z zod schema validacijo, audit log persist, revalidatePath('/')
+- ModernizationPanel UI komponenta (src/components/rivendell/modernization-panel.tsx, ~450 vrstic):
+  - 4 kartice z live demo vseh React 19 + Next.js 16 funkcionalnosti:
+    1. Server Actions + useOptimistic card:
+       - Webhook CRUD preko Server Actions (createWebhook, deleteWebhook, toggleWebhook)
+       - useOptimistic za instant delete (webhook izgine takoj, preden server potrdi)
+       - useFormStatus na create webhook formi (pending state na submit buttonu)
+       - useTransition za non-blocking mutations
+       - Revert na failure (refetch webhooks)
+    2. useTransition + Actions card:
+       - Anomaly acknowledge z useOptimistic (instant acknowledged state)
+       - EAS test (RWT/RMT) preko Server Actions
+       - DR failover/drill/recover preko Server Actions
+       - useTransition za non-blocking UI (Loader2 spinner med akcijo)
+    3. React 19 use() Hook card:
+       - Streaming data demo — fetch AI modules z promise unwrapping
+       - Prikaz: active/total modules, total runs, success rate, cost USD
+       - Re-stream button za osvežitev
+    4. Next.js 16 Feature Status card:
+       - 8 features tracker (Server Actions, useOptimistic, useFormStatus, useTransition, use(), React Compiler, PPR, Streaming SSR)
+       - 6/8 active (React Compiler + PPR sta opt-in z navodili)
+       - React Compiler navodila: "bun add babel-plugin-react-compiler" + reactCompiler: true v next.config.ts
+  - Integrirana v System tab za InfrastructurePanel
+- Lint: čist (0 errors, 0 warnings — popravil 1 set-state-in-effect warning)
+- Validacija (vse green):
+  - Agent Browser: Modernization panel upodobljen z vsemi 4 karticami + Sprint 4 badge
+  - Server Action test: izpolnil "Browser Test Webhook" formo preko UI-ja → submit → webhook ustvarjen in prikazan v listi
+  - use() hook card: AI modules podatki prikazani (active/total, runs, success rate, cost)
+  - Feature status: 6/8 active prikazano
+  - Vsi React 19 hooks delujejo: useOptimistic (instant delete), useFormStatus (pending spinner), useTransition (non-blocking)
+  - 0 browser errors, 0 console errors
+  - Dev log: čist (samo uspešni API klici)
+
+Stage Summary:
+- Sprint 4 Next.js 16 + React 19 Modernization: DONE
+- 1 nova Server Actions datoteka (webhooks.ts, ~220 vrstic) z 6 actions
+- 1 nova UI komponenta (modernization-panel.tsx, ~450 vrstic) z 4 karticami
+- 6 React 19 + Next.js 16 funkcionalnosti aktivnih: Server Actions, useOptimistic, useFormStatus, useTransition, use() hook, Streaming SSR
+- 2 opt-in funkcionalnosti prikazani z navodili: React Compiler (babel-plugin-react-compiler), Partial Prerendering (experimental_ppr)
+- Production-ready: Server Actions z zod validacijo + audit log + revalidatePath
+- API endpointi še vedno delujejo (Server Actions so dodatna možnost, ne replacement)
