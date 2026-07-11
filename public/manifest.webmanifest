@@ -1,0 +1,62 @@
+{
+  "name": "Rock 88.7 — Broadcast Control Center",
+  "short_name": "Rock 88.7",
+  "description": "Broadcast control center for Rock 88.7 FM — playout, scheduling, monitoring, AI orchestration.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a0a0a",
+  "theme_color": "#f59e0b",
+  "categories": ["music", "productivity", "business"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Home",
+      "description": "Now playing, soundpanel, listener requests",
+      "url": "/?tab=dashboard",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Library",
+      "short_name": "Music",
+      "description": "Track library z search in filters",
+      "url": "/?tab=library"
+    },
+    {
+      "name": "Schedule",
+      "short_name": "Shows",
+      "description": "Weekly schedule grid",
+      "url": "/?tab=schedule"
+    },
+    {
+      "name": "System",
+      "short_name": "Ops",
+      "description": "Monitoring, EAS, infrastructure",
+      "url": "/?tab=system"
+    }
+  ],
+  "display_override": ["window-controls-overlay", "standalone"],
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
+}
