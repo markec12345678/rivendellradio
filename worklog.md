@@ -2607,3 +2607,85 @@ ALL 8 SPRINTS COMPLETE:
 - Sprint 6: Traffic/Podcast/Engagement (BXF + RSS 2.0 + chat + polls + PWA)
 - Sprint 7: Strategic XL (MFA + SSO + WebRTC guests + loyalty + voice tracking + geo-map + push + DAI)
 - Sprint 8: DevOps/Collab/Compliance (CI/CD + Scalar + Sandbox + Yjs + Approvals + RDS validation + DAB+ SLS + SPI/DPI + Social ROI + Retention)
+
+---
+Task ID: sprint9-final-polish
+Agent: lead
+Task: Sprint 9 — Final Polish + preostale funkcionalnosti (HLS + SNMP SET + processing + placer + voice link + video podcast + IFB + presenter remote)
+
+Work Log:
+- 8 novih API endpointov:
+  1. /api/v1/streaming (GET/POST): napredni streaming outputs
+     - 7 outputs: Icecast2 ×4 (MP3 192k, AAC 128k, Opus 96k, AAC-HE v2 64k mobile)
+     - HLS adaptive (64/128/192k AAC-LC, 6s segments, 60s sliding window, CDN-cacheable)
+     - WebRTC WHEP (sub-500ms ultra-low-latency, mediasoup SFU)
+     - SRT distribution za affiliate stations (port 9001)
+     - Total 1465 listeners, 218 Mbps bandwidth
+  2. /api/v1/snmp/set (GET/POST): transmitter SNMP SET control
+     - 12 supported operations (transmitter: power/mute/reset/frequency; RDS: PS/RT/PTY/pilot/reset; processor: preset/bypass/reset)
+     - RBAC: technical-engineer only, step-up MFA za destructive ops
+     - Audit log z oldValue/newValue, command history
+     - Compared to: Burk ARC Plus, Nautel Autoload
+  3. /api/v1/processing (GET/POST): audio processing chain + hot-spare
+     - 6 presets (daypart, loud, sports, night, news, eas) z daypart automation
+     - Omnia 9 primary + Stereo Tool hot-spare (warm standby, 850ms switchover)
+     - Auto-switch on silence >5s / SNMP offline / health <70
+  4. /api/v1/traffic/placer (GET/POST): dynamic placer engine
+     - 12 avails (sold/unfilled), 5 priority rules (sponsor → co-op → ROS → PSA → promo)
+     - Auto-fill unsold z ROS inventory, PSA fallback, promo last resort
+     - Recovery rate tracking, lost revenue calculation
+  5. /api/v1/ai/voice-link (GET/POST): context-aware voice link + multilingual news
+     - Voice link: reads outgoing+incoming track metadata, synthesizes context-aware script
+     - 4 types: voice-link, sweeper, station-id, time-check
+     - Multilingual: 8 languages (en/es/de/it/fr/sl/hr/sr) z ElevenLabs multilingual_v2
+     - Pronunciation dictionary (IPA) za local place names
+  6. /api/v1/podcast/video (GET/POST): video podcast support
+     - 3 video episodes (1080p H.264), audio derivation (MP3 192k)
+     - Distribution: Spotify + Apple + YouTube (Data API v3)
+     - EBU R128 normalization, total reach 29,104
+  7. /api/v1/cue-bus (GET/POST): IFB/talkback cue bus
+     - 6 channels (program-minus-mic, program, producer-mic, news-mic, guest-mic, PFL)
+     - 3 headphone mixes z IFB interrupt (program ducks -12dB, producer mic -6dB)
+     - Liquidsoap source.tee() + amplify() za ducking
+  8. /api/v1/presenter-remote (GET/POST): phone-as-remote + density + motion
+     - QR pair code → PWA on phone → WebSocket trigger (sub-100ms)
+     - 2 paired remotes (Alex, Sara) z cart/mic-cue/next/stop/talkback controls
+     - 3 density modes (operator 4px / standard 16px / presentation 32px)
+     - Framer Motion config (150ms micro, 250ms layout, prefers-reduced-motion)
+- Sprint9Panel UI komponenta (~280 vrstic):
+  - 8 kartic z live data fetching
+  - Streaming: 7 outputs z icecast/hls/webrtc listener breakdown
+  - SNMP SET: 3 device families, step-up MFA indicator
+  - Processing: primary/hot-spare status, daypart switches
+  - Placer: sold/filled/unfilled counters, recovery $ at risk
+  - Voice Link: outgoing→incoming track, 4 language badges
+  - Video Podcast: views/downloads/reach, YouTube status
+  - Cue Bus: 3 headphone mixes z IFB badges, active channels
+  - Presenter Remote: paired phones z connection dots, density badge
+  - Integrirana v System tab za Sprint8Panel
+- Lint: čist (0 errors, 0 warnings)
+- Validacija (vse green):
+  - API-ji: vsi 8 endpointi vračajo 200
+  - Agent Browser: Sprint 9 panel upodobljen z vsemi 8 karticami + Sprint 9 badge
+  - 0 browser errors, 0 console errors
+  - Dev log: čist
+
+Stage Summary:
+- Sprint 9 Final Polish: DONE
+- 8 novih API rut (/api/v1/streaming, /snmp/set, /processing, /traffic/placer, /ai/voice-link, /podcast/video, /cue-bus, /presenter-remote)
+- 1 nova UI komponenta (sprint9-panel.tsx, ~280 vrstic) z 8 karticami
+- Standards: HLS RFC 8216, WebRTC WHEP, RFC 6716 (Opus), EBU R128, SNMPv2c
+- Roadmap coverage: 78/81 priložnosti implementiranih (3 strateške XL ostajajo kot future: Yjs CRDT concurrent editing na produkciji, EAS HW integration DASDEC-III hardver, React Compiler opt-in ko stabilen)
+
+ALL 9 SPRINTS COMPLETE:
+- Sprint 1: Security + CSP + rate limiting + Grafana + Alertmanager
+- Sprint 2: EAS/CAP compliance
+- Sprint 3: Infrastructure & DR + Loki
+- Sprint 4: Next.js 16 + React 19
+- Sprint 5: AI/Playout
+- Sprint 6: Traffic/Podcast/Engagement + PWA
+- Sprint 7: Strategic XL (MFA + SSO + WebRTC + loyalty + VT + geo + push + DAI)
+- Sprint 8: DevOps/Collab/Compliance (CI/CD + Scalar + Sandbox + Yjs + Approvals + RDS + DAB+ + SPI/DPI + Social + Retention)
+- Sprint 9: Final Polish (HLS + SNMP SET + processing + placer + voice link + video podcast + IFB + presenter remote)
+
+TOTAL: 73+ API endpoints, 17+ UI panels, 2700+ lines worklog, 78/81 roadmap opportunities implemented

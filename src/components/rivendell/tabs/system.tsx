@@ -23,6 +23,7 @@ import { AIPlayoutPanel } from '@/components/rivendell/ai-playout-panel'
 import { Sprint6Panel } from '@/components/rivendell/sprint6-panel'
 import { Sprint7Panel } from '@/components/rivendell/sprint7-panel'
 import { Sprint8Panel } from '@/components/rivendell/sprint8-panel'
+import { Sprint9Panel } from '@/components/rivendell/sprint9-panel'
 import { formatHms, formatClock, formatNumber } from '@/lib/rivendell/format'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -302,6 +303,9 @@ export function SystemTab() {
 
       {/* DevOps + Collaboration + Compliance Depth — Sprint 8 */}
       <Sprint8Panel />
+
+      {/* Final Polish + Missing Features — Sprint 9 */}
+      <Sprint9Panel />
 
       {/* Broadcast Topology */}
       <TopologyPanel />
