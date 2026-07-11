@@ -53,9 +53,72 @@ io.on('connection', (socket) => {
   connected.add(socket.id)
   console.log(`[broadcast-feed] client connected: ${socket.id} (total: ${connected.size})`)
   socket.emit('hello', { server: 'broadcast-feed', version: '1.0.0', ts: Date.now() })
+
+  // ============================================================================
+  // Yjs-style CRDT collaboration sync (lightweight, no yjs dependency)
+  // ============================================================================
+  // Each room represents a collaborative document (show log, schedule, etc.)
+  // Clients broadcast updates to all peers in the room. Server is dumb relay.
+
+  socket.on('collab:join', (payload: { roomId: string; userId: string; userName: string; role: string; color: string }) => {
+    socket.join(`collab:${payload.roomId}`)
+    socket.data.collab = payload
+    console.log(`[collab] ${payload.userName} joined room ${payload.roomId}`)
+    // Notify others in room
+    socket.to(`collab:${payload.roomId}`).emit('collab:user-joined', payload)
+    // Send current presence list
+    const peers = Array.from(io.sockets.adapter.rooms.get(`collab:${payload.roomId}`) ?? [])
+      .map((sid) => {
+        const s = io.sockets.sockets.get(sid)
+        return s?.data.collab
+      })
+      .filter(Boolean)
+    socket.emit('collab:presence', { roomId: payload.roomId, peers })
+  })
+
+  socket.on('collab:cursor', (payload: { roomId: string; position: number; selection?: [number, number] }) => {
+    socket.to(`collab:${payload.roomId}`).emit('collab:cursor', {
+      userId: socket.data.collab?.userId,
+      position: payload.position,
+      selection: payload.selection,
+      ts: Date.now(),
+    })
+  })
+
+  socket.on('collab:update', (payload: { roomId: string; update: number[]; origin: string }) => {
+    // Relay CRDT update to all peers in room (Yjs binary update format)
+    socket.to(`collab:${payload.roomId}`).emit('collab:update', {
+      userId: socket.data.collab?.userId,
+      update: payload.update,
+      origin: payload.origin,
+      ts: Date.now(),
+    })
+  })
+
+  socket.on('collab:comment', (payload: { roomId: string; comment: any }) => {
+    socket.to(`collab:${payload.roomId}`).emit('collab:comment', {
+      ...payload.comment,
+      userId: socket.data.collab?.userId,
+      ts: Date.now(),
+    })
+  })
+
+  socket.on('collab:leave', (payload: { roomId: string }) => {
+    socket.leave(`collab:${payload.roomId}`)
+    socket.to(`collab:${payload.roomId}`).emit('collab:user-left', { userId: socket.data.collab?.userId })
+  })
+
   socket.on('disconnect', () => {
     connected.delete(socket.id)
     console.log(`[broadcast-feed] disconnected: ${socket.id} (${connected.size})`)
+    // Notify collab rooms
+    if (socket.data.collab) {
+      for (const room of socket.rooms) {
+        if (room.startsWith('collab:')) {
+          socket.to(room).emit('collab:user-left', { userId: socket.data.collab.userId })
+        }
+      }
+    }
   })
 })
 
