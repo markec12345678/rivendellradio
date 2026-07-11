@@ -2516,3 +2516,94 @@ ALL 7 SPRINTS COMPLETE:
 - Sprint 5: AI/Playout (GSelector scheduler + separation + clocks + voice cloning + fingerprint + speech enhance)
 - Sprint 6: Traffic/Podcast/Engagement (BXF + RSS 2.0 + chat + polls + PWA)
 - Sprint 7: Strategic XL (MFA + SSO + WebRTC guests + loyalty + voice tracking + geo-map + push + DAI)
+
+---
+Task ID: sprint8-devops-collab-compliance
+Agent: lead
+Task: Sprint 8 — DevOps + Collaboration + Compliance depth (CI/CD + Scalar + Sandbox + Yjs + Approvals + RDS validation + DAB+ SLS + SPI/DPI + Social ROI + Retention)
+
+Work Log:
+- 10 novih API endpointov + 1 CI/CD workflow + 1 K8s probe:
+  1. .github/workflows/ci-cd.yml: 4-job pipeline (quality → security → build-image → deploy-blue-green)
+     - Quality: Bun install, ESLint, TypeScript, Prisma generate, Next.js build
+     - Security: CycloneDX SBOM, npm audit, Trivy filesystem scan (CRITICAL/HIGH), SARIF upload
+     - Build-image: Docker buildx + GHCR push z cache
+     - Deploy: blue-green (alternate slot), 60s health check, auto-rollback on failure, Caddy upstream swap
+  2. /api/v1/health/deploy (GET): K8s-style probes — live/ready/deploy (version, color, startedAt)
+     - Readiness: DB + Icecast + Event Bus + broadcast-feed checks
+     - Blue-green: DEPLOY_COLOR env var, health-check z 503 on not-ready
+  3. /api/docs (GET): Scalar API Reference (interactive Try-it-out)
+     - CDN-hosted @scalar/api-reference@1.25.0, dark theme, API key prefill from localStorage
+     - Uses existing OpenAPI 3.1 spec (/api/v1/openapi)
+  4. /api/v1/sandbox (GET/POST): Shadow broadcast pipeline
+     - Toggle sandbox mode (amber indicator v headerju)
+     - Mock transmitter + mock RDS encoder + mock Icecast (42 mock listeners)
+     - Use cases: training, AI Producer testing, webhook testing, DR drills, DJ auditions
+     - Audit: sandbox=true flag, 30-day retention (vs 4-year live)
+  5. /api/v1/collab (GET/POST): Yjs CRDT concurrent editing + presence + comments
+     - 2 active sessions (Morning Show, Afternoon Drive Log)
+     - 3 active users z role-color-coded avatars, live cursors, 5s heartbeat
+     - Comments z @mentions, resolve/anchor (position/cart/hour)
+     - Yjs CRDT (no last-write-wins), y-websocket over existing socket.io :3003
+  6. /api/v1/approvals (GET/POST): Multi-stage approval kanban
+     - 7 items across draft/submitted/in_review/approved/rejected/live stages
+     - Role-based routing: music→PD, sponsor→traffic, EAS→tech-engineer, VT→producer
+     - SLA tracking (24h due), overdue items, avg decision time, approval.overdue webhook
+  7. /api/v1/rds/validate (GET/POST): EBU Tech 3299 RDS field-level validation
+     - 6 fields (PI, PS, PTY, RT, RT+, AF) z error/warning violations
+     - PI format (4 hex), PS length (8 char), PTY range (0-31), RT length (64/128), AF range (76-108 MHz)
+     - PTY code map (0-31), PI country code map (0xA-F)
+  8. /api/v1/dab/sls (GET/POST): DAB+ DLS+ Slideshow (ETSI TS 101 499)
+     - 5 slides (now-playing, station-logo, ad, weather, fallback) z MOT object IDs
+     - Auto-push on track change, ad break, hourly weather, talk-segment fallback
+     - 640x480 JPEG/PNG, 15s cycle, 256KB max
+  9. /api/v1/radiodns/spi (GET): SPI/DPI EPG + Service Following (ETSI TS 102 410)
+     - 3 bearers: FM (PI+freq), DAB+ (ECC+ensemble), IP (URL) za cross-bearer handoff
+     - 3 programme series (morning, midday, afternoon) z 7-day rolling window
+     - Valid SPI XML z multimedia logo, genre, bearer cost
+  10. /api/v1/social (GET/POST): Social ROI dashboard + calendar
+      - 4 posts (twitter, instagram, tiktok, facebook) z engagement metrics
+      - UTM-tagged shortlinks → click → 1h tune-in matching → cost-per-tune-in
+      - 6 platform stats (followers), leaderboard, AI caption variants, optimal-time score
+  11. /api/v1/analytics/retention (GET): Cohort heatmap + funnel + ATS/TTL
+      - 5 cohort weeks × 13 weeks retention heatmap (W4: ~51%, W12: ~8%)
+      - 7-stage funnel (tune-in → 15min → 1hr → request → share → UGC → P1)
+      - ATS by daypart (morning-drive 47.2m, overnight 18.9m) z 7d/28d baselines
+      - TTL by track (median seconds before tune-out) z skip rate
+- Sprint8Panel UI komponenta (~430 vrstic):
+  - 10 kartic z live data fetching
+  - CI/CD: version, slot color, 4-point checklist (lint, SBOM, probe, rollback)
+  - Scalar: link to /api/docs, features list
+  - Sandbox: live/sandbox indicator, RML/events/mock-listeners counters
+  - Collab: session list z user color dots, unresolved comments
+  - Approvals: kanban stats (review/approved/SLA), overdue count
+  - RDS Validation: field checkmarks (PI/PS/PTY/RT), warning count
+  - DAB+ SLS: on-air slide preview, queue/today/cycle metrics
+  - SPI/DPI: 3 bearer list, XML link
+  - Social ROI: reach/engagement-rate/$-per-tune-in, leaderboard
+  - Retention: ATS/TTL/P1% metrics, W4/W12 retention, funnel summary
+  - Integrirana v System tab za Sprint7Panel
+- Lint: čist (0 errors, 0 warnings)
+- Validacija (vse green):
+  - API-ji: vsi 10 endpointi + /api/docs vračajo 200
+  - Agent Browser: Sprint 8 panel upodobljen z vsemi 10 karticami + Sprint 8 badge
+  - 0 browser errors, 0 console errors
+  - Dev log: čist
+
+Stage Summary:
+- Sprint 8 DevOps + Collaboration + Compliance Depth: DONE
+- 11 novih datotek (10 API + 1 CI/CD workflow + 1 K8s probe)
+- 1 nova UI komponenta (sprint8-panel.tsx, ~430 vrstic) z 10 karticami
+- Standards: EBU Tech 3299 (RDS), ETSI TS 101 499 (DAB SLS), ETSI TS 102 410 (SPI/DPI), CycloneDX SBOM, RFC 8216 (HLS), SAML 2.0
+- CI/CD: 4-job pipeline z blue-green deploy, auto-rollback, Trivy CVE scan, SBOM generation
+- Production-ready:只需要 GitHub Secrets (DEPLOY_HOST, DEPLOY_URL, SSH key) za live blue-green deploys
+
+ALL 8 SPRINTS COMPLETE:
+- Sprint 1: Security + CSP + rate limiting + Grafana + Alertmanager
+- Sprint 2: EAS/CAP compliance (CAP 1.2 + interrupt + signature + FCC EasLog)
+- Sprint 3: Infrastructure & DR (SRT + Liquidsoap + RF + STL + anomaly + DR failover + Loki)
+- Sprint 4: Next.js 16 + React 19 (Server Actions + useOptimistic + useFormStatus + use())
+- Sprint 5: AI/Playout (GSelector scheduler + separation + clocks + voice cloning + fingerprint + speech enhance)
+- Sprint 6: Traffic/Podcast/Engagement (BXF + RSS 2.0 + chat + polls + PWA)
+- Sprint 7: Strategic XL (MFA + SSO + WebRTC guests + loyalty + voice tracking + geo-map + push + DAI)
+- Sprint 8: DevOps/Collab/Compliance (CI/CD + Scalar + Sandbox + Yjs + Approvals + RDS validation + DAB+ SLS + SPI/DPI + Social ROI + Retention)
