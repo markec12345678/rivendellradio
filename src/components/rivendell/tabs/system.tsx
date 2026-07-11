@@ -21,6 +21,7 @@ import { InfrastructurePanel } from '@/components/rivendell/infrastructure-panel
 import { ModernizationPanel } from '@/components/rivendell/modernization-panel'
 import { AIPlayoutPanel } from '@/components/rivendell/ai-playout-panel'
 import { Sprint6Panel } from '@/components/rivendell/sprint6-panel'
+import { Sprint7Panel } from '@/components/rivendell/sprint7-panel'
 import { formatHms, formatClock, formatNumber } from '@/lib/rivendell/format'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -294,6 +295,9 @@ export function SystemTab() {
 
       {/* Traffic · Podcast · Engagement — Sprint 6 */}
       <Sprint6Panel />
+
+      {/* Strategic XL + Advanced Features — Sprint 7 */}
+      <Sprint7Panel />
 
       {/* Broadcast Topology */}
       <TopologyPanel />
