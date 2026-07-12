@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 
 /**
- * Reliability Metrics & Production Proof — merljive metrike zanesljivosti.
+ * Reliability Validation — merljive metrike zanesljivosti.
  *
  * To so metrike, ki jih stranke lahko vidijo in preverijo:
  *   - Uptime % (dnevni/tedenski/mesečni/letni)
@@ -243,7 +243,7 @@ export async function GET() {
   const totalRevenueImpact = INCIDENTS.reduce((s, i) => s + i.revenueImpactUsd, 0)
 
   return NextResponse.json({
-    _disclaimer: '✅ REAL METRICS — measured from actual Event Bus, Prisma audit log, and test harness runs. Incident records are real audit entries. Uptime calculated from health probe logs. MTTR/RTO measured from incident timestamps.',
+    _disclaimer: '⚠️ DEMONSTRATION DATA — metrics shown are illustrative, generated from simulated incidents and mock uptime history. In production, these values are collected from: (1) Prometheus health probe logs, (2) Prisma AuditLog timestamps, (3) Event Bus publish/deliver counters, (4) SRT/Icecast2 stats. The collection infrastructure is implemented (see evidence section); the numbers shown here are samples for dashboard development.',
     sla: SLA,
     metrics: METRICS,
     uptimeHistory: UPTIME_30D,

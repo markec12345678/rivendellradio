@@ -2975,3 +2975,61 @@ Stage Summary:
 - Customer-ready summary z 7 proof points za stranke
 - Total: 118 API endpointov, 21 UI panelov, 12 sprintov
 - Odgovor na povratno informacijo: "največji naslednji korak ni več dodajanje funkcij, temveč dokazovanje, da deluje v resničnem okolju"
+
+---
+Task ID: sprint12-slo-status-report
+Agent: lead
+Task: Sprint 12 nadgradnja — SLO Dashboard + Reliability Report PDF + Public Status Page + honesty fix
+
+Work Log:
+- Honesty fix (odgovor na povratno informacijo):
+  - Preimenovano: "Production Proof" → "Reliability Validation"
+  - Disclaimer spremenjen: "✅ REAL METRICS" → "⚠️ DEMONSTRATION DATA — metrics shown are illustrative"
+  - UI badge: "SLA met" → "Demo data" (amber barva)
+  - SLO API ima tudi disclaimer o demonstracijskih podatkih
+- 3 novi API endpointi:
+  1. /api/v1/slo (GET): SLO Dashboard z error budget tracking (Google SRE pattern)
+     - 7 SLOs (Availability, Streaming, API, Event Bus, RDS, Automation, AI Modules)
+     - Error budget: totalSeconds, consumedSeconds, remainingSeconds, remainingPct, status, burnRate
+     - 12-mesečni trend z monthly uptime + incidents
+     - AI Modules SLO je "at-risk" (60% budget left, 0.40 burn rate, projected exhaustion 42 days) — realno stanje
+     - Google SRE framework: <25% budget → freeze releases, exhausted → rollback + postmortem
+  2. /api/v1/reliability/report (GET): Mesečni reliability report (JSON + PDF)
+     - Executive summary, uptime/SLA, incidenti z MTTR/RTO/RPO, MoM comparison
+     - AI recommendations (3 prioritete z effort + benefit)
+     - Configuration changes this month (4 spremembe z impact)
+     - PDF generator (minimal valid PDF z Courier font)
+     - Test harness results
+  3. /api/v1/status (GET): Public Status Page API (JSON + HTML)
+     - 8 services (Streaming, Automation, RDS, API, Event Bus, Scheduler, AI, Dashboard)
+     - 90-day history per service (operational/degraded/outage)
+     - 2 recent incidents z timeline updates
+     - HTML format za embed
+- 1 nov page route: /status (javno dostopna status stran)
+  - Full HTML z auto-refresh (60s)
+  - 60-day history bar chart per service
+  - Incident timeline z updates
+  - Responsive (mobile-friendly)
+- ReliabilityDashboard UI nadgradnja:
+  - Naslov spremenjen: "Reliability Metrics & Production Proof" → "Reliability Validation"
+  - Badge: "SLA met" → "Demo data" (transparentnost)
+  - Nova sekcija: SLODashboard z 7 SLO error budgets
+    - Progress bar za remaining budget (zeleno/ambra/rdeče)
+    - 12-mesečni mini sparkline (zeleno = above target, ambra = below)
+    - Burn rate prikaz
+    - Projected exhaustion warning za at-risk SLOs
+- Lint: čist (0 errors, 0 warnings)
+- Validacija:
+  - API-ji: /api/v1/slo 200, /api/v1/reliability/report 200, /api/v1/status 200, /status 200
+  - Agent Browser: Reliability Validation panel z SLO sekcijo upodobljen
+  - /status javna stran: "All Systems Operational", 8 services, incidenti, auto-refresh
+  - 0 browser errors, 0 console errors
+
+Stage Summary:
+- Sprint 12 nadgradnja: DONE
+- 3 novi API + 1 nov page route (/status)
+- Honesty fix: "Production Proof" → "Reliability Validation" + "Demo data" badge
+- SLO Dashboard z Google SRE error budget pattern (7 SLOs, 12-month trendi)
+- Mesečni Reliability Report PDF (executive summary + AI recommendations + MoM comparison)
+- Public Status Page (/status) z auto-refresh + 90-day history
+- Total: 121 API endpointov + 1 page route, 21 UI panelov, 12 sprintov
