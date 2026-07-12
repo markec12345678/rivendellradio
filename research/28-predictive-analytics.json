@@ -1,0 +1,56 @@
+[
+  {
+    "url": "https://www.mdpi.com/2504-4990/7/3/105",
+    "name": "Customer Churn Prediction: A Systematic Review of  - MDPI",
+    "snippet": "This systematic review evaluates ML and DL approaches for churn prediction, identifying trends, challenges, and research gaps from 2020 to 2024.",
+    "host_name": "www.mdpi.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.shs-conferences.org/articles/shsconf/abs/2025/09/shsconf_icdde2025_02010/shsconf_icdde2025_02010.html",
+    "name": "Research on Customer Churn Prediction Using Machine Learning",
+    "snippet": "This research compares and analyzes the advantages and disadvantages of three different machine learning algorithms applied to customer churn prediction:",
+    "host_name": "www.shs-conferences.org",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12426120",
+    "name": "A predictive analytics approach to improve telecom's customer retention",
+    "snippet": "This study focused on predicting customer churn in the telecommunications sector using advanced data analysis and machine learning techniques.",
+    "host_name": "pmc.ncbi.nlm.nih.gov",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=qNglJgNOb7A",
+    "name": "Project 22. Customer Churn Prediction Using Machine Learning - YouTube",
+    "snippet": "... Customer Churn Prediction project using Machine Learning. Learn how to preprocess data, select the best features, build a predictive model ...",
+    "host_name": "www.youtube.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://medium.com/@allanouko17/customer-churn-prediction-using-machine-learning-ddf4cd7c9fd4",
+    "name": "Customer Churn Prediction Using Machine Learning | by Allan Ouko",
+    "snippet": "Creating churn prediction models involves using historical customer data to predict the likelihood of the current customer leaving or continuing ...",
+    "host_name": "medium.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://papers.ssrn.com/sol3/Delivery.cfm/5725302.pdf?abstractid=5725302&mirid=1&type=2",
+    "name": "[PDF] Customer Churn Prediction Using AI and Big Data Analytics",
+    "snippet": "This study explores machine learning-based predictive analytics, focusing on Random Forests and Decision Trees to identify churn patterns.",
+    "host_name": "papers.ssrn.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  }
+]

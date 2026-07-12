@@ -1,0 +1,56 @@
+[
+  {
+    "url": "https://www.openradio.eu/software-2/alexa-skills-and-google-actions-for-voice-assistants",
+    "name": "Alexa Skills and Google Actions for voice assistants - Open Radio",
+    "snippet": "Open Radio implements Alexa Skills and Google Actions for live radio and catch-ups of shows already broadcast, to respond to calls to action launched by hosts ...",
+    "host_name": "www.openradio.eu",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://developer.amazon.com/alexa",
+    "name": "Amazon Alexa Voice AI | Alexa Developer Official Site",
+    "snippet": "Start building for voice today by creating Alexa skills, connecting Alexa to devices, or integrating Alexa directly into your products. You can engage our Alexa ...\nAlexa is Amazon's cloud-based voice service that allows voice developers to create and manage their voice apps and integrate them with Alexa-related smart ...",
+    "host_name": "developer.amazon.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://medium.com/@odolenakostova/amazon-alexa-skills-and-google-assistant-actions-the-future-of-search-531573793643",
+    "name": "Amazon Alexa Skills and Google Assistant Actions: The Future of",
+    "snippet": "Alexa provides a set of built-in capabilities, called skills. Skills are the equivalent of apps for mobile devices in the voice assistant world.",
+    "host_name": "medium.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/MusicCast/comments/1s65qhw/end_of_support_for_alexa_skills_and_google",
+    "name": "End of support for Alexa Skills and Google Actions for MusicCast",
+    "snippet": "The driving force for that is to get a product that integrates with my Home Automation system that uses Alexa for everyday control. This is \" ... Voice assistant given looming Alexa update, march 2025 - Reddit Can home assistant emulate alexa/google assistant commands? More results from www.reddit.com\nI just like browsing my collection of music visually. Sometimes doing that inspires me to listen to something I haven't heard in a while.",
+    "host_name": "www.reddit.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://faq.yamaha.com/in/s/article/000027463",
+    "name": "End of support for Alexa Skills and Google Actions for MusicCast",
+    "snippet": "As announced in August 2025, support for Amazon Alexa Skills and Google Home Actions on MusicCast products is being phased out. While features could become ...",
+    "host_name": "faq.yamaha.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=RSKsqAyrpPc",
+    "name": "Amazon Alexa Skills: State of the Union - YouTube",
+    "snippet": "Amazon has introduced the Alexa Radio Skills Kit. What does this mean for radio stations and podcasters? Lead Software Engineer Jamie Woods ...",
+    "host_name": "www.youtube.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  }
+]

@@ -25,6 +25,7 @@ import { Sprint7Panel } from '@/components/rivendell/sprint7-panel'
 import { Sprint8Panel } from '@/components/rivendell/sprint8-panel'
 import { Sprint9Panel } from '@/components/rivendell/sprint9-panel'
 import { CollabPresenceIndicator } from '@/components/rivendell/collab-presence'
+import { Sprint10Panel } from '@/components/rivendell/sprint10-panel'
 import { formatHms, formatClock, formatNumber } from '@/lib/rivendell/format'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -310,6 +311,9 @@ export function SystemTab() {
 
       {/* Final Polish + Missing Features — Sprint 9 */}
       <Sprint9Panel />
+
+      {/* Next-Gen + Emerging Tech — Sprint 10 */}
+      <Sprint10Panel />
 
       {/* Broadcast Topology */}
       <TopologyPanel />

@@ -1,0 +1,56 @@
+[
+  {
+    "url": "https://chain.link/article/blockchain-in-music-royalties",
+    "name": "Blockchain in Music Royalties: Rights & Payments - Chainlink",
+    "snippet": "Blockchain in music royalties refers to the use of decentralized ledgers and smart contracts to manage music rights, track streaming data ...",
+    "host_name": "chain.link",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://hal.science/hal-05377360/document",
+    "name": "[PDF] BlockRoyalty: Royalties Management Using Blockchain and Smart  - HAL",
+    "snippet": "In the context of copyrights and royalties, smart contracts can automate the distribution of earnings based on verifiable sales data, minimizing ...",
+    "host_name": "hal.science",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://dl.acm.org/doi/10.1145/3651655.3651667",
+    "name": "Web3 Based Digital Rights Management in the Music Industry",
+    "snippet": "This research proposes implementing blockchain technology and smart contracts as a solution to revolutionize music royalty management. The ...",
+    "host_name": "dl.acm.org",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://lumoza.io/blog/smart-contracts-music",
+    "name": "How Smart Contracts Are Changing Music Royalties and Rights",
+    "snippet": "How blockchain-based smart contracts automate royalty splits, reduce disputes, and bring transparency to music rights.",
+    "host_name": "lumoza.io",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.scss.tcd.ie/Donal.OMahony/bfg/202122/17329846RuthBrennan.pdf",
+    "name": "[PDF] Music Copyright Management using Smart Contracts and Tokenization",
+    "snippet": "Smart contracts allow royalties generated from things like streams on streaming platforms, which have blanket licences for streaming music prenegotiated, to pay ...",
+    "host_name": "www.scss.tcd.ie",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.researchgate.net/publication/330891236_BMCProtector_A_Blockchain_and_Smart_Contract_Based_Application_for_Music_Copyright_Protection",
+    "name": "BMCProtector: A Blockchain and Smart Contract Based Application",
+    "snippet": "With the blockchain, musicians can easily authorize and manage their music copyright on a public ledger. Without intermediaries being involved during the ...",
+    "host_name": "www.researchgate.net",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  }
+]

@@ -1,0 +1,56 @@
+[
+  {
+    "url": "https://www.atsc.org/nextgen-tv/deployments",
+    "name": "Deployments - ATSC : NextGen TV",
+    "snippet": "In August 2025, Brazil adopted ATSC 3.0 technologies as the basis for its next-generation television system (branded “DTV+,” also known as TV 3.0).",
+    "host_name": "www.atsc.org",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.thebroadcastbridge.com/content/entry/21807/how-5g-broadcast-could-rescue-nextgen-tv",
+    "name": "How 5G Broadcast Could Rescue NextGen TV",
+    "snippet": "An ATSC technical group has recently taken a critical step on that front by developing guidance on how to incorporate 5G Broadcast delivery ...",
+    "host_name": "www.thebroadcastbridge.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.atsc.org/nextgen-tv",
+    "name": "Spotlight ATSC 3.0 - ATSC : NextGen TV - ATSC.org",
+    "snippet": "ATSC 3.0 is the next generation terrestrial broadcast system designed from the ground up to improve the television viewing experience.",
+    "host_name": "www.atsc.org",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://en.wikipedia.org/wiki/ATSC_3.0",
+    "name": "ATSC 3.0 - Wikipedia",
+    "snippet": "ATSC 3.0 is a major version of the ATSC standards for terrestrial television broadcasting created by the Advanced Television Systems Committee (ATSC).\nCountries and territories using...",
+    "host_name": "en.wikipedia.org",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.linkedin.com/posts/xgen-network-llc_5gbroadcasting-5gbroadcast-futureofbroadcasting-activity-7349466931336302595--c4e",
+    "name": "HC2 Broadcasting supports 5G Broadcast alongside ATSC 3.0",
+    "snippet": "The 5G Broadcast standard is complementary to ATSC 3.0, not in competition with it. This sentiment is echoed in HC2 Broadcasting's petition to the FCC.",
+    "host_name": "www.linkedin.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.tvtechnology.com/opinion/point-5g-broadcast-connects-stations-to-the-mobile-future",
+    "name": "Point/Counterpoint: 5G Broadcast vs. NextGen TV - TVTechnology",
+    "snippet": "ATSC 3.0 demonstrated greater spectral efficiency, with higher throughput for both fixed indoor reception and high-speed mobile reception. ( ...",
+    "host_name": "www.tvtechnology.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  }
+]
