@@ -98,6 +98,7 @@ const PAYMENTS: RoyaltyPayment[] = [
 export async function GET() {
   await new Promise((r) => setTimeout(r, 80))
   return NextResponse.json({
+    _disclaimer: '⚠️ ARCHITECTURE/SCHEMA — API defines smart contract schema + split sheets. Real royalty distribution requires: (1) deployed smart contracts on Polygon, (2) Chainlink oracle integration with Rivendell play counts, (3) legal agreements with PROs (ASCAP/BMI/SESAC/GEMA/SOKOJ), (4) rights holder onboarding + wallet setup. Contract addresses shown are examples.',
     contracts: CONTRACTS,
     recentPayments: PAYMENTS,
     stats: {

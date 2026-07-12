@@ -53,6 +53,7 @@ const CONFIG: SpatialAudioConfig = {
 export async function GET() {
   await new Promise((r) => setTimeout(r, 80))
   return NextResponse.json({
+    _disclaimer: '⚠️ SIMULATION/METADATA — API exposes object-based audio config + metadata. Real Dolby Atmos/MPEG-H rendering requires licensed encoder (Dolby Atmos Production Suite, MPEG-H Authoring Suite) and compatible receiver hardware. Dialogue boost + multi-language are config flags, not real-time rendered streams.',
     config: CONFIG,
     stats: {
       activeObjects: CONFIG.objects.length,

@@ -71,6 +71,7 @@ const TRACK_SKIP_PREDICTIONS: TrackSkipPrediction[] = [
 export async function GET() {
   await new Promise((r) => setTimeout(r, 80))
   return NextResponse.json({
+    _disclaimer: '⚠️ SIMULATION — Predictions are illustrative. Real 87% accuracy requires actual ML training on real listener session data (2.4M+ sessions) with proper train/test split + cross-validation. XGBoost model must be trained + deployed as a service. Feature engineering + data pipeline are the real work, not the API.',
     churnPredictions: CHURN_PREDICTIONS,
     listenerForecast: LISTENER_FORECAST,
     trackSkipPredictions: TRACK_SKIP_PREDICTIONS,

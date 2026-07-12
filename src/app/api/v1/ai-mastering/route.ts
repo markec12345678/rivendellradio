@@ -101,6 +101,7 @@ const STYLES = [
 export async function GET() {
   await new Promise((r) => setTimeout(r, 80))
   return NextResponse.json({
+    _disclaimer: '⚠️ SIMULATION — API defines mastering pipeline schema + job queue. Real AI mastering requires integration with LANDR/eMastered API or local ML model (TensorFlow/PyTorch). Stats are illustrative — production accuracy depends on real training data + validation.',
     queue: QUEUE,
     completed: COMPLETED,
     styles: STYLES,

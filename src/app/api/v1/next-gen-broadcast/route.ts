@@ -89,6 +89,7 @@ const CONFIG = {
 export async function GET() {
   await new Promise((r) => setTimeout(r, 80))
   return NextResponse.json({
+    _disclaimer: '⚠️ SIMULATION/ARCHITECTURE — API defines capabilities + config schema. Real ATSC 3.0/5G broadcast requires physical transmitter hardware, spectrum license, and encoder integration. DAB+ is the only standard currently deployed (national Slovenia). ATSC 3.0 is pilot/testing, 5G Broadcast is planned.',
     capabilities: CAPABILITIES,
     activeStandards: CAPABILITIES.filter((c) => c.status === 'deployed' || c.status === 'testing'),
     config: CONFIG,
