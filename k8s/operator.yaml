@@ -254,3 +254,203 @@ spec:
     ipawsEnabled: true
     cogId: "COG-ROCK887-001"
     testSchedule: "0 3 * * 1"
+
+---
+# ============================================================================
+# K8s Operator Enhancements — production-grade deployment patterns
+# ============================================================================
+
+---
+# HorizontalPodAutoscaler — auto-scale web pods based on CPU + memory
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rock887-web-hpa
+  namespace: rock887
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rock887-web
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 30
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 25
+          periodSeconds: 60
+
+---
+# PodDisruptionBudget — ensure minimum available pods during voluntary disruptions
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rock887-web-pdb
+  namespace: rock887
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: rock887-web
+
+---
+# PodDisruptionBudget — broadcast-feed (critical, 1 min available)
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rock887-feed-pdb
+  namespace: rock887
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: rock887-feed
+
+---
+# Prometheus ServiceMonitor — auto-discovery for Prometheus scraping
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rock887-web-monitor
+  namespace: rock887
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: rock887-web
+  endpoints:
+    - port: http
+      path: /api/v1/metrics
+      interval: 10s
+      scrapeTimeout: 5s
+      honorLabels: true
+
+---
+# ServiceMonitor — broadcast-feed
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rock887-feed-monitor
+  namespace: rock887
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: rock887-feed
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 10s
+
+---
+# Canary Deployment — gradual rollout (5% → 25% → 50% → 100%)
+# Requires Argo Rollouts or Flagger
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: rock887-web-canary
+  namespace: rock887
+spec:
+  replicas: 4
+  strategy:
+    canary:
+      canaryService: rock887-web-canary
+      stableService: rock887-web-stable
+      trafficRouting:
+        nginx:
+          stableIngress: rock887-web-ingress
+      steps:
+        - setWeight: 5
+        - pause: { duration: 5m }
+        - setWeight: 25
+        - pause: { duration: 5m }
+        - setWeight: 50
+        - pause: { duration: 5m }
+        - setWeight: 100
+      analysis:
+        templates:
+          - templateName: success-rate
+        args:
+          - name: service-name
+            value: rock887-web-canary
+  selector:
+    matchLabels:
+      app: rock887-web
+  template:
+    metadata:
+      labels:
+        app: rock887-web
+    spec:
+      containers:
+        - name: web
+          image: ghcr.io/markec12345678/rivendellradio:latest
+          ports:
+            - containerPort: 3000
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health/ready
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health/live
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+
+---
+# AnalysisTemplate — auto-rollback if error rate >5% or P95 >500ms
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: success-rate
+  namespace: rock887
+spec:
+  args:
+    - name: service-name
+  metrics:
+    - name: success-rate
+      interval: 1m
+      successCondition: result[0] >= 0.95
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus-server.observability:9090
+          query: |
+            sum(rate(http_requests_total{service="{{args.service-name}}",status!~"5.."}[2m]))
+            /
+            sum(rate(http_requests_total{service="{{args.service-name}}"}[2m]))
+    - name: latency-p95
+      interval: 1m
+      successCondition: result[0] < 500
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus-server.observability:9090
+          query: |
+            histogram_quantile(0.95, sum(rate(http_request_duration_ms_bucket{service="{{args.service-name}}"}[2m])) by (le))

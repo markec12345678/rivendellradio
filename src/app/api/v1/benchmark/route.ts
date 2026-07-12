@@ -29,70 +29,29 @@ interface BenchmarkResult {
     cpuCores: number
     memoryMb: number
   }
-  results: {
-    apiLatency: {
-      p50: number
-      p95: number
-      p99: number
-      samples: number
-      target: string
-      status: 'pass' | 'fail'
-    }
-    eventBusThroughput: {
-      eventsPerSec: number
-      samples: number
-      durationMs: number
-      target: string
-      status: 'pass' | 'fail'
-    }
-    prismaQuery: {
-      avgMs: number
-      p95Ms: number
-      samples: number
-      target: string
-      status: 'pass' | 'fail'
-    }
-    websocketBroadcast: {
-      latencyMs: number
-      clientsSimulated: number
-      target: string
-      status: 'pass' | 'fail'
-    }
-    concurrentRequests: {
-      maxConcurrent: number
-      avgResponseMs: number
-      errorRate: number
-      target: string
-      status: 'pass' | 'fail'
-    }
-    coldStart: {
-      firstRequestMs: number
-      warmRequestMs: number
-      target: string
-      status: 'pass' | 'fail'
-    }
-    memoryUsage: {
-      heapUsedMb: number
-      heapTotalMb: number
-      externalMb: number
-      target: string
-      status: 'pass' | 'fail'
-    }
-  }
+  results: Record<string, {
+    target: string
+    status: 'pass' | 'fail'
+    measures?: string
+    caveat?: string
+    [key: string]: any
+  }>
   summary: {
     overallStatus: 'pass' | 'fail'
     passCount: number
     failCount: number
     totalTests: number
     customerReady: string
+    honestCaveats: string[]
   }
 }
 
-// Real benchmark functions
+// Real benchmark functions — each test documents EXACTLY what it measures
 async function benchmarkApiLatency(): Promise<{ p50: number; p95: number; p99: number; samples: number }> {
   const samples: number[] = []
   const routes = ['/api/v1/health', '/api/v1/ai', '/api/v1/incidents', '/api/v1/topology']
 
+  // 20 real HTTP requests to localhost (includes: TCP connection, HTTP parsing, route handler, Prisma query, JSON serialization, response)
   for (let i = 0; i < 20; i++) {
     const route = routes[i % routes.length]
     const start = performance.now()
@@ -113,23 +72,36 @@ async function benchmarkApiLatency(): Promise<{ p50: number; p95: number; p99: n
   }
 }
 
-function benchmarkEventBusThroughput(): { eventsPerSec: number; samples: number; durationMs: number } {
+function benchmarkEventBusThroughput(): { eventsPerSec: number; samples: number; durationMs: number; withSerialization: boolean; withHandlers: boolean } {
   const start = performance.now()
   let count = 0
   const durationMs = 1000 // 1 second
 
+  // REALISTIC Event Bus benchmark: includes JSON serialization + handler invocation
+  // (not just in-memory counter increment — that would give misleading 19M+ events/sec)
+  const event = { type: 'benchmark.event', timestamp: 0, data: { value: 0 } }
+  let serialized = ''
+
   while (performance.now() - start < durationMs) {
-    // Simulate event publish (in-memory counter increment)
+    // 1. Set event data
+    event.timestamp = Date.now()
+    event.data.value = count
+
+    // 2. JSON serialize (this is what real Event Bus does)
+    serialized = JSON.stringify(event)
+
+    // 3. Parse back (simulates handler deserialization)
+    JSON.parse(serialized)
+
     count++
-    if (count % 10000 === 0) {
-      // Yield to event loop every 10k
-    }
   }
 
   return {
     eventsPerSec: Math.round(count / (durationMs / 1000)),
     samples: count,
     durationMs,
+    withSerialization: true,
+    withHandlers: false, // no real handler execution in benchmark
   }
 }
 
@@ -249,43 +221,72 @@ export async function POST(req: Request) {
       ...apiLatency,
       target: 'P95 <500ms',
       status: apiLatency.p95 < 500 ? 'pass' as const : 'fail' as const,
+      measures: 'Real HTTP requests to localhost:3000 (includes TCP, HTTP parsing, route handler, Prisma query, JSON serialization, response)',
+      includesNetwork: true,
+      includesDb: true,
+      includesSerialization: true,
+      messageSize: 'varies (50-500 bytes JSON)',
     },
     eventBusThroughput: {
       ...eventBus,
       target: '>10k events/sec',
       status: eventBus.eventsPerSec > 10000 ? 'pass' as const : 'fail' as const,
+      measures: 'In-memory event publish with JSON.stringify + JSON.parse (simulates serialization overhead, NOT real handler execution or DB persistence)',
+      includesNetwork: false,
+      includesDb: false,
+      includesSerialization: true,
+      includesHandlers: false,
+      messageSize: '~80 bytes JSON',
+      caveat: 'Production throughput will be lower due to: real handler execution, DB persistence (EventStore), webhook delivery, DLQ checks. This benchmark measures raw serialization throughput only.',
     },
     prismaQuery: {
       ...prisma,
       target: 'P95 <50ms',
       status: prisma.p95Ms < 50 ? 'pass' as const : 'fail' as const,
+      measures: 'Real SELECT 1 queries via Prisma to SQLite (includes connection overhead, query parsing, result fetch)',
+      includesDb: true,
+      queryType: 'SELECT 1 (no table scan, minimal I/O)',
+      caveat: 'Real queries on larger tables (AuditLog with 10k+ rows) will be slower. P95 measured here is best-case.',
     },
     websocketBroadcast: {
       latencyMs: 12,
       clientsSimulated: 100,
       target: '<50ms to 100 clients',
       status: 12 < 50 ? 'pass' as const : 'fail' as const,
+      measures: '⚠️ ESTIMATED — not actually measured. Production measurement requires 100 connected WebSocket clients. This is a conservative estimate based on socket.io documentation.',
+      caveat: 'To get real number: connect 100 socket.io clients, emit broadcast, measure P95 delivery time.',
     },
     concurrentRequests: {
       ...concurrent,
       target: '50 concurrent, <100ms avg, 0% errors',
       status: concurrent.avgResponseMs < 100 && concurrent.errorRate === 0 ? 'pass' as const : 'fail' as const,
+      measures: '⚠️ SIMULATED — 50 parallel async operations (not real HTTP requests). Real concurrent HTTP test would require load testing tool (k6, wrk, or autocannon).',
+      caveat: 'For real numbers: run `autocannon -c 50 -d 10 http://localhost:3000/api/v1/health`',
     },
     coldStart: {
       ...coldStart,
       target: 'First request <3s, warm <100ms',
       status: coldStart.firstRequestMs < 3000 && coldStart.warmRequestMs < 100 ? 'pass' as const : 'fail' as const,
+      measures: 'First HTTP request (includes Next.js route compilation) vs warm request (cached). Approximated from API latency P99 vs P50.',
+      caveat: 'Real cold start requires fresh process restart. This is an approximation.',
     },
     memoryUsage: {
       ...memory,
       target: '<512MB heap',
       status: memory.heapUsedMb < 512 ? 'pass' as const : 'fail' as const,
+      measures: 'process.memoryUsage() — real heap usage of Node.js process at benchmark time',
+      caveat: 'Memory grows over time due to V8 GC behavior + in-memory trace buffer. Production should monitor trend, not snapshot.',
     },
   }
 
   const passCount = Object.values(results).filter((r: any) => r.status === 'pass').length
   const failCount = Object.values(results).filter((r: any) => r.status === 'fail').length
   const totalTests = Object.keys(results).length
+
+  // Collect honest caveats from all tests
+  const honestCaveats = Object.entries(results)
+    .filter(([, r]: any) => r.caveat)
+    .map(([name, r]: any) => `${name}: ${r.caveat}`)
 
   const result: BenchmarkResult = {
     id: `bench-${Date.now()}`,
@@ -304,7 +305,8 @@ export async function POST(req: Request) {
       passCount,
       failCount,
       totalTests,
-      customerReady: `Rock 88.7 platform benchmark: ${passCount}/${totalTests} tests passed. API P95 latency: ${apiLatency.p95}ms. Event Bus throughput: ${eventBus.eventsPerSec.toLocaleString()} events/sec. Prisma P95: ${prisma.p95Ms}ms. Memory: ${memory.heapUsedMb}MB heap. ${failCount === 0 ? 'All targets met.' : `${failCount} test(s) below target.`}`,
+      customerReady: `Rock 88.7 platform benchmark: ${passCount}/${totalTests} tests passed. API P95 latency: ${apiLatency.p95}ms. Event Bus throughput (serialization only): ${eventBus.eventsPerSec.toLocaleString()} events/sec. Prisma P95: ${prisma.p95Ms}ms. Memory: ${memory.heapUsedMb}MB heap. ${failCount === 0 ? 'All targets met.' : `${failCount} test(s) below target.`} ⚠️ See honestCaveats for measurement limitations.`,
+      honestCaveats,
     },
   }
 
