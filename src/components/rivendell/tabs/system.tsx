@@ -24,6 +24,7 @@ import { Sprint6Panel } from '@/components/rivendell/sprint6-panel'
 import { Sprint7Panel } from '@/components/rivendell/sprint7-panel'
 import { Sprint8Panel } from '@/components/rivendell/sprint8-panel'
 import { Sprint9Panel } from '@/components/rivendell/sprint9-panel'
+import { CollabPresenceIndicator } from '@/components/rivendell/collab-presence'
 import { formatHms, formatClock, formatNumber } from '@/lib/rivendell/format'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -279,6 +280,9 @@ export function SystemTab() {
 
       {/* Production Readiness — Health + Backup */}
       <ProductionReadinessWrapper />
+
+      {/* Live Collaboration Presence — Yjs CRDT demo */}
+      <CollabPresenceIndicator />
 
       {/* Upgrades & Hardening — Top 10 quick wins */}
       <UpgradesPanel />

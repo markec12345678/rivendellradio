@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useCollab } from '@/lib/collab/use-collab'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'

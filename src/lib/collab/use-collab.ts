@@ -59,11 +59,7 @@ export function useCollab(opts: UseCollabOptions): UseCollabResult {
   }>({})
 
   // Extract primitives so the effect only re-runs when actual string values change
-  const roomId = roomId
-  const userId = userId
-  const userName = userName
-  const role = role
-  const color = color
+  const { roomId, userId, userName, role, color } = opts
 
   useEffect(() => {
     if (!roomId) return
