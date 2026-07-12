@@ -3379,3 +3379,56 @@ Stage Summary:
 - Experiment framework: 5 A/B testov z statistical rigor (P-value, effect size, CI, guardrails)
 - Learning loop: radio se uči iz lastnih odločitev (decision → outcome → weight adjustment)
 - Skupno: 136 API endpointov, 23 UI panelov, 41 testov, 6 dokumentov, 19 sprintov
+
+---
+Task ID: sprint20-knowledge-engine
+Agent: lead
+Task: Sprint 20 — Knowledge Engine (verified knowledge base with evidence + applicability boundaries)
+
+Work Log:
+- 1 nov API: /api/v1/ai/knowledge-engine (GET/POST)
+- Razlika od Learning Loop:
+  - Learning Loop: prilagaja numerične uteži (0.15 → 0.25)
+  - Knowledge Engine: shranjuje SEMANTIČNA PRAVILA z dokazi + mejami veljavnosti
+- 8 pravil z različnimi statusi:
+  - rule-001 (CONFIRMED): "Dve zaporedni nizkoenergijski skladbi (<0.5) povečata tune-out za 2.7% podnevi" — A/B validated (P=0.008, d=0.38). Velja 06:00-22:00, NE velja 22:00-06:00.
+  - rule-002 (CONFIRMED): "Ad breaks ≤2.5min povečajo retention za 4.8%" — A/B validated (P=0.003, d=0.42). Velja all dayparts, NE velja non-commercial.
+  - rule-003 (CONFIRMED): "Sandwich new releases between hits reduces tune-out 38%" — A/B validated (P=0.012, d=0.35).
+  - rule-004 (TESTING): "P1 request fulfillment within 15min → +8.5min ALT" — observational only, A/B running (342/500). NOT yet implemented in scheduler.
+  - rule-005 (HYPOTHESIS): "Weather mentions in voice links → +0.6min ALT" — n=1 observation, A/B in planning.
+  - rule-006 (PARTIALLY-CONFIRMED): "Familiar hits → +4.2min ALT" — observational (P<0.01) but A/B not yet run. Implemented as soft constraint.
+  - rule-007 (HYPOTHESIS): "BPM transitions ≤15% tolerated in afternoon but not overnight" — n=1, not significant.
+  - rule-008 (SUPERSEDED): "Low-energy tracks should not be consecutive" → replaced by rule-001 (specific threshold + time window).
+- Pre-registration (experiments registered BEFORE start, frozen):
+  - exp-001: hypothesis, primary KPI, secondary KPIs, success criteria, guardrails, analysis plan — all frozen before data collection
+  - exp-004: same structure, frozen
+  - Prevents p-hacking and post-hoc criterion adjustment
+- Dynamic weights (uteži se spreminjajo glede na dokaze):
+  - consecutive_low_energy_penalty: 0.15 → 0.25 (adjusted after lrn-002)
+  - weather_in_voice_link: 0.05 → 0.08 (adjusted after lrn-003, low confidence)
+  - request_fulfillment_speed: 0.20 → 0.24 (adjusted after lrn-004, pending A/B)
+  - Adjustment policy: max ±0.05 per cycle, requires confirmed rule status, reviewed every 7-14 days
+- CRITICAL honesty labeling:
+  - ALL evidence.isReal = false (demonstration data)
+  - 0 real A/B tests conducted
+  - honestyRate: "0% real evidence — all demonstration. Framework ready for real experiments."
+  - _disclaimer: "When real experiments are run, isReal will be set to true"
+- Knowledge pipeline:
+  - Hypothesis → Pre-registration → A/B test → Statistical analysis → Confirmed rule → Implemented in scheduler → Dynamic weight adjustment → Next hypothesis
+  - Principle: "A rule is only 'confirmed' when A/B test shows P<0.05 AND d>0.2 AND no guardrail violation"
+- Lint: čist (0 errors, 0 warnings)
+- Testi: 41 pass, 0 fail
+- API: 200
+
+Stage Summary:
+- Sprint 20 Knowledge Engine: DONE
+- 4 faze projekta:
+  1. Platforma (Sprint 1-10): kako zgraditi broadcast platformo
+  2. Zanesljivost (Sprint 11-16): kako dokazati zanesljivost
+  3. Odločanje (Sprint 17-19): kako izboljšati program na podlagi podatkov
+  4. Znanje (Sprint 20): kako sistem kopiči preverjeno znanje in se uči
+- 8 pravil z evidence + applicability boundaries + lifecycle status
+- Pre-registration: frozen experimental design pred začetkom (prepreči p-hacking)
+- Dynamic weights: uteži se spreminjajo glede na dokaze (max ±0.05/cycle)
+- 0% real evidence — vse je demonstration, pošteno označeno
+- Total: 137 API endpointov, 23 UI panelov, 41 testov, 6 dokumentov, 20 sprintov
