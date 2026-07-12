@@ -3241,3 +3241,55 @@ Stage Summary:
 - CI/CD: test job dodan, build-image depends na test
 - 6 dokumentacijskih vodnikov (Architecture, SRE, Deployment, Plugin SDK, Broadcast Integration, Disaster Recovery)
 - Total: 129 API endpointov, 23 UI panelov, 6 dokumentov, 41 testov, 16 sprintov
+
+---
+Task ID: sprint17-ai-radio-brain
+Agent: lead
+Task: Sprint 17 — AI Radio Brain (pivot od infrastrukture k kakovosti programa)
+
+Work Log:
+- PIVOT: prenehal dodajati API-je/standarde/panele. Začel graditi AI možgane radia.
+- Merilo uspeha: "Ali bo poslušalec zaradi tega ostal 5 minut dlje?"
+- 4 novi AI moduli:
+  1. /api/v1/ai/station-brain (GET/POST): 24/7 avtonomni orkestrator
+     - 24-urni avtonomni urnik (vsaka ura ima specifična navodila za možgane)
+     - Brain perception (poslušalci, trend, ura, vreme, promet, energija, minute od zadnjega hita/reklame/jingla)
+     - Brain thoughts (opazovanja, skrbi, priložnosti, pravila z utežmi + retention delta)
+     - Brain decision (ena odločitev z reasoning + projected retention + confidence)
+     - Retention impact (projected 5min/15min/session extension — EDINI metrike ki štejeta)
+     - Learning: reinforcement learning (decision → outcome → reward → policy improvement)
+     - 3 zgodovinske odločitve z outcome (success/partial/failed) + actualRetentionDelta
+  2. /api/v1/ai/show-prep (GET): priprava oddaje pred začetkom
+     - Topics (4 teme z talking points + retention score)
+     - Fun facts (4 zanimivosti z viri)
+     - Local events (3 dogodki z mention worthiness)
+     - Weather (5-urna napoved)
+     - Traffic (3 proge z zamudami)
+     - Birthdays (3 vključno z listenerjem)
+     - Anniversaries (3 vključno z obletnico postaje)
+     - Music news (5 novice)
+     - Social trending (3 trendi)
+     - Listener requests (3 zahtevke)
+     - Show outline (8 segmentov v prvi uri)
+     - Prep quality: 91/100, AI pripravi v 4 minutah (vs 2 uri ročno)
+  3. /api/v1/ai/listener-brain (GET): ZAKAJ poslušalci ostanejo/odidejo
+     - 12 retention driverjev (familiar hit +4.2min, request fulfilled +8.5min, ad break >3min -3.1min, etc.)
+     - 5 listener segmentov (P1 Core 87 poslušalcev 67min seja → New/Trial 4337 poslušalcev 6min seja)
+     - 8 leave reasons (ad break too long, two slow tracks, unfamiliar track, etc. — z preventability)
+     - 7 stay reasons (familiar power track, AI DJ mentioned name, request fulfilled, contest, etc. — z amplification)
+     - #1 insight: "Listeners who get request fulfilled stay 8.5 minutes longer"
+     - Projected impact: +563 listener-minutes/day from 87 P1 listeners
+  4. /api/v1/ai/studio-assistant (GET/POST): pogovorni vmesnik za operaterje
+     - 7 capabilities: pripravi program, kaj poslušajo, zakaj so odšli, katera skladba prinese največ, ustvari voice link, razveljavi odločitev, tedensko poročilo
+     - Real conversation examples (pripravi jutranji program → 6 akcij; zakaj so odšli → root cause analiza)
+     - POST: pošlji sporočilo → AI odgovori z akcijami
+- Lint: čist (0 errors, 0 warnings — popravljen `new new Date` typo)
+- Validacija: vsi 4 API-ji vračajo 200
+
+Stage Summary:
+- Sprint 17 AI Radio Brain: DONE
+- PIVOT od infrastrukture k kakovosti programa
+- 4 novi AI moduli (station-brain, show-prep, listener-brain, studio-assistant)
+- Merilo: "Ali bo poslušalec ostal 5 minut dlje?"
+- #1 ugotovitev: izpolnjena zahteva = +8.5min seje (563 listener-min/dan)
+- Total: 133 API endpointov, 23 UI panelov, 41 testov, 6 dokumentov, 17 sprintov
