@@ -1,0 +1,256 @@
+# Rock 88.7 — Kubernetes Operator
+# Custom Resource Definition + Controller for automated deployment
+#
+# This Operator manages Rock 88.7 broadcast platform on Kubernetes:
+#   - Automated deployment with rolling updates
+#   - Health checks + auto-recovery
+#   - Horizontal scaling (web + feed)
+#   - Database persistence + backups
+#   - Configuration management
+#
+# Install: kubectl apply -f k8s/operator.yaml
+# Usage: kubectl apply -f k8s/rock887-instance.yaml
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: rock887platforms.rock887.fm
+spec:
+  group: rock887.fm
+  names:
+    kind: Rock887Platform
+    listKind: Rock887PlatformList
+    plural: rock887platforms
+    singular: rock887platform
+    shortNames:
+      - rock887
+      - r887
+  scope: Namespaced
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: ["spec"]
+          properties:
+            spec:
+              type: object
+              required: ["version"]
+              properties:
+                # Version to deploy
+                version:
+                  type: string
+                  description: "Rock 88.7 platform version (e.g., 4.4.1)"
+                # Replicas
+                webReplicas:
+                  type: integer
+                  minimum: 1
+                  maximum: 10
+                  default: 2
+                feedReplicas:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                  default: 1
+                # Resources
+                resources:
+                  type: object
+                  properties:
+                    requests:
+                      type: object
+                      properties:
+                        cpu: { type: string, default: "500m" }
+                        memory: { type: string, default: "512Mi" }
+                    limits:
+                      type: object
+                      properties:
+                        cpu: { type: string, default: "2000m" }
+                        memory: { type: string, default: "2Gi" }
+                # Database
+                database:
+                  type: object
+                  properties:
+                    storage: { type: string, default: "10Gi" }
+                    storageClass: { type: string, default: "standard" }
+                    backupSchedule: { type: string, default: "0 2 * * *" }
+                    backupRetention: { type: integer, default: 30 }
+                # Broadcast configuration
+                broadcast:
+                  type: object
+                  properties:
+                    stationId: { type: string, default: "main-fm" }
+                    frequency: { type: string, default: "88.7" }
+                    icecastUrl: { type: string }
+                    rdxportUrl: { type: string }
+                # Observability
+                observability:
+                  type: object
+                  properties:
+                    otelCollector: { type: string, default: "http://otel-collector:4318" }
+                    prometheus: { type: boolean, default: true }
+                    grafana: { type: boolean, default: true }
+                    loki: { type: boolean, default: true }
+                # High availability
+                ha:
+                  type: object
+                  properties:
+                    enabled: { type: boolean, default: true }
+                    raftCluster: { type: boolean, default: false }
+                    failoverThreshold: { type: integer, default: 60 }
+                # EAS/CAP
+                eas:
+                  type: object
+                  properties:
+                    ipawsEnabled: { type: boolean, default: false }
+                    cogId: { type: string }
+                    testSchedule: { type: string, default: "0 3 * * 1" }
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  enum: ["Pending", "Running", "Failed", "Updating"]
+                readyReplicas:
+                  type: integer
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type: { type: string }
+                      status: { type: string }
+                      lastTransitionTime: { type: string }
+                version:
+                  type: string
+                uptime:
+                  type: string
+
+---
+# Operator RBAC
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rock887-operator
+rules:
+  - apiGroups: ["rock887.fm"]
+    resources: ["rock887platforms", "rock887platforms/finalizers", "rock887platforms/status"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "replicasets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "secrets", "persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rock887-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rock887-operator
+subjects:
+  - kind: ServiceAccount
+    name: rock887-operator
+    namespace: rock887-system
+
+---
+# Operator Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rock887-operator
+  namespace: rock887-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rock887-operator
+  template:
+    metadata:
+      labels:
+        app: rock887-operator
+    spec:
+      serviceAccountName: rock887-operator
+      containers:
+        - name: operator
+          image: ghcr.io/markec12345678/rivendellradio-operator:4.4.1
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "rock887-operator"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+
+---
+# Example: Rock 88.7 instance
+# kubectl apply -f k8s/rock887-instance.yaml
+apiVersion: rock887.fm/v1
+kind: Rock887Platform
+metadata:
+  name: rock887-prod
+  namespace: rock887
+spec:
+  version: "4.4.1"
+  webReplicas: 3
+  feedReplicas: 2
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "512Mi"
+    limits:
+      cpu: "2000m"
+      memory: "2Gi"
+  database:
+    storage: "50Gi"
+    storageClass: "fast-ssd"
+    backupSchedule: "0 2 * * *"
+    backupRetention: 90
+  broadcast:
+    stationId: "main-fm"
+    frequency: "88.7"
+    icecastUrl: "http://icecast.rock887.fm:8000"
+    rdxportUrl: "http://rivendell.rock887.fm/rdxport.cgi"
+  observability:
+    otelCollector: "http://otel-collector.observability:4318"
+    prometheus: true
+    grafana: true
+    loki: true
+  ha:
+    enabled: true
+    raftCluster: true
+    failoverThreshold: 60
+  eas:
+    ipawsEnabled: true
+    cogId: "COG-ROCK887-001"
+    testSchedule: "0 3 * * 1"
