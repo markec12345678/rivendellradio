@@ -24,8 +24,8 @@ export const dynamic = 'force-dynamic'
  * POST /api/v1/ai/knowledge-engine — add rule, update evidence, supersede
  */
 
-type RuleStatus = 'hypothesis' | 'testing' | 'confirmed' | 'partially-confirmed' | 'superseded' | 'refuted'
-type EvidenceType = 'observational' | 'ab-test' | 'meta-analysis' | 'expert-judgment'
+type RuleStatus = 'proposed' | 'observed' | 'simulated' | 'experiment-running' | 'externally-validated' | 'deprecated' | 'refuted'
+type EvidenceType = 'observational' | 'ab-test' | 'meta-analysis' | 'expert-judgment' | 'simulation'
 
 interface Evidence {
   id: string
@@ -35,11 +35,18 @@ interface Evidence {
   effectSize: number // Cohen's d
   pValue: number | null // null for observational
   sampleSize: number
-  confidence: 'high' | 'medium' | 'low'
   date: string
   // Honesty
   isReal: boolean // true if from actual experiment, false if demonstration
   confounders: string[]
+}
+
+interface Confidence {
+  score: number // 0-100, weighted by evidence quality + replications
+  evidenceQuality: 'high' | 'medium' | 'low' // A/B > observational > simulation
+  replications: number // how many independent experiments confirmed this
+  lastVerified: string | null // date of last A/B validation
+  isReal: boolean // false = all evidence is simulation/observational, true = at least one real A/B
 }
 
 interface KnowledgeRule {
@@ -50,7 +57,7 @@ interface KnowledgeRule {
   // Evidence
   evidence: Evidence[]
   consensusEffect: number // weighted average of evidence
-  consensusConfidence: 'high' | 'medium' | 'low'
+  confidence: Confidence
   // Applicability — WHEN does this rule hold?
   appliesWhen: string[]
   // Boundaries — WHEN does this rule NOT hold?
@@ -58,16 +65,19 @@ interface KnowledgeRule {
   // Lifecycle
   status: RuleStatus
   proposedAt: string
-  confirmedAt: string | null
+  validatedAt: string | null // when externally-validated (real A/B)
   supersededBy?: string
   // Impact
   altImpact: number // estimated ALT delta (minutes)
   // Practical use
   implementedInScheduler: boolean
   implementedAsConstraint: 'hard' | 'soft' | 'none'
-  // Versioning
+  // Versioning — full history, nothing disappears
   version: number
-  previousVersions: { version: number; statement: string; changedAt: string; reason: string }[]
+  versionHistory: { version: number; statement: string; changedAt: string; reason: string; status: RuleStatus }[]
+  // Conflict detection
+  conflictsWith?: string[] // IDs of rules that may conflict
+  conflictResolution?: string // how the conflict was resolved
 }
 
 const RULES: KnowledgeRule[] = [
@@ -80,7 +90,9 @@ const RULES: KnowledgeRule[] = [
       { id: 'ev-002', type: 'ab-test', experimentId: 'exp-006', description: 'A/B test: enforced separation vs random placement, 14 days', effectSize: 0.38, pValue: 0.008, sampleSize: 420, confidence: 'high', date: '2026-07-12', isReal: false, confounders: ['weather variation across test period'] },
     ],
     consensusEffect: 0.43,
-    consensusConfidence: 'high',
+    confidence: { score: 45, evidenceQuality: 'medium', replications: 0, lastVerified: null, isReal: false },
+    conflictsWith: ['rule-007'],
+    conflictResolution: 'rule-001 applies daytime (06:00-22:00), rule-007 may apply overnight — both coexist in different time windows',
     appliesWhen: [
       'Daytime dayparts (06:00-22:00)',
       'Both tracks have energy <0.5',
@@ -91,14 +103,14 @@ const RULES: KnowledgeRule[] = [
       'Specialty shows (Deep Cuts, Album Sides)',
       'Explicit-content safe harbor programming',
     ],
-    status: 'confirmed',
+    status: 'simulated',
     proposedAt: '2026-07-08',
-    confirmedAt: '2026-07-12',
+    validatedAt: '2026-07-12',
     altImpact: -2.4,
     implementedInScheduler: true,
     implementedAsConstraint: 'hard',
     version: 2,
-    previousVersions: [
+    versionHistory: [
       { version: 1, statement: 'Low-energy tracks should not be played consecutively', changedAt: '2026-07-10', reason: 'Refined after A/B test — specific threshold (0.5) and time window (06-22) identified' },
     ],
   },
@@ -110,7 +122,7 @@ const RULES: KnowledgeRule[] = [
       { id: 'ev-003', type: 'ab-test', experimentId: 'exp-002', description: '50/50 A/B test, 200 breaks per group, 14 days', effectSize: 0.42, pValue: 0.003, sampleSize: 400, confidence: 'high', date: '2026-07-05', isReal: false, confounders: ['ad content quality varied', 'time-of-day distribution was balanced'] },
     ],
     consensusEffect: 0.42,
-    consensusConfidence: 'high',
+    confidence: { score: 45, evidenceQuality: 'medium', replications: 0, lastVerified: null, isReal: false },
     appliesWhen: [
       'All dayparts',
       'Commercial stations with ad inventory',
@@ -121,14 +133,14 @@ const RULES: KnowledgeRule[] = [
       'Sponsor-only breaks (single sponsor, <90s)',
       'EAS override periods (ad breaks suspended)',
     ],
-    status: 'confirmed',
+    status: 'simulated',
     proposedAt: '2026-06-28',
-    confirmedAt: '2026-07-05',
+    validatedAt: '2026-07-05',
     altImpact: 0.8,
     implementedInScheduler: true,
     implementedAsConstraint: 'hard',
     version: 1,
-    previousVersions: [],
+    versionHistory: [],
   },
   {
     id: 'rule-003',
@@ -138,7 +150,9 @@ const RULES: KnowledgeRule[] = [
       { id: 'ev-004', type: 'ab-test', experimentId: 'exp-003', description: '50/50 A/B, 150 new track plays per group, 14 days', effectSize: 0.35, pValue: 0.012, sampleSize: 300, confidence: 'high', date: '2026-07-12', isReal: false, confounders: ['genre of new releases varied', 'familiarity of "hits" varied'] },
     ],
     consensusEffect: 0.35,
-    consensusConfidence: 'high',
+    confidence: { score: 45, evidenceQuality: 'medium', replications: 0, lastVerified: null, isReal: false },
+    conflictsWith: ['rule-007'],
+    conflictResolution: 'rule-001 applies daytime (06:00-22:00), rule-007 may apply overnight — both coexist in different time windows',
     appliesWhen: [
       'New releases (familiarity <0.5)',
       'Daytime dayparts',
@@ -149,14 +163,14 @@ const RULES: KnowledgeRule[] = [
       'Overnight (listeners more open to unfamiliar)',
       'Listener-requested new tracks (listener already invested)',
     ],
-    status: 'confirmed',
+    status: 'simulated',
     proposedAt: '2026-06-28',
-    confirmedAt: '2026-07-12',
+    validatedAt: '2026-07-12',
     altImpact: 0.6,
     implementedInScheduler: true,
     implementedAsConstraint: 'hard',
     version: 1,
-    previousVersions: [],
+    versionHistory: [],
   },
   {
     id: 'rule-004',
@@ -167,7 +181,7 @@ const RULES: KnowledgeRule[] = [
       { id: 'ev-006', type: 'ab-test', experimentId: 'exp-001', description: 'A/B test running — 342/500 sessions collected', effectSize: 0, pValue: null, sampleSize: 342, confidence: 'low', date: '2026-07-12', isReal: false, confounders: ['incomplete — results not yet available'] },
     ],
     consensusEffect: 0.30, // downweighted because A/B not yet complete
-    consensusConfidence: 'low',
+    confidence: { score: 20, evidenceQuality: 'low', replications: 0, lastVerified: null, isReal: false },
     appliesWhen: [
       'P1 listeners (Diamond/Platinum tier)',
       'Request fits the current clock category',
@@ -178,14 +192,14 @@ const RULES: KnowledgeRule[] = [
       'Request conflicts with hard rules (DMCA, separation)',
       'Track is explicit outside safe harbor',
     ],
-    status: 'testing',
+    status: 'experiment-running',
     proposedAt: '2026-07-02',
-    confirmedAt: null,
+    validatedAt: null,
     altImpact: 8.5, // projected, not confirmed
     implementedInScheduler: false, // not yet — waiting for A/B
     implementedAsConstraint: 'none',
     version: 1,
-    previousVersions: [],
+    versionHistory: [],
   },
   {
     id: 'rule-005',
@@ -195,7 +209,9 @@ const RULES: KnowledgeRule[] = [
       { id: 'ev-007', type: 'observational', description: 'Observed +0.6min correlation (lrn-003, n=1, not significant)', effectSize: 0, pValue: null, sampleSize: 1, confidence: 'low', date: '2026-07-09', isReal: false, confounders: ['n=1', 'sunny weather (positive mood)', 'morning drive (naturally values weather)'] },
     ],
     consensusEffect: 0,
-    consensusConfidence: 'low',
+    confidence: { score: 10, evidenceQuality: 'low', replications: 0, lastVerified: null, isReal: false },
+    conflictsWith: [],
+    conflictResolution: 'No conflicts yet — may conflict with future voice-link-length rules',
     appliesWhen: [
       'Drive time dayparts (06:00-10:00, 15:00-19:00)',
       'Weather is actionable (rain, snow, extreme temp)',
@@ -204,14 +220,14 @@ const RULES: KnowledgeRule[] = [
       'Overnight (listeners less weather-sensitive)',
       'Generic weather ("partly cloudy") with no impact',
     ],
-    status: 'hypothesis',
+    status: 'proposed',
     proposedAt: '2026-07-09',
-    confirmedAt: null,
+    validatedAt: null,
     altImpact: 0.6, // projected
     implementedInScheduler: false,
     implementedAsConstraint: 'none',
     version: 1,
-    previousVersions: [],
+    versionHistory: [],
   },
   {
     id: 'rule-006',
@@ -221,7 +237,7 @@ const RULES: KnowledgeRule[] = [
       { id: 'ev-008', type: 'observational', description: '847 track plays analyzed, +4.2min avg for power tracks (P<0.01)', effectSize: 0.55, pValue: 0.001, sampleSize: 847, confidence: 'medium', date: '2026-07-10', isReal: false, confounders: ['power tracks played more in drive time (natural ALT peak)', 'familiarity correlates with recency of last play'] },
     ],
     consensusEffect: 0.55,
-    consensusConfidence: 'medium',
+    confidence: { score: 45, evidenceQuality: 'medium', replications: 0, lastVerified: null, isReal: false },
     appliesWhen: [
       'All dayparts',
       'Track not played in last 6h (title separation)',
@@ -231,14 +247,14 @@ const RULES: KnowledgeRule[] = [
       'Track has 30d play count >25 (fatigue threshold)',
       'Specialty shows (Deep Cuts)',
     ],
-    status: 'partially-confirmed',
+    status: 'observed',
     proposedAt: '2026-07-01',
-    confirmedAt: null,
+    validatedAt: null,
     altImpact: 4.2,
     implementedInScheduler: true,
     implementedAsConstraint: 'soft',
     version: 1,
-    previousVersions: [],
+    versionHistory: [],
   },
   {
     id: 'rule-007',
@@ -248,7 +264,9 @@ const RULES: KnowledgeRule[] = [
       { id: 'ev-009', type: 'observational', description: 'lrn-001: 158→134 BPM well-tolerated (afternoon, n=1)', effectSize: 0, pValue: null, sampleSize: 1, confidence: 'low', date: '2026-07-10', isReal: false, confounders: ['n=1', 'both tracks highly familiar'] },
     ],
     consensusEffect: 0,
-    consensusConfidence: 'low',
+    confidence: { score: 5, evidenceQuality: 'low', replications: 0, lastVerified: null, isReal: false },
+    conflictsWith: ['rule-001'],
+    conflictResolution: 'rule-001 says low-energy consecutive is bad daytime; rule-007 says BPM transition OK afternoon. Not a true conflict — energy and BPM are different dimensions.',
     appliesWhen: [
       'Afternoon drive (15:00-19:00)',
       'Both tracks have familiarity >0.7',
@@ -257,14 +275,14 @@ const RULES: KnowledgeRule[] = [
       'Overnight (listeners prefer gradual energy changes)',
       'Either track is unfamiliar',
     ],
-    status: 'hypothesis',
+    status: 'proposed',
     proposedAt: '2026-07-10',
-    confirmedAt: null,
+    validatedAt: null,
     altImpact: 0.5,
     implementedInScheduler: false,
     implementedAsConstraint: 'none',
     version: 1,
-    previousVersions: [],
+    versionHistory: [],
   },
   {
     id: 'rule-008',
@@ -272,18 +290,20 @@ const RULES: KnowledgeRule[] = [
     statement: 'SUPERSeded: "Low-energy tracks should not be played consecutively" (replaced by rule-001 with specific threshold + time window)',
     evidence: [],
     consensusEffect: 0,
-    consensusConfidence: 'low',
+    confidence: { score: 45, evidenceQuality: 'medium', replications: 0, lastVerified: null, isReal: false },
+    conflictsWith: ['rule-007'],
+    conflictResolution: 'rule-001 applies daytime (06:00-22:00), rule-007 may apply overnight — both coexist in different time windows',
     appliesWhen: [],
     doesNotApplyWhen: ['All cases — superseded by rule-001'],
-    status: 'superseded',
+    status: 'deprecated',
     proposedAt: '2026-07-08',
-    confirmedAt: '2026-07-10',
+    validatedAt: '2026-07-10',
     supersededBy: 'rule-001',
     altImpact: 0,
     implementedInScheduler: false,
     implementedAsConstraint: 'none',
     version: 1,
-    previousVersions: [],
+    versionHistory: [],
   },
 ]
 
@@ -375,50 +395,99 @@ const DYNAMIC_WEIGHTS: DynamicWeight[] = [
   },
 ]
 
+// Knowledge Conflict Detection — finds rules that may contradict each other
+function detectConflicts(rules: KnowledgeRule[]): { ruleA: string; ruleB: string; description: string; resolution: string; type: 'resolved' | 'unresolved' }[] {
+  const conflicts: { ruleA: string; ruleB: string; description: string; resolution: string; type: 'resolved' | 'unresolved' }[] = []
+  for (const rule of rules) {
+    if (rule.conflictsWith) {
+      for (const conflictId of rule.conflictsWith) {
+        const other = rules.find(r => r.id === conflictId)
+        if (other) {
+          const resolution = rule.conflictResolution ?? 'Unresolved — requires investigation'
+          conflicts.push({
+            ruleA: rule.id, ruleB: conflictId,
+            description: `"${rule.statement.slice(0, 60)}..." may conflict with "${other.statement.slice(0, 60)}..."`,
+            resolution,
+            type: rule.conflictResolution ? 'resolved' : 'unresolved',
+          })
+        }
+      }
+    }
+  }
+  return conflicts
+}
+
 export async function GET() {
   await new Promise((r) => setTimeout(r, 80))
 
-  const confirmed = RULES.filter(r => r.status === 'confirmed')
-  const testing = RULES.filter(r => r.status === 'testing')
-  const hypothesis = RULES.filter(r => r.status === 'hypothesis')
-  const superseded = RULES.filter(r => r.status === 'superseded')
-  const abValidated = RULES.filter(r => r.evidence.some(e => e.type === 'ab-test'))
-
   return NextResponse.json({
-    _disclaimer: '⚠️ ALL EVIDENCE IS DEMONSTRATION DATA — no real A/B tests have been conducted. Every evidence.isReal=false. This framework defines HOW the radio will accumulate knowledge. When real experiments are run, isReal will be set to true and evidence will include actual P-values, effect sizes, and sample sizes from real listener data.',
+    _disclaimer: '⚠️ ALL EVIDENCE IS DEMONSTRATION DATA — no real A/B tests have been conducted. Every evidence.isReal=false. No rule can be "externally-validated" without real data. This framework defines HOW the radio will accumulate knowledge. When real experiments run, isReal becomes true, rules transition to externally-validated, and confidence scores reflect actual evidence.',
     rules: RULES,
     preRegistrations: PRE_REGISTRATIONS,
     dynamicWeights: DYNAMIC_WEIGHTS,
+    // Evidence Graph — trace any decision back to its origin
+    evidenceGraph: {
+      description: 'Every AI decision can be traced back through: Decision → Policy → Rule → Evidence → Experiment → Hypothesis',
+      nodes: [
+        { id: 'decision-001', type: 'decision', label: 'Play Thunderstruck after Everlong', parent: 'policy-001' },
+        { id: 'policy-001', type: 'policy', label: 'Enforce energy separation <0.5 daytime', parent: 'rule-001' },
+        { id: 'rule-001', type: 'rule', label: 'Two consecutive low-energy tracks increase tune-out', parent: 'exp-006' },
+        { id: 'exp-006', type: 'experiment', label: 'A/B: enforced separation vs random (14 days)', parent: 'hypothesis-001' },
+        { id: 'hypothesis-001', type: 'hypothesis', label: 'Consecutive low-energy tracks cause tune-out', parent: null },
+        // Second chain
+        { id: 'decision-002', type: 'decision', label: 'Cap ad break at 2.5min', parent: 'policy-002' },
+        { id: 'policy-002', type: 'policy', label: 'Ad breaks max 2.5min, 4 spots', parent: 'rule-002' },
+        { id: 'rule-002', type: 'rule', label: 'Shorter ad breaks increase retention', parent: 'exp-002' },
+        { id: 'exp-002', type: 'experiment', label: 'A/B: 2.5min vs 3-4min breaks (14 days)', parent: 'hypothesis-002' },
+        { id: 'hypothesis-002', type: 'hypothesis', label: 'Longer ad breaks cause tune-out', parent: null },
+      ],
+      edges: [
+        { from: 'decision-001', to: 'policy-001', relationship: 'implements' },
+        { from: 'policy-001', to: 'rule-001', relationship: 'derived-from' },
+        { from: 'rule-001', to: 'exp-006', relationship: 'evidence' },
+        { from: 'exp-006', to: 'hypothesis-001', relationship: 'tests' },
+        { from: 'decision-002', to: 'policy-002', relationship: 'implements' },
+        { from: 'policy-002', to: 'rule-002', relationship: 'derived-from' },
+        { from: 'rule-002', to: 'exp-002', relationship: 'evidence' },
+        { from: 'exp-002', to: 'hypothesis-002', relationship: 'tests' },
+      ],
+      principle: 'You can always answer: "Why did the AI make this decision?" → trace the graph back to the hypothesis.',
+    },
+    // Knowledge Conflict Detection
+    conflicts: detectConflicts(RULES),
     stats: {
       totalRules: RULES.length,
-      confirmed: confirmed.length,
-      partiallyConfirmed: RULES.filter(r => r.status === 'partially-confirmed').length,
-      testing: testing.length,
-      hypothesis: hypothesis.length,
-      superseded: superseded.length,
-      abValidated: abValidated.length,
+      externallyValidated: RULES.filter(r => r.status === 'externally-validated').length, // 0 — none yet
+      simulated: RULES.filter(r => r.status === 'simulated').length,
+      observed: RULES.filter(r => r.status === 'observed').length,
+      experimentRunning: RULES.filter(r => r.status === 'experiment-running').length,
+      proposed: RULES.filter(r => r.status === 'proposed').length,
+      deprecated: RULES.filter(r => r.status === 'deprecated').length,
       // Honesty metrics
-      realEvidenceCount: RULES.flatMap(r => r.evidence).filter(e => e.isReal).length, // 0 — all demonstration
+      realEvidenceCount: RULES.flatMap(r => r.evidence).filter(e => e.isReal).length, // 0
       demonstrationEvidenceCount: RULES.flatMap(r => r.evidence).filter(e => !e.isReal).length,
-      honestyRate: '0% real evidence — all demonstration. Framework ready for real experiments.',
+      avgConfidenceScore: Math.round(RULES.reduce((s, r) => s + r.confidence.score, 0) / RULES.length),
+      conflictsDetected: RULES.filter(r => r.conflictsWith && r.conflictsWith.length > 0).length,
+      honestyRate: '0% real evidence — all demonstration. No rule is externally-validated. Framework ready for real experiments.',
     },
     knowledgePipeline: {
       stages: [
-        { stage: 'Hypothesis', description: 'Proposed rule from observation or theory', count: hypothesis.length },
-        { stage: 'Testing', description: 'A/B test designed and running', count: testing.length },
-        { stage: 'Partially confirmed', description: 'Observational evidence, A/B pending', count: RULES.filter(r => r.status === 'partially-confirmed').length },
-        { stage: 'Confirmed', description: 'A/B validated with statistical significance', count: confirmed.length },
-        { stage: 'Superseded', description: 'Replaced by refined version', count: superseded.length },
+        { stage: 'Proposed', description: 'New idea from observation or theory', count: RULES.filter(r => r.status === 'proposed').length },
+        { stage: 'Observed', description: 'Correlation observed in data (not causal)', count: RULES.filter(r => r.status === 'observed').length },
+        { stage: 'Simulated', description: 'Confirmed with demonstration data only (isReal=false)', count: RULES.filter(r => r.status === 'simulated').length },
+        { stage: 'Experiment Running', description: 'A/B test in progress', count: RULES.filter(r => r.status === 'experiment-running').length },
+        { stage: 'Externally Validated', description: 'Confirmed with real A/B test (isReal=true)', count: RULES.filter(r => r.status === 'externally-validated').length },
+        { stage: 'Deprecated', description: 'Replaced by refined version', count: RULES.filter(r => r.status === 'deprecated').length },
       ],
-      flow: 'Hypothesis → Pre-registration → A/B test → Statistical analysis → Confirmed rule → Implemented in scheduler → Dynamic weight adjustment → Next hypothesis',
-      principle: 'A rule is only "confirmed" when an A/B test with adequate sample size shows P<0.05 AND effect size >0.2 AND no guardrail violation. Everything else is "hypothesis" or "partially-confirmed".',
+      flow: 'Proposed → Observed → Simulated → Experiment Running → Externally Validated → (or Refuted) → Implemented → Dynamic weight adjustment → Next hypothesis',
+      principle: 'A rule can only be "externally-validated" when a real A/B test (isReal=true) shows P<0.05 AND d>0.2 AND no guardrail violation. "Simulated" means the framework is tested but evidence is demonstration data only.',
     },
     howItDiffersFromLearningLoop: {
       learningLoop: 'Adjusts numerical weights based on each decision outcome',
-      knowledgeEngine: 'Stores semantic rules with evidence, applicability boundaries, and lifecycle status. Rules can be superseded, refined, or refuted.',
-      example: 'Learning Loop: "consecutive_low_energy_penalty: 0.15 → 0.25" | Knowledge Engine: "Two consecutive low-energy tracks (<0.5) increase tune-out by 2.7% in daytime. Confirmed via A/B (P=0.008, d=0.38). Does NOT apply overnight (22:00-06:00)."',
+      knowledgeEngine: 'Stores semantic rules with evidence, applicability boundaries, lifecycle status, version history, and conflict detection. Rules can be deprecated, refined, or refuted — but never deleted.',
+      example: 'Learning Loop: "consecutive_low_energy_penalty: 0.15 → 0.25" | Knowledge Engine: "Two consecutive low-energy tracks (<0.5) increase tune-out by 2.7% in daytime. Simulated via A/B (P=0.008, d=0.38, isReal=false). Does NOT apply overnight (22:00-06:00). Confidence: 45%. Conflicts with rule-007 (resolved: different dimensions)."',
     },
-    nextStep: 'When real experiments run, evidence.isReal becomes true, rules transition from hypothesis → confirmed, and the knowledge base becomes the radio\'s accumulated wisdom — not guesses, but verified findings with clear boundaries.',
+    nextStep: 'When the first real A/B test completes: evidence.isReal becomes true, rule transitions from "simulated" → "externally-validated", confidence.score increases, and the knowledge base becomes real wisdom — not framework, but experience.',
   })
 }
 
@@ -429,12 +498,12 @@ export async function POST(req: Request) {
     const rule: KnowledgeRule = {
       id: `rule-${Date.now()}`, domain: body.domain ?? 'scheduling',
       statement: body.statement,
-      evidence: [], consensusEffect: 0, consensusConfidence: 'low',
+      evidence: [], consensusEffect: 0, confidence: { score: 0, evidenceQuality: 'low', replications: 0, lastVerified: null, isReal: false },
       appliesWhen: body.appliesWhen ?? [], doesNotApplyWhen: body.doesNotApplyWhen ?? [],
-      status: 'hypothesis', proposedAt: new Date().toISOString(), confirmedAt: null,
+      status: 'proposed', proposedAt: new Date().toISOString(), validatedAt: null,
       altImpact: body.altImpact ?? 0,
       implementedInScheduler: false, implementedAsConstraint: 'none',
-      version: 1, previousVersions: [],
+      version: 1, versionHistory: [],
     }
     RULES.push(rule)
     return NextResponse.json({ ok: true, rule, message: 'Hypothesis added to knowledge engine — needs A/B test to confirm' })
@@ -448,7 +517,7 @@ export async function POST(req: Request) {
       const abEvidence = rule.evidence.filter(e => e.type === 'ab-test' && e.pValue !== null && e.pValue < 0.05)
       if (abEvidence.length > 0) {
         rule.status = 'confirmed'
-        rule.confirmedAt = new Date().toISOString()
+        rule.validatedAt = new Date().toISOString()
         rule.consensusConfidence = 'high'
         rule.consensusEffect = abEvidence.reduce((s, e) => s + e.effectSize, 0) / abEvidence.length
       }
@@ -461,7 +530,7 @@ export async function POST(req: Request) {
     if (old) {
       old.status = 'superseded'
       old.supersededBy = body.newRuleId
-      old.previousVersions.push({ version: old.version, statement: old.statement, changedAt: new Date().toISOString(), reason: body.reason ?? 'Superseded by refined version' })
+      old.versionHistory.push({ version: old.version, statement: old.statement, changedAt: new Date().toISOString(), reason: body.reason ?? 'Superseded by refined version' })
       return NextResponse.json({ ok: true, rule: old, message: `Rule ${old.id} superseded by ${body.newRuleId}` })
     }
   }

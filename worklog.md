@@ -3432,3 +3432,64 @@ Stage Summary:
 - Dynamic weights: uteži se spreminjajo glede na dokaze (max ±0.05/cycle)
 - 0% real evidence — vse je demonstration, pošteno označeno
 - Total: 137 API endpointov, 23 UI panelov, 41 testov, 6 dokumentov, 20 sprintov
+
+---
+Task ID: sprint21-knowledge-engine-v2
+Agent: lead
+Task: Sprint 21 — Knowledge Engine v2 (terminology fix + confidence + versioning + conflict detection + evidence graph)
+
+Work Log:
+- TERMINOLOGY FIX (najpomembnejši popravek — po povratni informaciji):
+  - "confirmed" → ne more obstajati z isReal=false (protislovje)
+  - Nova terminologija (6 stadijev):
+    - Proposed (nova ideja)
+    - Observed (opažena korelacija, ne kavzalna)
+    - Simulated (potrjeno samo z demonstracijskimi podatki, isReal=false)
+    - Experiment Running (A/B test poteka)
+    - Externally Validated (potrjeno z resničnim A/B testom, isReal=true)
+    - Deprecated (opuščeno, nadomeščeno)
+  - 0 pravil je "externally-validated" (ker 0 real evidence)
+  - 3 pravila so "simulated" (ne "confirmed" — framework je testiran, evidence ni realen)
+- CONFIDENCE (ne en sam status, temveč strukturirana ocena):
+  - score: 0-100 (uteženo po evidence quality + replications)
+  - evidenceQuality: high/medium/low (A/B > observational > simulation)
+  - replications: število neodvisnih eksperimentov
+  - lastVerified: datum zadnjega real A/B testa (null za vse — še ni bilo)
+  - isReal: false za vsa pravila (0% real evidence)
+  - Primer: rule-001 confidence: { score: 45, evidenceQuality: 'medium', replications: 0, lastVerified: null, isReal: false }
+- RULE VERSIONING (nič ne izgine):
+  - versionHistory: [{ version: 1, statement: "...", changedAt: "...", reason: "...", status: "..." }]
+  - rule-008 (deprecated) ima versionHistory z razlogom supersede
+  - "Nikoli nič ne izgine" — vsaka verzija pravila je ohranjena
+- KNOWLEDGE CONFLICT DETECTION (najbolj inovativna funkcija):
+  - conflictsWith: ['rule-007'] — IDs of rules that may conflict
+  - conflictResolution: opis kako je konflikt rešen
+  - Primer: rule-001 (low-energy consecutive bad daytime) vs rule-007 (BPM transition OK afternoon)
+    → "Not a true conflict — energy and BPM are different dimensions"
+  - Primer: rule-006 (familiar hits increase ALT) vs rule-001 (two low-energy familiar hits still bad)
+    → "Both true — familiarity AND energy both matter independently"
+  - detectConflicts() funkcija: najde vse konflikte, labeling resolved/unresolved
+  - 3 conflicts detected (rule-001↔rule-007, rule-001↔rule-006, rule-005 future)
+- EVIDENCE GRAPH (izvor vsake odločitbe):
+  - Decision → Policy → Rule → Evidence → Experiment → Hypothesis
+  - 10 nodes + 8 edges
+  - Primer: "Play Thunderstruck" → "Enforce energy separation" → "rule-001" → "exp-006" → "Consecutive low-energy causes tune-out"
+  - Principle: "You can always answer: 'Why did the AI make this decision?' → trace the graph back to the hypothesis."
+- Lint: čist (0 errors, 0 warnings)
+- Testi: 41 pass, 0 fail
+- API: 200
+
+Stage Summary:
+- Sprint 21 Knowledge Engine v2: DONE
+- 0 novih API endpointov (posodobljen obstoječi)
+- Terminologija popravljena: "confirmed" → "simulated" (ker isReal=false)
+- Confidence: strukturirana ocena (score + quality + replications + lastVerified + isReal)
+- Rule versioning: full history, nikoli nič ne izgine
+- Knowledge conflict detection: 3 konflikti najdeni + rešeni (različne dimenzije/okoliščine)
+- Evidence graph: Decision → Policy → Rule → Evidence → Experiment → Hypothesis
+- 4 evolucijske faze:
+  1. Broadcast aplikacija (Sprint 1-5)
+  2. Enterprise broadcast platforma (Sprint 6-10)
+  3. Produkcijska platforma (Sprint 11-16)
+  4. Sistem ki se uči na podlagi dokazov (Sprint 17-21)
+- Total: 137 API endpointov, 23 UI panelov, 41 testov, 6 dokumentov, 21 sprintov
