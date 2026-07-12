@@ -3334,3 +3334,48 @@ Stage Summary:
 - ALT kot north star metric z before/after framework in statistical significance
 - KPI framework za vsak AI modul (hypothesis + KPI + baseline + A/B test plan)
 - Total: 133 API endpointov, 23 UI panelov, 41 testov, 6 dokumentov, 18 sprintov
+
+---
+Task ID: sprint19-evidence-based-radio
+Agent: lead
+Task: Sprint 19 — Evidence-Based Radio (multi-objective optimizer + experiment framework + learning loop)
+
+Work Log:
+- 3 novi AI moduli za evidence-based odločanje:
+  1. /api/v1/ai/optimizer (GET): Multi-Objective Optimizer
+     - 8 objectives z utežmi (skupna 1.0): ALT (0.25), return-rate (0.20), session-completion (0.15), tune-out-rate (0.15), ad-retention (0.10), discovery (0.05), diversity (0.05), compliance (0.05)
+     - Hard constraints (compliance=100, diversity≥8 artists/hr, tune-out≤5%) preprečijo gaming
+     - 4 tradeoff primeri (play hit every 12min, cap ads 2.5min, sandwich new releases, remove explicit)
+     - Pareto frontier (ALT vs diversity) — optimal balance point
+     - Weight rationale: "ALT 0.25 — primary but not sole. 25% weight prevents over-optimization."
+     - Problem+solution: "If you optimize ONLY for ALT, AI plays only top 20 hits → fatigue → listeners leave. 8 objectives prevent gaming."
+  2. /api/v1/ai/experiments (GET/POST): Experiment Framework
+     - 5 eksperimentov (2 running, 2 completed/shipped, 1 planning)
+     - A/B test design: 50/50 split, sample size calculation, primary KPI + guardrails
+     - Completed results: t-test, P-value, Cohen's d effect size, 95% CI, statistical significance
+     - exp-002 (ad breaks 2.5min): P=0.003, d=0.42 → SHIPPED
+     - exp-003 (sandwich new releases): P=0.012, d=0.35 → SHIPPED
+     - exp-001 (fulfill P1 requests 15min): 342/500 sessions, running
+     - exp-004 (voice links 15min vs 20min): 487/1000 sessions, running
+     - Methodology: no peeking, pre-registered end date, ship if P<0.05 AND no guardrail violation AND d>0.2
+     - Policy log: shipped policies z impact tracking
+  3. /api/v1/ai/learning-loop (GET): Learning Loop
+     - 4 learning records (decision → projected → actual → surprise → lesson → weight adjustment)
+     - lrn-002: "Two consecutive low-energy tracks caused 3x more departure than predicted" → weight +0.10
+     - lrn-004: "Fast request fulfillment exceeded projection (+12.3 vs +8.5)" → but "n=1, not significant"
+     - 4 accumulated knowledge domains (track selection, voice links, requests, ad breaks)
+     - Each finding labeled: confidence (high/medium/low), abValidated (true/false)
+     - Honesty metric: "honestyRate = % of findings that are A/B validated"
+     - Self-awareness: "I underestimate consecutive low-energy impact" / "I correctly predict familiar hit retention"
+     - Principle: "Every decision is a learning opportunity. Every surprise is a weight adjustment. Every A/B test converts correlation to causation. The radio gets smarter every day — but it never claims more than the evidence supports."
+- Lint: čist (0 errors, 0 warnings — popravljen 'new new Date' typo)
+- Testi: 41 pass, 0 fail
+- API-ji: vsi 3 endpointi vračajo 200
+
+Stage Summary:
+- Sprint 19 Evidence-Based Radio: DONE
+- 3 novi API: multi-objective optimizer, experiment framework, learning loop
+- Multi-objective: 8 KPIs z utežmi + hard constraints (prepreči gaming ene metrike)
+- Experiment framework: 5 A/B testov z statistical rigor (P-value, effect size, CI, guardrails)
+- Learning loop: radio se uči iz lastnih odločitev (decision → outcome → weight adjustment)
+- Skupno: 136 API endpointov, 23 UI panelov, 41 testov, 6 dokumentov, 19 sprintov
