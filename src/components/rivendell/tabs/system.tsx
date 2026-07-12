@@ -29,6 +29,7 @@ import { Sprint10Panel } from '@/components/rivendell/sprint10-panel'
 import { Sprint11Panel } from '@/components/rivendell/sprint11-panel'
 import { ReliabilityDashboard } from '@/components/rivendell/reliability-dashboard'
 import { ObservabilityPanel } from '@/components/rivendell/observability-panel'
+import { ProfessionalBroadcastPanel } from '@/components/rivendell/professional-broadcast-panel'
 import { formatHms, formatClock, formatNumber } from '@/lib/rivendell/format'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -326,6 +327,9 @@ export function SystemTab() {
 
       {/* Observability + Performance — Sprint 13 */}
       <ObservabilityPanel />
+
+      {/* Professional Broadcast Infrastructure — Sprint 15 */}
+      <ProfessionalBroadcastPanel />
 
       {/* Broadcast Topology */}
       <TopologyPanel />

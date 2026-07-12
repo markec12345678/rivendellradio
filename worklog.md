@@ -3140,3 +3140,64 @@ Stage Summary:
 - Benchmark honesty fix (19M → 804k ev/s z JSON serializacijo + 6 caveats)
 - README z 10 CI badges + Implementation Status
 - Total: 124 API endpointov, 22 UI panelov, 4 dokumentacijske datoteke, 13+ sprintov
+
+---
+Task ID: sprint15-professional-broadcast
+Agent: lead
+Task: Sprint 15 — Professional Broadcast Infrastructure (AES67/ST2110/NMOS + Data Warehouse + Feature Store + AI Program Director + CarPlay)
+
+Work Log:
+- 5 novih API endpointov za profesionalno broadcast infrastrukturo:
+  1. /api/v1/aes67 (GET/POST): AES67/SMPTE ST 2110/NMOS professional audio-over-IP
+     - 4 NMOS nodes (Lawo V_pro8 sender, RVR T60-IP receiver, Riedel Bolero backup, Tektronix PTP grandmaster)
+     - PTP IEEE 1588-2019 v2 (sub-microsecond sync), grandmaster, domain, offset
+     - AES67 streams z SDP, RTP, codec (L16/L24/L32/AM824), packet time (125-4000μs)
+     - NMOS IS-04 (discovery + registration), IS-05 (connection management), IS-08 (audio mapping)
+     - ST 2110-10/20/30/40 standardi
+     - Interop: Dante (AES67 mode), Ravenna, Livewire+, Lawo, Riedel
+     - Actions: register-node, route (NMOS IS-05), unroute
+  2. /api/v1/warehouse (GET/POST): Data Warehouse (OLAP) za production ML + analytics
+     - 5 tabel: listener_sessions (8.47M), track_plays (1.84M), event_log (47.2M), aggr_hourly_listeners, aggr_daily_track_performance
+     - ClickHouse/DuckDB engine (columnar, 5-10x compression)
+     - Partitioning (toYYYYMM, toYYYYMMDD)
+     - 4 query primeri (hourly listeners, top tracks, churn analysis, DJ impact)
+  3. /api/v1/feature-store (GET/POST): Feast-style Feature Store
+     - 4 feature views: track_features (19 features), listener_features (12), show_features (7), realtime_features (12)
+     - Total 50 features z dtype + description
+     - Online store (Redis, <1ms), Offline store (ClickHouse, point-in-time joins)
+     - Materialization (15min/hourly/1min schedules)
+     - Training (Python Feast SDK) + Serving (TypeScript API) consistency
+  4. /api/v1/ai/program-director (GET/POST): AI Program Director z full context
+     - Context: time, daypart, weekend, weather, holiday, sports event, traffic level, listeners, energy curve, minutes since last hit/ad/jingle
+     - 8 rules: no hit >15min, ad break every 20-30min, rainy→softer, rush hour→traffic update, jingle every 25min, sports pre→mention, holiday→themed, energy >0.85→cooldown
+     - Recommendations z priority (critical/high/medium/low), confidence, context factors
+  5. /api/v1/carplay (GET): CarPlay / Android Auto metadata
+     - Now-playing metadata (title, artist, album, artwork 3000x3000, duration, position)
+     - Queue (upcoming 3 tracks)
+     - Media session controls (play/pause/seek/skip)
+     - CarPlay: INPlayMediaIntent, Siri shortcuts, NowPlayingTemplate
+     - Android Auto: MediaSession + MediaBrowserService, browse tree, voice actions
+- ProfessionalBroadcastPanel UI komponenta (~220 vrstic):
+  - 5 kartic: AES67, Warehouse, Feature Store, Program Director, CarPlay
+  - AES67: node count, senders/receivers, PTP locked, bandwidth, standard badges
+  - Warehouse: total rows, size, tables, top 3 tables z row counts
+  - Feature Store: views, features, realtime views, top 3 feature views z online store
+  - Program Director: weather temp, traffic level, minutes since last hit, energy, recommendations
+  - CarPlay: now-playing preview, platform badges
+  - Integrirana v System tab za ObservabilityPanel
+- Lint: čist (0 errors, 0 warnings)
+- Validacija:
+  - API-ji: vsi 5 endpointi vračajo 200
+  - Agent Browser: Professional Broadcast panel upodobljen z vsemi 5 karticami + Sprint 15 badge
+  - 0 browser errors, 0 console errors
+
+Stage Summary:
+- Sprint 15 Professional Broadcast Infrastructure: DONE
+- 5 novih API rut, 1 nova UI komponenta (professional-broadcast-panel.tsx, ~220 vrstic)
+- Zaprte 4 ključne vrzeli iz arhitekturne analize:
+  1. ✅ AES67/ST 2110/NMOS — professional audio-over-IP interconnect
+  2. ✅ Data Warehouse (ClickHouse/DuckDB) — OLAP za production ML
+  3. ✅ Feature Store (Feast) — consistent ML features training + serving
+  4. ✅ AI Program Director — full context (weather/traffic/holiday/sports/energy)
+  5. ✅ CarPlay / Android Auto — automotive metadata + controls
+- Total: 129 API endpointov, 23 UI panelov, 15 sprintov
