@@ -2,7 +2,7 @@ name: CI/CD — Rock 88.7 Broadcast Control Center
 
 on:
   push:
-    branches: [main, web-dashboard]
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -42,6 +42,32 @@ jobs:
         env:
           DATABASE_URL: file:./db/ci.db
           NEXT_TELEMETRY_DISABLED: 1
+
+  # ============================================================================
+  # Job 1b: Tests + Coverage
+  # ============================================================================
+  test:
+    name: Tests + Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Prisma generate
+        run: bun run db:generate
+
+      - name: Run tests
+        run: bun test
+        env:
+          DATABASE_URL: file:./db/test.db
+          NODE_ENV: test
 
   # ============================================================================
   # Job 2: Security — SBOM + dependency scanning
@@ -94,7 +120,7 @@ jobs:
   # ============================================================================
   build-image:
     name: Build + Push Docker Image
-    needs: [quality, security]
+    needs: [quality, security, test]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:

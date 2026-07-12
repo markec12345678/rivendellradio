@@ -5,15 +5,17 @@ Open-source AI-powered radio broadcast automation platform for the [Rivendell Ra
 ## CI/CD Quality Badges
 
 ![Build](https://img.shields.io/github/actions/workflow/status/markec12345678/rivendellradio/ci-cd.yml?branch=main&label=Build)
+![Tests](https://img.shields.io/badge/Tests-41%20passing-brightgreen)
 ![Lint](https://img.shields.io/badge/Lint-ESLint-green)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)
 ![Next.js](https://img.shields.io/badge/Next.js-16.1.3-black)
 ![License](https://img.shields.io/github/license/markec12345678/rivendellradio)
 ![Last Commit](https://img.shields.io/github/last-commit/markec12345678/rivendellradio)
 
-![API Endpoints](https://img.shields.io/badge/API%20Endpoints-124-blue)
-![UI Panels](https://img.shields.io/badge/UI%20Panels-22-purple)
+![API Endpoints](https://img.shields.io/badge/API%20Endpoints-129-blue)
+![UI Panels](https://img.shields.io/badge/UI%20Panels-23-purple)
 ![Test Scenarios](https://img.shields.io/badge/Test%20Scenarios-12%20passing-green)
+![Unit Tests](https://img.shields.io/badge/Unit%20Tests-41%20passing-brightgreen)
 ![SLO Compliance](https://img.shields.io/badge/SLO-99.99%25%20(30d)-brightgreen)
 ![OpenTelemetry](https://img.shields.io/badge/Observability-OpenTelemetry%201.36-blue)
 
@@ -247,8 +249,10 @@ This dashboard is a clean-room implementation:
 | [SRE Guide](docs/SRE-GUIDE.md) | SLOs, error budgets, incident response, test harness, capacity planning |
 | [Deployment Guide](docs/DEPLOYMENT-GUIDE.md) | Quick start, Docker, Kubernetes, environment variables, production checklist |
 | [Plugin SDK Guide](docs/PLUGIN-SDK-GUIDE.md) | Plugin development, permissions, sandbox, publishing, marketplace |
+| [Broadcast Integration Guide](docs/BROADCAST-INTEGRATION-GUIDE.md) | Hardware integration (RVR, Inovonics, Omnia, AES67, NMOS, GPIO) |
+| [Disaster Recovery Guide](docs/DISASTER-RECOVERY-GUIDE.md) | RTO/RPO targets, failover scenarios, DR drills, backup strategy |
 | [UPGRADE-ROADMAP.md](UPGRADE-ROADMAP.md) | 81 upgrade opportunities researched from 23 web searches |
-| [worklog.md](worklog.md) | Full development log (13 sprints, 2800+ lines) |
+| [worklog.md](worklog.md) | Full development log (15 sprints, 2900+ lines) |
 
 ## Implementation Status
 

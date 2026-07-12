@@ -3201,3 +3201,43 @@ Stage Summary:
   4. ✅ AI Program Director — full context (weather/traffic/holiday/sports/energy)
   5. ✅ CarPlay / Android Auto — automotive metadata + controls
 - Total: 129 API endpointov, 23 UI panelov, 15 sprintov
+
+---
+Task ID: sprint16-ecosystem
+Agent: lead
+Task: Sprint 16 — Ecosystem Build (documentation completion + reference deployment + real test coverage)
+
+Work Log:
+- 0 novih API endpointov (konec dodajanju funkcij — po nasvetu "prenehaj širiti funkcionalnosti, začni graditi ekosistem")
+- Dokumentacija (2 nova vodnika, skupaj 6):
+  1. docs/BROADCAST-INTEGRATION-GUIDE.md: hardware integracija (Rivendell RDXport, RVR T60, Inovonics 730, Omnia 9, AES67/NMOS, GPIO, Icecast2, EAS/CAP)
+  2. docs/DISASTER-RECOVERY-GUIDE.md: RTO/RPO targets, 6 failover scenarijev, DR drill procedure, backup strategy, recovery procedures, contact matrix
+- Referenčni deployment (docker-compose.reference.yml):
+  - En ukaz za celoten stack: web + feed + Prometheus + Grafana + Loki + Promtail + Alertmanager
+  - Health checks za web + feed
+  - Persistent volumes za db + prometheus + grafana + loki + alertmanager
+  - Internal bridge network
+  - `docker compose -f docker-compose.reference.yml up -d`
+- Real test coverage (4 datoteke, 41 testov, 104 expect() klicev):
+  1. tests/rate-limit.test.ts (9 tests): RATE_LIMITS config, allow/block, RFC 7807 problem+json, Retry-After header, per-IP limits, IP allowlist
+  2. tests/scheduler.test.ts (13 tests): separation rules, conflict rules, clocks, dayparts, library, getActiveDaypart, getActiveClock, demandScore, checkSeparation, checkConflicts, scheduleHour, hard separation enforcement
+  3. tests/cap-parser.test.ts (8 tests): CAP 1.2 XML parsing, info block, geocode/parameters, invalid XML, SAME code extraction, event inference, SAME_EVENT_CODES, FCC_ORIGINATOR_CODES
+  4. tests/cap-signature.test.ts (11 tests): signature verification (trusted/unknown), replay protection (first/duplicate/different), internal digest (hex/deterministic/different)
+- CI/CD workflow popravek:
+  - Typo v branches: [ain, web-dashboard] → [main]
+  - Nov "test" job: bun test z Prisma generate + test DB
+  - build-image depends na [quality, security, test] (ne samo quality + security)
+- README posodobitev:
+  - Novi badges: Tests (41 passing), Unit Tests (41 passing)
+  - Posodobljeni badges: API Endpoints 129, UI Panels 23
+  - Dokumentacijska tabela posodobljena z 2 novima vodnikoma
+- Lint: čist (0 errors, 0 warnings)
+- Testi: 41 pass, 0 fail, 104 expect() calls (vsi gredo skoči v 126ms)
+
+Stage Summary:
+- Sprint 16 Ecosystem Build: DONE
+- 0 novih API-jev, 2 nova dokumenta, 1 referenčni docker-compose, 4 test datoteke
+- Real test coverage: 41 testov (rate-limit, scheduler, CAP parser, CAP signature)
+- CI/CD: test job dodan, build-image depends na test
+- 6 dokumentacijskih vodnikov (Architecture, SRE, Deployment, Plugin SDK, Broadcast Integration, Disaster Recovery)
+- Total: 129 API endpointov, 23 UI panelov, 6 dokumentov, 41 testov, 16 sprintov
