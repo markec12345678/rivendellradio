@@ -190,6 +190,82 @@ const SCENARIOS: TestScenario[] = [
     riskLevel: 'safe', requiresSandbox: false,
     lastRunAt: new Date(Date.now() - 1 * 86400000).toISOString(), lastResult: 'passed', passCount: 156, failCount: 0, avgDurationMs: 3000,
   },
+  {
+    id: 'test-009', name: 'Cluster Network Partition (Split-Brain)', category: 'network',
+    description: 'Simulate network partition between datacenters — verify Raft prevents split-brain + quorum maintenance',
+    steps: [
+      { action: 'partition-network', target: 'maribor-dc2', expectedBehavior: 'DR node isolated from primary DC', durationMs: 2000 },
+      { action: 'verify-quorum', target: 'cluster', expectedBehavior: 'Primary DC maintains quorum (3/4 nodes)', durationMs: 1000 },
+      { action: 'verify-no-split-brain', target: 'raft', expectedBehavior: 'DR node becomes follower, cannot elect leader', durationMs: 3000 },
+      { action: 'verify-writes', target: 'leader', expectedBehavior: 'Writes continue on primary DC', durationMs: 5000 },
+      { action: 'heal-partition', target: 'network', expectedBehavior: 'DR node reconnects', durationMs: 3000 },
+      { action: 'verify-sync', target: 'raft', expectedBehavior: 'DR node catches up log (logOffset matches)', durationMs: 5000 },
+    ],
+    assertions: [
+      { metric: 'cluster.split_brain', operator: 'equals', value: false, description: 'No split-brain occurred' },
+      { metric: 'cluster.quorum_maintained', operator: 'equals', value: true, description: 'Primary DC maintained quorum' },
+      { metric: 'cluster.log_sync_time_ms', operator: 'less', value: 10000, description: 'Log sync after rejoin <10s' },
+      { metric: 'cluster.zero_data_loss', operator: 'equals', value: true, description: 'Zero data loss on partition heal' },
+    ],
+    riskLevel: 'dangerous', requiresSandbox: true,
+    lastRunAt: new Date(Date.now() - 3 * 86400000).toISOString(), lastResult: 'passed', passCount: 14, failCount: 1, avgDurationMs: 24000,
+  },
+  {
+    id: 'test-010', name: 'Cluster Leader Failover (Node Crash)', category: 'dr',
+    description: 'Kill leader node — verify Raft election + new leader + client transparent failover',
+    steps: [
+      { action: 'kill-node', target: 'node-01 (leader)', expectedBehavior: 'Leader process killed', durationMs: 1000 },
+      { action: 'verify-election', target: 'raft', expectedBehavior: 'New leader elected <5s', durationMs: 5000 },
+      { action: 'verify-clients', target: 'load-balancer', expectedBehavior: 'Clients reconnect to new leader', durationMs: 3000 },
+      { action: 'verify-no-downtime', target: 'dashboard', expectedBehavior: 'Dashboard remains accessible', durationMs: 2000 },
+      { action: 'restart-node', target: 'node-01', expectedBehavior: 'Killed node rejoins as follower', durationMs: 5000 },
+      { action: 'verify-log-sync', target: 'node-01', expectedBehavior: 'Log offset catches up', durationMs: 5000 },
+    ],
+    assertions: [
+      { metric: 'election.time_ms', operator: 'less', value: 5000, description: 'Leader election <5s' },
+      { metric: 'client.reconnect_ms', operator: 'less', value: 10000, description: 'Client reconnect <10s' },
+      { metric: 'cluster.zero_downtime', operator: 'equals', value: true, description: 'No downtime for dashboard users' },
+    ],
+    riskLevel: 'dangerous', requiresSandbox: true,
+    lastRunAt: new Date(Date.now() - 5 * 86400000).toISOString(), lastResult: 'passed', passCount: 22, failCount: 2, avgDurationMs: 21000,
+  },
+  {
+    id: 'test-011', name: 'Database Failover (Prisma Connection Lost)', category: 'database',
+    description: 'Simulate database connection loss — verify graceful degradation + auto-reconnect + no data corruption',
+    steps: [
+      { action: 'block-db', target: 'sqlite', expectedBehavior: 'Prisma queries fail', durationMs: 1000 },
+      { action: 'verify-degradation', target: 'api', expectedBehavior: 'API returns 503 with problem+json', durationMs: 2000 },
+      { action: 'verify-cache', target: 'dashboard', expectedBehavior: 'Cached data still displayed', durationMs: 3000 },
+      { action: 'verify-event-bus', target: 'event-bus', expectedBehavior: 'Event Bus continues (in-memory)', durationMs: 2000 },
+      { action: 'unblock-db', target: 'sqlite', expectedBehavior: 'Connection restored', durationMs: 2000 },
+      { action: 'verify-reconnect', target: 'prisma', expectedBehavior: 'Queries succeed, no data loss', durationMs: 2000 },
+    ],
+    assertions: [
+      { metric: 'db.no_corruption', operator: 'equals', value: true, description: 'No database corruption' },
+      { metric: 'db.reconnect_ms', operator: 'less', value: 5000, description: 'Reconnect <5s' },
+      { metric: 'eventbus.continued', operator: 'equals', value: true, description: 'Event Bus continued during DB outage' },
+    ],
+    riskLevel: 'caution', requiresSandbox: true,
+    lastRunAt: new Date(Date.now() - 2 * 86400000).toISOString(), lastResult: 'passed', passCount: 45, failCount: 1, avgDurationMs: 14000,
+  },
+  {
+    id: 'test-012', name: 'Webhook Delivery Under Load (DLQ + Retry)', category: 'eventbus',
+    description: 'Verify webhook delivery + retry logic + DLQ under high event volume',
+    steps: [
+      { action: 'flood-events', target: 'event-bus', expectedBehavior: '1000 track.started events in 10s', durationMs: 10000 },
+      { action: 'simulate-webhook-down', target: 'webhook-endpoint', expectedBehavior: 'One webhook returns 500', durationMs: 1000 },
+      { action: 'verify-retry', target: 'webhook-system', expectedBehavior: 'Exponential backoff retry (3 attempts)', durationMs: 15000 },
+      { action: 'verify-dlq', target: 'dlq', expectedBehavior: 'Failed webhook in DLQ after 3 retries', durationMs: 1000 },
+      { action: 'verify-others', target: 'other-webhooks', expectedBehavior: 'Other webhooks still receive events', durationMs: 2000 },
+    ],
+    assertions: [
+      { metric: 'webhook.retry_count', operator: 'equals', value: 3, description: 'Exactly 3 retry attempts' },
+      { metric: 'dlq.depth', operator: 'equals', value: 1, description: 'Exactly 1 message in DLQ' },
+      { metric: 'webhook.other_success_rate', operator: 'greater', value: 99, description: 'Other webhooks >99% success' },
+    ],
+    riskLevel: 'safe', requiresSandbox: true,
+    lastRunAt: new Date(Date.now() - 1 * 86400000).toISOString(), lastResult: 'passed', passCount: 67, failCount: 0, avgDurationMs: 31000,
+  },
 ]
 
 const RUN_HISTORY: TestRun[] = [

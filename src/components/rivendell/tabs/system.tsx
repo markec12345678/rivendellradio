@@ -27,6 +27,7 @@ import { Sprint9Panel } from '@/components/rivendell/sprint9-panel'
 import { CollabPresenceIndicator } from '@/components/rivendell/collab-presence'
 import { Sprint10Panel } from '@/components/rivendell/sprint10-panel'
 import { Sprint11Panel } from '@/components/rivendell/sprint11-panel'
+import { ReliabilityDashboard } from '@/components/rivendell/reliability-dashboard'
 import { formatHms, formatClock, formatNumber } from '@/lib/rivendell/format'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -318,6 +319,9 @@ export function SystemTab() {
 
       {/* Operational Excellence — Sprint 11 */}
       <Sprint11Panel />
+
+      {/* Reliability Metrics & Production Proof — Sprint 12 */}
+      <ReliabilityDashboard />
 
       {/* Broadcast Topology */}
       <TopologyPanel />
