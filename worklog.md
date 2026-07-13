@@ -3790,3 +3790,40 @@ Stage Summary:
 - 6 evolucijskih faz: platforma → enterprise → production → učenje → spomin → **AI Core**
 - Total: 139 API endpointov, 24 UI panelov, 109 testov, 27 sprintov
 - Prvi pravi AI agent (ne chatbot) — Tool Calling + Memory + Actions
+
+---
+Task ID: 30
+Agent: lead
+Task: Rewrite docs/STATION-CHRONICLE.md to honor the user's final vision — one honest entry, a clear format for future entries, and empty space waiting for real events.
+
+Work Log:
+- Prebral obstoječi STATION-CHRONICLE.md — ugotovil, da je preveč poln:
+  - 2026 entry je bil feature inventory (kaj smo zgradili), ne kronika (kaj se je zgodilo)
+  - 2027/2028/2029/2030 sekcije s checkboxi so bile napovedi prihodnosti — to je načrt, ne kronika
+  - Oboje je v nasprotju z duhom, ki ga je opisal uporabnik
+- Rewrote celotno datoteko z novo strukturo:
+  1. The One Rule (prominentno na vrhu): "Do not write what the AI thinks happened. Write what actually happened."
+  2. What belongs here — kaj je kronika, kaj ni (ne feature list, ne sprint retro)
+  3. Record failures especially — poudarek, da so napake najbolj dragocene
+  4. Entry format z good/bad primerom (uporabnikov točno besedilo)
+  5. Failure entry primer (uporabnikov točno besedilo — ALT +0.4, revenue -11%)
+  6. Learning loop diagram (Decision → Evidence → Outcome → Lesson → Future decision)
+  7. 2026-07-13 The Framework Year — uporabnikov točno enovrstični vnos + "the receipts" (0 real data, 44 isReal=false, 0 isReal=true)
+  8. "What comes next = Nothing" — jasno, da je praznina namerna
+  9. Maintenance rules (sharpened — dodan sample size, status)
+  10. The final measure — koda je framework, kronika je modrost
+- Odstranjeno:
+  - Feature list za 2026 (kaj smo zgradili) — to je arhitektura, ne kronika
+  - Vsi predictivni checkboxi za 2027-2030 — kronika ne napoveduje, kronika zapisuje
+  - "Milestones to track" sekcije — to je roadmap, ne kronika
+- Lint: ni kode, dokumentacijska datoteka
+- Git: pripravljeno za commit
+
+Stage Summary:
+- STATION-CHRONICLE.md je zdaj strukturana kot PRAVA kronika, ne kot feature list
+- En sam pravi vnos (2026-07-13 The Framework Year) — vse ostalo je prazno, čaka na prve resnične dogodke
+- Format za prihodnje vnose je definiran s good/bad primerom in failure primerom
+- Jedrno pravilo izpostavljeno: ne zapisuj kaj AI misli da se je zgodilo, zapiši kaj se je dejansko zgodilo
+- Poudarek na napakah kot najbolj dragocenih vnosih
+- Learning loop ekspliciten: Decision → Evidence → Outcome → Lesson → Future decision
+- Datoteka je zdaj "najbolj profesionalen del celotnega projekta" — sposobnost reči "še ne vemo"
