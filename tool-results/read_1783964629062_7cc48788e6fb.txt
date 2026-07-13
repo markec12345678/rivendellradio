@@ -1,0 +1,668 @@
+     1→import { NextResponse } from 'next/server'
+     2→
+     3→export const dynamic = 'force-dynamic'
+     4→
+     5→/**
+     6→ * Station Intelligence Database — dolgoročni spomin postaje.
+     7→ *
+     8→ * To NI nov AI modul. To je institucionalni spomin.
+     9→ *
+    10→ * Razlika od Knowledge Engine:
+    11→ *   Knowledge Engine: strukturirana pravila z dokazi (semantic, statistical)
+    12→ *   Station Memory: narativni, longitudinalni, institucionalni (temporal, behavioral)
+    13→ *
+    14→ * Izkušeni programski direktor po 20 letih ve:
+    15→ *   - "Leta 2019 smo poskusili daljši jutranji blok brez novic. Ni delovalo."
+    16→ *   - "Jutranji poslušalci v avtu ne prenašajo počasnih skladb."
+    17→ *   - "Ko predvajamo Foo Fighters ob 7:15, poslušanost vedno skoči."
+    18→ *   - "Poslušalci v službi (desktop) ostanejo dlje ko je manj govora."
+    19→ *
+    20→ * Ta API hrani takšno znanje sistematično — ne v glavi ene osebe.
+    21→ *
+    22→ * GET /api/v1/ai/station-memory — full institutional memory
+    23→ * POST /api/v1/ai/station-memory — record memory, add observation
+    24→ */
+    25→
+    26→// ============================================================================
+    27→// 1. Behavioral Listener Segments — VZORCI, ne posamezniki
+    28→// ============================================================================
+    29→interface ListenerSegment {
+    30→  id: string
+    31→  name: string
+    32→  description: string
+    33→  // When they listen
+    34→  typicalHours: string
+    35→  typicalDays: string[]
+    36→  // Where they listen
+    37→  devices: string[]
+    38→  contexts: string[]
+    39→  // How they behave
+    40→  avgSessionMin: number
+    41→  returnRate7d: number
+    42→  churnRisk: number
+    43→  // What they respond to
+    44→  respondsWellTo: string[]
+    45→  doesNotRespondWellTo: string[]
+    46→  // Key insight
+    47→  keyInsight: string
+    48→  // Size
+    49→  estimatedSize: number
+    50→  percentageOfAudience: number
+    51→}
+    52→
+    53→const SEGMENTS: ListenerSegment[] = [
+    54→  {
+    55→    id: 'seg-morning-commuter',
+    56→    name: 'Jutranji voznik (commute)',
+    57→    description: 'Poslušalci v avtu med 6:00-9:00, vožnja 20-40min',
+    58→    typicalHours: '06:00-09:00', typicalDays: [1, 2, 3, 4, 5],
+    59→    devices: ['car', 'mobile'], contexts: ['driving', 'commute'],
+    60→    avgSessionMin: 28, returnRate7d: 78, churnRisk: 0.15,
+    61→    respondsWellTo: ['visoka energija', 'hits', 'prometne informacije', 'časovne napovedi', 'hitri voice linki (<20s)'],
+    62→    doesNotRespondWellTo: ['dolge voice linki (>30s)', 'počasne skladbe zjutraj', 'dolg uvod (>15s)', 'nova glasba brez konteksta'],
+    63→    keyInsight: 'Ta segment ima fiksno časovno okno — če jih izgubiš ob 7:15, se ne vrnejo. Vsaka minuta šteje.',
+    64→    estimatedSize: 4200, percentageOfAudience: 49.6,
+    65→  },
+    66→  {
+    67→    id: 'seg-office-worker',
+    68→    name: 'Službeni poslušalec (desktop)',
+    69→    description: 'Poslušalci v službi na računalniku, 9:00-17:00',
+    70→    typicalHours: '09:00-17:00', typicalDays: [1, 2, 3, 4, 5],
+    71→    devices: ['desktop'], contexts: ['office', 'work'],
+    72→    avgSessionMin: 180, returnRate7d: 82, churnRisk: 0.08,
+    73→    respondsWellTo: ['manj prekinitev', 'globlje rezije', 'albumske verzije', 'manj govora', 'stalnost formata'],
+    74→    doesNotRespondWellTo: ['pogoste reklame', 'glasni voice linki', 'nagle spremembe energije', 'preveč govora'],
+    75→    keyInsight: 'Najdaljše seje vseh segmentov. Ne iščejo napetosti — iščejo ozadje. Manj govora = daljše seje.',
+    76→    estimatedSize: 1800, percentageOfAudience: 21.2,
+    77→  },
+    78→  {
+    79→    id: 'seg-afternoon-driver',
+    80→    name: 'Popoldanski voznik (drive home)',
+    81→    description: 'Poslušalci v avtu med 15:00-19:00, vožnja 25-45min',
+    82→    typicalHours: '15:00-19:00', typicalDays: [1, 2, 3, 4, 5],
+    83→    devices: ['car', 'mobile'], contexts: ['driving', 'commute-home', 'school-pickup'],
+    84→    avgSessionMin: 35, returnRate7d: 74, churnRisk: 0.18,
+    85→    respondsWellTo: ['visoka energija', 'hits', 'promet', 'priporočila za večer', 'fun facts'],
+    86→    doesNotRespondWellTo: ['počasne skladbe ob 16:00', 'dolg voice link pred prometno konico', 'preveč novic'],
+    87→    keyInsight: 'Najbolj občutljivi na promet — če damo promet ob 16:15 namesto 16:00, izgubimo 8% poslušalcev. Časovna natančnost je ključna.',
+    88→    estimatedSize: 2100, percentageOfAudience: 24.8,
+    89→  },
+    90→  {
+    91→    id: 'seg-evening-listener',
+    92→    name: 'Večerni poslušalec (home)',
+    93→    description: 'Poslušalci doma 19:00-23:00, sprostitev',
+    94→    typicalHours: '19:00-23:00', typicalDays: [0, 1, 2, 3, 4, 5, 6],
+    95→    devices: ['smart-speaker', 'mobile', 'desktop'], contexts: ['home', 'relaxing', 'dinner', 'cooking'],
+    96→    avgSessionMin: 65, returnRate7d: 61, churnRisk: 0.28,
+    97→    respondsWellTo: ['globlje rezije', 'albumske skladbe', 'tematski bloki', 'manj hitov', 'AI DJ z umetniškimi izbori'],
+    98→    doesNotRespondWellTo: ['preveč hitov', 'reklame (motijo sprostitev)', 'visoka energija po 21:00'],
+    99→    keyInsight: 'Najbolj selektivni poslušalci. Ne iščejo hitov — iščejo razmerje. Če damo preveč komercialne glasbe, odidejo k streamingu.',
+   100→    estimatedSize: 900, percentageOfAudience: 10.6,
+   101→  },
+   102→  {
+   103→    id: 'seg-weekend-casual',
+   104→    name: 'Vikend poslušalec (casual)',
+   105→    description: 'Občasni poslušalci, predvsem vikend',
+   106→    typicalHours: '08:00-22:00', typicalDays: [0, 6],
+   107→    devices: ['mobile', 'smart-speaker', 'tablet'], contexts: ['weekend', 'leisure', 'family'],
+   108→    avgSessionMin: 22, returnRate7d: 34, churnRisk: 0.52,
+   109→    respondsWellTo: ['hits', 'znane klasike', 'natečaji', 'interaktivne oddaje', 'družabna omrežja'],
+   110→    doesNotRespondWellTo: ['nova glasba', 'dolge voice linki', 'globlje rezije', 'počasne skladbe'],
+   111→    keyInsight: 'Najvišja fluktuacija. Ne vračajo se vsak teden — potrebni so natečaji in dogodki, da jih pritegnemo nazaj.',
+   112→    estimatedSize: 3200, percentageOfAudience: 37.8,
+   113→  },
+   114→]
+   115→
+   116→// ============================================================================
+   117→// 2. Music Taste Evolution — kako se okus spreminja skozi leta
+   118→// ============================================================================
+   119→interface TasteEvolution {
+   120→  period: string
+   121→  year: number
+   122→  // What was popular
+   123→  topGenres: string[]
+   124→  topArtists: string[]
+   125→  avgBpmPreference: number
+   126→  energyPreference: string
+   127→  // How listeners responded
+   128→  altAverage: number
+   129→  topTrackRetention: number
+   130→  // Key change
+   131→  keyChange: string
+   132→  // Evidence
+   133→  evidence: string
+   134→}
+   135→
+   136→const TASTE_EVOLUTION: TasteEvolution[] = [
+   137→  {
+   138→    period: '2020-2021 (COVID era)', year: 2020,
+   139→    topGenres: ['classic-rock', 'alternative', 'indie-rock'], topArtists: ['Queen', 'Fleetwood Mac', 'Arctic Monkeys'],
+   140→    avgBpmPreference: 110, energyPreference: 'medium (comfort listening during lockdown)',
+   141→    altAverage: 14.2, topTrackRetention: 0.72,
+   142→    keyChange: 'Poslušalci so iskali uteho — klasični rock in znane skladbe so imele najvišjo zadrževalno moč. Nova glasba je bila slabo sprejeta.',
+   143→    evidence: 'Analiza 2.4M track plays — klasike so imele +3.1min ALT napram novim izdajam',
+   144→  },
+   145→  {
+   146→    period: '2022-2023 (post-COVID recovery)', year: 2022,
+   147→    topGenres: ['alternative-rock', 'indie-rock', 'post-punk-revival'], topArtists: ['Foo Fighters', 'Imagine Dragons', 'The Killers'],
+   148→    avgBpmPreference: 125, energyPreference: 'high (return to energy after lockdown)',
+   149→    altAverage: 16.5, topTrackRetention: 0.78,
+   150→    keyChange: 'Vrnitev k visoki energiji. Poslušalci so hoteli aktivno glasbo, ne več utehe. Foo Fighters so doživeli renesanso.',
+   151→    evidence: 'Energične skladbe (energy >0.7) so povečale ALT za +2.3min napram 2020',
+   152→  },
+   153→  {
+   154→    period: '2024-2025 (streaming generation)', year: 2024,
+   155→    topGenres: ['modern-rock', 'alternative', 'classic-rock-revival'], topArtists: ['Greta Van Fleet', 'Måneskin', 'Arctic Monkeys'],
+   156→    avgBpmPreference: 120, energyPreference: 'varied (listeners more eclectic)',
+   157→    altAverage: 17.8, topTrackRetention: 0.81,
+   158→    keyChange: 'Poslušalci postajajo eklektični — ne iščejo več enega žanra. Zmožnost odkrivanja novih izvajalcev (Måneskin, Greta Van Fleet) je postala ključna.',
+   159→    evidence: 'Discovery rate se je dvignil z 58% na 72% — poslušalci bolj odprti za novo',
+   160→  },
+   161→  {
+   162→    period: '2026 (current)', year: 2026,
+   163→    topGenres: ['classic-rock', 'alternative', 'modern-rock'], topArtists: ['Foo Fighters', 'The White Stripes', 'AC/DC'],
+   164→    avgBpmPreference: 124, energyPreference: 'high (drive-time focus)',
+   165→    altAverage: 18.9, topTrackRetention: 0.84,
+   166→    keyChange: 'Vrnitev h klasičnemu rocku z modernim twistom. AI Station Brain optimizira za ALT — znanje iz prejšnjih let se uporablja za odločitve.',
+   167→    evidence: 'AI decisions based on 6 years of accumulated station memory',
+   168→  },
+   169→]
+   170→
+   171→// ============================================================================
+   172→// 3. Programming Decision History — kaj je delovalo, kaj ne
+   173→// ============================================================================
+   174→interface ProgrammingDecision {
+   175→  id: string
+   176→  year: number
+   177→  decision: string
+   178→  type: 'format-change' | 'schedule-change' | 'music-policy' | 'voice-link' | 'ad-strategy' | 'technology' | 'experiment'
+   179→  // What happened
+   180→  hypothesis: string
+   181→  outcome: 'success' | 'partial' | 'failure' | 'abandoned'
+   182→  altBefore: number
+   183→  altAfter: number
+   184→  altDelta: number
+   185→  // Expected vs Actual — where did predictions go wrong?
+   186→  expectedAlt: number       // what the AI/PD predicted would happen
+   187→  actualAlt: number         // what actually happened
+   188→  predictionError: number   // actualAlt - expectedAlt (negative = overestimated)
+   189→  whyWrong?: string         // if prediction was off, why?
+   190→  // Duration
+   191→  triedFor: string
+   192→  // Lesson
+   193→  lesson: string
+   194→  // Would we try again?
+   195→  retryVerdict: string
+   196→  // Evidence quality
+   197→  evidenceType: 'before-after' | 'ab-test' | 'observational'
+   198→  isReal: boolean
+   199→}
+   200→
+   201→const DECISION_HISTORY: ProgrammingDecision[] = [
+   202→  {
+   203→    id: 'dec-2019-001', year: 2019,
+   204→    decision: 'Daljši jutranji blok brez novic (6:00-8:00 brez prekinitev)',
+   205→    type: 'schedule-change',
+   206→    hypothesis: 'Manj prekinitev zjutraj = daljše seje',
+   207→    outcome: 'failure', altBefore: 15.2, altAfter: 13.8, altDelta: -1.4,
+   208→    expectedAlt: 16.2, actualAlt: 13.8, predictionError: -2.4,
+   209→    whyWrong: 'PD expected less interruption = longer sessions. Reality: listeners left because they EXPECT news at 7:00/8:00. Missing news feels wrong, not relaxing.',
+   210→    triedFor: '3 tedne',
+   211→    lesson: 'Jutranji poslušalci v avtu PRIČAKUJEjo novice ob 7:00 in 8:00. Brez novic odidejo k konkurenci. Novice so sidro, ne motnja.',
+   212→    retryVerdict: 'Ne poskušati ponovno — potrjeno dvakrat (2019, 2024)',
+   213→    evidenceType: 'before-after', isReal: false,
+   214→  },
+   215→  {
+   216→    id: 'dec-2020-001', year: 2020,
+   217→    decision: 'AI DJ voice linki namesto živega voditelja med 22:00-06:00',
+   218→    type: 'voice-link',
+   219→    hypothesis: 'AI DJ je dovolj dober za overnight in prihrani stroške',
+   220→    outcome: 'success', altBefore: 12.1, altAfter: 14.8, altDelta: +2.7,
+   221→    expectedAlt: 13.6, actualAlt: 14.8, predictionError: +1.2,
+   222→    whyWrong: 'AI DJ exceeded expectations. Overnight listeners are less demanding than predicted — voice quality matters less at night.',
+   223→    triedFor: '6 mesecev (nato stalno)',
+   224→    lesson: 'Overnight poslušalci so manj zahtevni glede voice linkov. AI DJ je dovolj dober. Prihranek stroškov: 40k€/leto.',
+   225→    retryVerdict: 'Že implementirano — nadaljuj',
+   226→    evidenceType: 'before-after', isReal: false,
+   227→  },
+   228→  {
+   229→    id: 'dec-2021-002', year: 2021,
+   230→    decision: 'Uvedba "New Music Wednesday" — vsako sredo 1 nova skladba na uro',
+   231→    type: 'music-policy',
+   232→    hypothesis: 'Redno predstavljanje nove glasbe poveča return rate',
+   233→    outcome: 'success', altBefore: 14.5, altAfter: 16.2, altDelta: +1.7,
+   234→    expectedAlt: 15.5, actualAlt: 16.2, predictionError: +0.7,
+   235→    whyWrong: 'Return rate impact was larger than predicted. Listeners actively schedule their week around new music day.',
+   236→    triedFor: 'Trajno',
+   237→    lesson: 'Poslušalci se vračajo na sredo, ker vedo da bodo slišali nekaj novega. Return rate +8% ob sredah.',
+   238→    retryVerdict: 'Že implementirano — ključni del programske identitete',
+   239→    evidenceType: 'before-after', isReal: false,
+   240→  },
+   241→  {
+   242→    id: 'dec-2022-001', year: 2022,
+   243→    decision: 'Krajše reklame (3min → 2min) z več bloki',
+   244→    type: 'ad-strategy',
+   245→    hypothesis: 'Krajši bloki zadržijo več poslušalcev',
+   246→    outcome: 'partial', altBefore: 16.5, altAfter: 17.1, altDelta: +0.6,
+   247→    expectedAlt: 18.0, actualAlt: 17.1, predictionError: -0.9,
+   248→    whyWrong: 'ALT improved less than predicted because shorter breaks also meant more frequent interruptions. Revenue dropped 12% which was not anticipated.',
+   249→    triedFor: '2 meseca',
+   250→    lesson: 'Poslušalci so ostali dlje, vendar je prihodek padel za 12% (manj oglasov). Ravnovesje: 2.5min je optimalno.',
+   251→    retryVerdict: 'Poskušali znova 2026 z 2.5min — A/B test exp-002 potrjuje (P=0.003)',
+   252→    evidenceType: 'before-after', isReal: false,
+   253→  },
+   254→  {
+   255→    id: 'dec-2023-001', year: 2023,
+   256→    decision: 'Uvedba listener requests v jutranjem programu',
+   257→    type: 'format-change',
+   258→    hypothesis: 'Interaktivnost poveča ALT in return rate',
+   259→    outcome: 'success', altBefore: 16.8, altAfter: 18.9, altDelta: +2.1,
+   260→    expectedAlt: 18.3, actualAlt: 18.9, predictionError: +0.6,
+   261→    whyWrong: 'Personalization impact was underestimated. Hearing your name on air creates stronger emotional bond than predicted.',
+   262→    triedFor: 'Trajno',
+   263→    lesson: 'Poslušalci, ki slišijo svojo zahtevo, ostanejo +8.5min dlje. Najmočnejši posamezni faktor ALT.',
+   264→    retryVerdict: 'Že implementirano — A/B test exp-001 preverja vzročnost',
+   265→    evidenceType: 'before-after', isReal: false,
+   266→  },
+   267→  {
+   268→    id: 'dec-2024-001', year: 2024,
+   269→    decision: 'Poskus daljšega jutranjega bloka brez novic (ponovitev 2019)',
+   270→    type: 'schedule-change',
+   271→    hypothesis: 'Morda se je okus spremenil — poskušamo znova',
+   272→    outcome: 'failure', altBefore: 18.1, altAfter: 16.9, altDelta: -1.2,
+   273→    expectedAlt: 17.5, actualAlt: 16.9, predictionError: -0.6,
+   274→    whyWrong: 'Predicted that taste might have changed in 5 years. It did not — morning news expectation is structural, not generational.',
+   275→    triedFor: '2 tedna',
+   276→    lesson: 'Enak rezultat kot 2019. Jutranji vozniški segment še vedno pričakuje novice ob 7:00 in 8:00. To je trajno pravilo, ne trend.',
+   277→    retryVerdict: 'Ne poskušati tretjič — pravilo je potrjeno dvakrat v različnih letih',
+   278→    evidenceType: 'before-after', isReal: false,
+   279→  },
+   280→  {
+   281→    id: 'dec-2025-001', year: 2025,
+   282→    decision: 'AI Station Brain prevzame dnevne odločitve (človek samo nadzor)',
+   283→    type: 'technology',
+   284→    hypothesis: 'AI lahko vodi program bolje kot človek na podlagi podatkov',
+   285→    outcome: 'partial', altBefore: 17.2, altAfter: 18.9, altDelta: +1.7,
+   286→    expectedAlt: 19.7, actualAlt: 18.9, predictionError: -0.8,
+   287→    whyWrong: 'AI overestimated its ability to handle strategic decisions. Good at track selection, bad at format changes. Hybrid model needed.',
+   288→    triedFor: '12 mesecev',
+   289→    lesson: 'AI je boljši v vsakodnevnih odločitvah (track selection, timing). Človek je še vedno boljši v strateških odločitvah (format changes, special events). Optimalno: AI dnevno, človek strateško.',
+   290→    retryVerdict: 'Nadaljuj z hibridnim modelom — AI + človek',
+   291→    evidenceType: 'before-after', isReal: false,
+   292→  },
+   293→  {
+   294→    id: 'dec-2026-001', year: 2026,
+   295→    decision: 'Weather context v AI DJ voice linkih',
+   296→    type: 'voice-link',
+   297→    hypothesis: 'Vremenska kontekstualizacija poveča ALT',
+   298→    outcome: 'partial', altBefore: 18.5, altAfter: 18.9, altDelta: +0.4,
+   299→    expectedAlt: 19.5, actualAlt: 18.9, predictionError: -0.6,
+   300→    whyWrong: 'Weather mentions have perception value (listeners feel cared for) but less ALT impact than predicted. A/B test needed.',
+   301→    triedFor: '3 mesece (A/B test exp-005 v planning)',
+   302→    lesson: 'Šibka korelacija (+0.4min). Morda bolj pomembno za perception (listeners feel cared for) kot za dejansko ALT. A/B test needed.',
+   303→    retryVerdict: 'A/B test exp-005 bo odločil',
+   304→    evidenceType: 'observational', isReal: false,
+   305→  },
+   306→]
+   307→
+   308→// ============================================================================
+   309→// 4. Institutional Lessons — znanje izkušenega PD
+   310→// ============================================================================
+   311→interface InstitutionalLesson {
+   312→  id: string
+   313→  category: 'programming' | 'music' | 'listeners' | 'technology' | 'business'
+   314→  lesson: string
+   315→  evidence: string
+   316→  yearLearned: number
+   317→  stillValid: boolean
+   318→  // Confidence tracking — how strong is this memory?
+   319→  confidence: {
+   320→    level: 'very-high' | 'high' | 'medium' | 'low' | 'experimental'
+   321→    timesObserved: number      // how many times this pattern was seen
+   322→    yearsObserved: number      // over how many years
+   323→    lastConfirmed: string | null  // when was this last validated
+   324→    isReal: boolean            // false = demonstration, true = real observation
+   325→  }
+   326→  // How it's used
+   327→  usedBy: string[]
+   328→  counterEvidence?: string
+   329→}
+   330→
+   331→const LESSONS: InstitutionalLesson[] = [
+   332→  {
+   333→    id: 'lesson-001', category: 'listeners',
+   334→    lesson: 'Jutranji vozniški segment ima fiksno časovno okno. Če izgubiš poslušalca ob 7:15, se ne vrne.',
+   335→    evidence: 'Opazovano 2019-2026: ALT pade 40% po 7:30 če program ni optimalen',
+   336→    yearLearned: 2019, stillValid: true,
+   337→    confidence: { level: 'very-high', timesObserved: 847, yearsObserved: 7, lastConfirmed: '2026-07-10', isReal: false },
+   338→    usedBy: ['station-brain', 'scheduler', 'show-prep'],
+   339→  },
+   340→  {
+   341→    id: 'lesson-002', category: 'music',
+   342→    lesson: 'Foo Fighters ob 7:15 vedno dvignejo poslušanost. To je najbolj zanesljiv "anchor" v jutranjem programu.',
+   343→    evidence: '47 analiziranih predvajanj ob 7:00-7:30 — povprečno +12% poslušalcev v 2min',
+   344→    yearLearned: 2021, stillValid: true,
+   345→    confidence: { level: 'high', timesObserved: 47, yearsObserved: 5, lastConfirmed: '2026-07-08', isReal: false },
+   346→    usedBy: ['station-brain', 'scheduler'],
+   347→  },
+   348→  {
+   349→    id: 'lesson-003', category: 'programming',
+   350→    lesson: 'Novice ob 7:00 in 8:00 so sidro, ne motnja. Brez njih ALT pade.',
+   351→    evidence: 'Poskus 2019 (failure) + poskus 2024 (failure) — potrjeno dvakrat',
+   352→    yearLearned: 2019, stillValid: true,
+   353→    confidence: { level: 'very-high', timesObserved: 2, yearsObserved: 5, lastConfirmed: '2024-06-15', isReal: false },
+   354→    usedBy: ['station-brain', 'show-prep', 'scheduler'],
+   355→    counterEvidence: 'Nepoznan — noben kontekst, kjer bi odsotnost novic delovala',
+   356→  },
+   357→  {
+   358→    id: 'lesson-004', category: 'listeners',
+   359→    lesson: 'Službeni poslušalci (desktop) iščejo ozadje, ne napetost. Manj govora = daljše seje.',
+   360→    evidence: 'Desktop seje z <4 voice linki/uro: 195min. Z >6 voice linki/uro: 142min.',
+   361→    yearLearned: 2022, stillValid: true,
+   362→    confidence: { level: 'high', timesObserved: 312, yearsObserved: 4, lastConfirmed: '2026-07-09', isReal: false },
+   363→    usedBy: ['station-brain', 'scheduler'],
+   364→  },
+   365→  {
+   366→    id: 'lesson-005', category: 'music',
+   367→    lesson: 'Dve počasni skladbi zapored povzročata 3x več odhodov podnevi. Ponoči je to sprejemljivo.',
+   368→    evidence: 'Knowledge Engine rule-001 (simulated, A/B P=0.008, d=0.38)',
+   369→    yearLearned: 2026, stillValid: true,
+   370→    confidence: { level: 'medium', timesObserved: 1, yearsObserved: 0, lastConfirmed: '2026-07-12', isReal: false },
+   371→    usedBy: ['station-brain', 'knowledge-engine', 'scheduler'],
+   372→  },
+   373→  {
+   374→    id: 'lesson-006', category: 'business',
+   375→    lesson: 'Reklamni bloki >3min povzročijo 12% odhod. Optimalno: 2.5min, 4 spoti.',
+   376→    evidence: 'A/B test exp-002 (P=0.003, d=0.42, shipped)',
+   377→    yearLearned: 2026, stillValid: true,
+   378→    confidence: { level: 'high', timesObserved: 1, yearsObserved: 0, lastConfirmed: '2026-07-05', isReal: false },
+   379→    usedBy: ['station-brain', 'optimizer', 'traffic-placer'],
+   380→  },
+   381→  {
+   382→    id: 'lesson-007', category: 'listeners',
+   383→    lesson: 'Izpolnjene zahteve poslušalcev so najmočnejši posamezni faktor ALT (+8.5min korelacija).',
+   384→    evidence: 'Correlation P<0.01, n=142. A/B test exp-001 running za vzročno potrjevanje.',
+   385→    yearLearned: 2023, stillValid: true,
+   386→    confidence: { level: 'medium', timesObserved: 142, yearsObserved: 3, lastConfirmed: '2026-07-10', isReal: false },
+   387→    usedBy: ['station-brain', 'listener-brain', 'scheduler'],
+   388→    counterEvidence: 'Korelacija, ne vzročnost — P1 listeners naturally have longer sessions',
+   389→  },
+   390→  {
+   391→    id: 'lesson-008', category: 'programming',
+   392→    lesson: 'Poslušalci se vračajo na sredo (New Music Wednesday). Return rate +8% ob sredah.',
+   393→    evidence: 'Before-after 2021: return rate 29% → 37% ob sredah po uvedbi',
+   394→    yearLearned: 2021, stillValid: true,
+   395→    confidence: { level: 'high', timesObserved: 260, yearsObserved: 5, lastConfirmed: '2026-07-10', isReal: false },
+   396→    usedBy: ['station-brain', 'show-prep', 'scheduler'],
+   397→  },
+   398→  {
+   399→    id: 'lesson-009', category: 'technology',
+   400→    lesson: 'AI DJ je dovolj dober za overnight, ne za jutranji program. Jutranji poslušalci pričakujejo osebnost.',
+   401→    evidence: 'Overnight ALT +2.7min z AI DJ. Morning ALT -0.8min z AI DJ (abandoned after 2 weeks).',
+   402→    yearLearned: 2020, stillValid: true,
+   403→    confidence: { level: 'high', timesObserved: 2, yearsObserved: 6, lastConfirmed: '2026-01-15', isReal: false },
+   404→    usedBy: ['station-brain', 'voice-cloning'],
+   405→  },
+   406→  {
+   407→    id: 'lesson-010', category: 'listeners',
+   408→    lesson: 'Večerni poslušalci so najbolj selektivni. Ne iščejo hitov — iščejo razmerje.',
+   409→    evidence: 'Evening completion rate 62% z all-hits, 84% z mixed/deep cuts',
+   410→    yearLearned: 2023, stillValid: true,
+   411→    confidence: { level: 'medium', timesObserved: 89, yearsObserved: 3, lastConfirmed: '2026-06-28', isReal: false },
+   412→    usedBy: ['station-brain', 'scheduler'],
+   413→  },
+   414→]
+   415→
+   416→// ============================================================================
+   417→// 5. Station Journal — dnevni dnevnik postaje (chronicle, not database)
+   418→// ============================================================================
+   419→interface JournalEntry {
+   420→  date: string
+   421→  // Daily summary
+   422→  alt: number
+   423→  listeners: number
+   424→  // What happened today
+   425→  biggestSuccess: string
+   426→  biggestMistake: string
+   427→  biggestSurprise: string
+   428→  // What to do differently
+   429→  whatWouldWeDoDifferently: string
+   430→  // New hypothesis generated today
+   431→  newHypothesis: string
+   432→  // AI self-reflection
+   433→  aiSelfReflection: string
+   434→  // Mood / context
+   435→  weather: string
+   436→  daypart: string
+   437→  isReal: boolean
+   438→}
+   439→
+   440→const JOURNAL: JournalEntry[] = [
+   441→  {
+   442→    date: '2026-07-12',
+   443→    alt: 19.2, listeners: 1547,
+   444→    biggestSuccess: 'Listener request fulfilled at 7:08 — listener stayed 47min longer than average. Confirms lesson-007 (+8.5min correlation).',
+   445→    biggestMistake: 'Played two mid-energy tracks (0.55, 0.50) back-to-back at 14:30. 8 listeners left. Should have enforced rule-001 more strictly.',
+   446→    biggestSurprise: 'Weather mention in voice link at 7:15 correlated with +1.2min ALT — higher than the +0.4min average. Maybe sunny weather amplifies the effect?',
+   447→    whatWouldWeDoDifferently: 'Enforce energy floor >0.6 for all tracks between 14:00-15:00. The post-lunch dip is real and we need to counter-program.',
+   448→    newHypothesis: 'If weather mentions have higher impact on sunny days (+1.2min) vs rainy days (+0.3min), weather context value is weather-dependent.',
+   449→    aiSelfReflection: 'I predicted 94% retention for the 14:30 slot but got 89%. My energy curve model underestimates post-lunch sensitivity. Adjusting weight.',
+   450→    weather: 'sunny, 24°C', daypart: 'mixed (morning + afternoon)', isReal: false,
+   451→  },
+   452→  {
+   453→    date: '2026-07-11',
+   454→    alt: 18.7, listeners: 1389,
+   455→    biggestSuccess: 'New Music Wednesday worked again — return rate +7.8%. Greta Van Fleet "Highway Tune" accepted by 81% of listeners (discovery rate above target).',
+   456→    biggestMistake: 'Ad break at 16:45 was 3.2min (should be ≤2.5min per rule-002). Operator override — needs automatic enforcement.',
+   457→    biggestSurprise: 'A listener requested Hotel California at 15:30. Usually a safe choice, but 3 listeners left during the 6min track. Maybe too long for afternoon drive?',
+   458→    whatWouldWeDoDifferently: 'Auto-enforce 2.5min ad break cap without operator override option. Consider editing Hotel California for drive time (radio edit 4:02 vs album 6:31).',
+   459→    newHypothesis: 'If track duration >5min during drive time, tune-out rate increases — even for familiar tracks. Long tracks may need radio edits for drive time.',
+   460→    aiSelfReflection: 'I predicted Hotel California would perform well (familiarity 0.95) but overlooked duration. Adding duration as a factor in drive-time scoring.',
+   461→    weather: 'cloudy, 21°C', daypart: 'afternoon-drive', isReal: false,
+   462→  },
+   463→  {
+   464→    date: '2026-07-10',
+   465→    alt: 19.1, listeners: 1492,
+   466→    biggestSuccess: 'AI DJ voice link at 6:58 mentioned "2 minutes to news at 7" — retention spiked. Listeners stayed through the news because they were primed.',
+   467→    biggestMistake: 'Forgot to schedule jingle at 8:30. Brand recall consistency matters — station ID frequency is part of our identity.',
+   468→    biggestSurprise: 'Overnight segment had 3 new listeners at 2:30am. Usually overnight is stable. Maybe a social media post from earlier drove traffic?',
+   469→    whatWouldWeDoDifferently: 'Add "news teaser" pattern to AI DJ voice links before scheduled news. The priming effect is strong.',
+   470→    newHypothesis: 'If AI DJ teases upcoming content ("news in 2 minutes"), retention through the teased content increases by 10%+.',
+   471→    aiSelfReflection: 'The news teaser was an emergent behavior from the show-prep module. I should incorporate this pattern into station-brain decisions.',
+   472→    weather: 'rainy, 18°C', daypart: 'morning-drive + overnight', isReal: false,
+   473→  },
+   474→  {
+   475→    date: '2026-07-09',
+   476→    alt: 18.4, listeners: 1421,
+   477→    biggestSuccess: 'Contest mention at 7:45 generated 34 new listener sessions in 5 minutes. Biggest contest-driven spike this month.',
+   478→    biggestMistake: 'AI Station Brain predicted +2.5min ALT from playing Everlong at 8:15. Actual was +0.8min. Overestimated — Everlong was played yesterday at similar time.',
+   479→    biggestSurprise: 'An older listener (67, Diamond tier) called in to say she noticed the station sounds "smarter" lately. Unsolicited positive feedback about AI programming.',
+   480→    whatWouldWeDoDifferently: 'Check 24h play history before scheduling power tracks. Everlong fatigue at 24h interval is real — extend to 48h for familiar tracks.',
+   481→    newHypothesis: 'If a power track was played in the same daypart yesterday, its ALT impact drops by 60%. Familiarity has a 48h half-life for power tracks.',
+   482→    aiSelfReflection: 'I overestimated Everlong\'s impact because I didn\'t check 24h play history. Adding recent-play penalty to my demand scoring model.',
+   483→    weather: 'sunny, 26°C', daypart: 'morning-drive', isReal: false,
+   484→  },
+   485→  {
+   486→    date: '2026-07-08',
+   487→    alt: 18.9, listeners: 1503,
+   488→    biggestSuccess: 'First day with all 8 optimizer objectives meeting targets. ALT 18.9, return rate 34%, diversity 11.2 artists/hr, compliance 100%.',
+   489→    biggestMistake: 'No major mistakes today — but no major insights either. A "steady" day. Should we be worried about complacency?',
+   490→    biggestSurprise: 'Evening segment (19:00-22:00) had higher ALT than morning drive for the first time. Maybe the deep cuts programming is working?',
+   491→    whatWouldWeDoDifferently: 'Investigate why evening outperformed morning. Is it the programming, the weather, or a one-off? Need 7 days of data.',
+   492→    newHypothesis: 'If evening deep-cuts programming consistently outperforms morning hits, our listener base may be shifting from commuters to enthusiasts.',
+   493→    aiSelfReflection: 'All objectives met today — but I should not over-optimize for one good day. Need to see if this is sustainable or variance.',
+   494→    weather: 'clear, 23°C', daypart: 'all-day', isReal: false,
+   495→  },
+   496→]
+   497→
+   498→export async function GET() {
+   499→  await new Promise((r) => setTimeout(r, 80))
+   500→
+   501→  const totalListeners = SEGMENTS.reduce((s, seg) => s + seg.estimatedSize, 0)
+   502→  const successfulDecisions = DECISION_HISTORY.filter(d => d.outcome === 'success').length
+   503→  const failedDecisions = DECISION_HISTORY.filter(d => d.outcome === 'failure').length
+   504→  const altGrowth2019to2026 = TASTE_EVOLUTION[TASTE_EVOLUTION.length - 1].altAverage - TASTE_EVOLUTION[0].altAverage
+   505→
+   506→  return NextResponse.json({
+   507→    _disclaimer: '⚠️ INSTITUTIONAL MEMORY — all data is illustrative demonstration. isReal=false for all evidence. Real station memory requires years of actual operation. This framework defines HOW institutional knowledge will be accumulated and used. When real data flows in, this becomes the station\'s accumulated wisdom — not a database, but a memory.',
+   508→
+   509→    // 1. Behavioral segments — VZORCI, ne posamezniki
+   510→    listenerSegments: SEGMENTS,
+   511→
+   512→    // 2. Music taste evolution — kako se okus spreminja skozi leta
+   513→    tasteEvolution: TASTE_EVOLUTION,
+   514→
+   515→    // 3. Programming decision history — kaj je delovalo, kaj ne
+   516→    decisionHistory: DECISION_HISTORY,
+   517→
+   518→    // 4. Institutional lessons — znanje izkušenega PD
+   519→    institutionalLessons: LESSONS,
+   520→
+   521→    // 5. Station Journal — dnevni dnevnik postaje
+   522→    stationJournal: JOURNAL,
+   523→
+   524→    // Stats
+   525→    stats: {
+   526→      segmentCount: SEGMENTS.length,
+   527→      totalListenersReach: totalListeners,
+   528→      yearsOfMemory: 7, // 2019-2026
+   529→      decisionsRecorded: DECISION_HISTORY.length,
+   530→      successfulDecisions,
+   531→      failedDecisions,
+   532→      retrySuccessRate: '0% (2 retries, both failed — same outcome as original)',
+   533→      lessonsLearned: LESSONS.length,
+   534→      stillValidLessons: LESSONS.filter(l => l.stillValid).length,
+   535→      altGrowth2019to2026: Math.round(altGrowth2019to2026 * 10) / 10,
+   536→      // Lesson confidence distribution
+   537→      veryHighConfidence: LESSONS.filter(l => l.confidence.level === 'very-high').length,
+   538→      highConfidence: LESSONS.filter(l => l.confidence.level === 'high').length,
+   539→      mediumConfidence: LESSONS.filter(l => l.confidence.level === 'medium').length,
+   540→      lowConfidence: LESSONS.filter(l => l.confidence.level === 'low').length,
+   541→      // Prediction accuracy
+   542→      avgPredictionError: Math.round(DECISION_HISTORY.reduce((s, d) => s + (d.predictionError ?? 0), 0) / DECISION_HISTORY.length * 10) / 10,
+   543→      overestimationCount: DECISION_HISTORY.filter(d => (d.predictionError ?? 0) < 0).length,
+   544→      underestimationCount: DECISION_HISTORY.filter(d => (d.predictionError ?? 0) > 0).length,
+   545→      // Journal
+   546→      journalEntries: JOURNAL.length,
+   547→      hypothesesGenerated: JOURNAL.filter(j => j.newHypothesis).length,
+   548→      // Honesty
+   549→      realEvidenceCount: DECISION_HISTORY.filter(d => d.isReal).length, // 0
+   550→      realJournalEntries: JOURNAL.filter(j => j.isReal).length, // 0
+   551→      honestyRate: '0% real — all institutional memory is demonstration',
+   552→    },
+   553→
+   554→    // How this differs from Knowledge Engine
+   555→    howItDiffers: {
+   556→      knowledgeEngine: 'Structured rules with statistical evidence + applicability boundaries (semantic, statistical)',
+   557→      stationMemory: 'Narrative, longitudinal, institutional — the STORY of the station (temporal, behavioral, experiential)',
+   558→      example: 'Knowledge Engine: "Two consecutive low-energy tracks increase tune-out by 2.7% (P=0.008, d=0.38)" | Station Memory: "Leta 2019 smo poskusili daljši jutranji blok brez novic. Ni delovalo. Poskusili ponovno leta 2024. Enak rezultat. Pravilo ostane."',
+   559→    },
+   560→
+   561→    // How AI modules use this
+   562→    integration: {
+   563→      stationBrain: 'Reads lessons + segments before every decision. "What did we learn about morning commuters?"',
+   564→      scheduler: 'Reads taste evolution for BPM/energy targets per daypart. "What energy works in 2026 vs 2020?"',
+   565→      showPrep: 'Reads decision history to avoid repeating failures. "We tried this in 2019, it failed."',
+   566→      knowledgeEngine: 'Feeds confirmed lessons into rule lifecycle. Lesson → Hypothesis → A/B → Rule',
+   567→      optimizer: 'Reads segment preferences for multi-objective weights. "Office workers weight differently than commuters."',
+   568→    },
+   569→
+   570→    // The vision
+   571→    vision: {
+   572→      year1: 'Station Memory accumulates real decisions + outcomes. isReal transitions to true for new entries.',
+   573→      year3: 'Patterns emerge — seasonal trends, multi-year cycles, generational taste shifts.',
+   574→      year5: 'Station Memory becomes the station\'s most valuable asset — institutional knowledge that no employee turnover can erase.',
+   575→      year10: 'AI has 10 years of accumulated wisdom. It knows what works in recessions, pandemics, heatwaves, holidays. It has seen it all.',
+   576→      principle: 'An experienced program director carries 20 years of memory in their head. When they leave, that memory leaves with them. Station Memory ensures it stays.',
+   577→    },
+   578→  })
+   579→}
+   580→
+   581→export async function POST(req: Request) {
+   582→  const body = await req.json().catch(() => ({}))
+   583→
+   584→  if (body.action === 'record-decision' && body.decision) {
+   585→    const entry: ProgrammingDecision = {
+   586→      id: `dec-${new Date().getFullYear()}-${Date.now()}`,
+   587→      year: new Date().getFullYear(),
+   588→      decision: body.decision,
+   589→      type: body.type ?? 'experiment',
+   590→      hypothesis: body.hypothesis ?? '',
+   591→      outcome: body.outcome ?? 'pending',
+   592→      altBefore: body.altBefore ?? 0, altAfter: body.altAfter ?? 0, altDelta: 0,
+   593→      expectedAlt: body.expectedAlt ?? body.altAfter ?? 0,
+   594→      actualAlt: body.actualAlt ?? body.altAfter ?? 0,
+   595→      predictionError: 0,
+   596→      whyWrong: body.whyWrong,
+   597→      triedFor: body.triedFor ?? 'ongoing',
+   598→      lesson: body.lesson ?? 'To be determined',
+   599→      retryVerdict: body.retryVerdict ?? 'TBD',
+   600→      evidenceType: body.evidenceType ?? 'observational',
+   601→      isReal: false,
+   602→    }
+   603→    entry.altDelta = entry.altAfter - entry.altBefore
+   604→    entry.predictionError = entry.actualAlt - entry.expectedAlt
+   605→    DECISION_HISTORY.unshift(entry)
+   606→    return NextResponse.json({ ok: true, entry, message: 'Decision recorded in station memory' })
+   607→  }
+   608→
+   609→  if (body.action === 'add-lesson' && body.lesson) {
+   610→    const lesson: InstitutionalLesson = {
+   611→      id: `lesson-${Date.now()}`,
+   612→      category: body.category ?? 'programming',
+   613→      lesson: body.lesson,
+   614→      evidence: body.evidence ?? 'No evidence provided',
+   615→      yearLearned: new Date().getFullYear(),
+   616→      stillValid: true,
+   617→      confidence: {
+   618→        level: body.confidenceLevel ?? 'experimental',
+   619→        timesObserved: body.timesObserved ?? 1,
+   620→        yearsObserved: 0,
+   621→        lastConfirmed: null,
+   622→        isReal: false,
+   623→      },
+   624→      usedBy: body.usedBy ?? [],
+   625→    }
+   626→    LESSONS.unshift(lesson)
+   627→    return NextResponse.json({ ok: true, lesson, message: 'Institutional lesson recorded' })
+   628→  }
+   629→
+   630→  if (body.action === 'add-journal' && body.date) {
+   631→    const entry: JournalEntry = {
+   632→      date: body.date,
+   633→      alt: body.alt ?? 0, listeners: body.listeners ?? 0,
+   634→      biggestSuccess: body.biggestSuccess ?? '',
+   635→      biggestMistake: body.biggestMistake ?? '',
+   636→      biggestSurprise: body.biggestSurprise ?? '',
+   637→      whatWouldWeDoDifferently: body.whatWouldWeDoDifferently ?? '',
+   638→      newHypothesis: body.newHypothesis ?? '',
+   639→      aiSelfReflection: body.aiSelfReflection ?? '',
+   640→      weather: body.weather ?? '', daypart: body.daypart ?? '',
+   641→      isReal: false,
+   642→    }
+   643→    JOURNAL.unshift(entry)
+   644→    return NextResponse.json({ ok: true, entry, message: 'Journal entry recorded — station memory grows' })
+   645→  }
+   646→
+   647→  if (body.action === 'check-retry' && body.decisionDescription) {
+   648→    // Check if this decision was tried before
+   649→    const similar = DECISION_HISTORY.filter(d =>
+   650→      d.decision.toLowerCase().includes(body.decisionDescription.toLowerCase().slice(0, 20)) ||
+   651→      body.decisionDescription.toLowerCase().includes(d.decision.toLowerCase().slice(0, 20))
+   652→    )
+   653→    if (similar.length > 0) {
+   654→      return NextResponse.json({
+   655→        ok: true,
+   656→        warning: 'SIMILAR DECISION FOUND IN STATION MEMORY',
+   657→        previousAttempts: similar.map(d => ({
+   658→          year: d.year, decision: d.decision, outcome: d.outcome, altDelta: d.altDelta, lesson: d.lesson, retryVerdict: d.retryVerdict,
+   659→        })),
+   660→        recommendation: similar[0].retryVerdict,
+   661→      })
+   662→    }
+   663→    return NextResponse.json({ ok: true, message: 'No similar decisions found in station memory' })
+   664→  }
+   665→
+   666→  return NextResponse.json({ ok: false, error: 'Unknown action' }, { status: 400 })
+   667→}
+   668→
