@@ -4288,3 +4288,42 @@ Stage Summary:
 - Zdaj vsak, ki odpre github.com/markec12345678/rivendellradio, takoj vidi naš README s screenshoti
 - Vsa koda Sprintov 1-31b je bila VEDNO bila na main — problem je bil samo v tem, da GitHub ni prikazoval main kot default
 - "nasel sem napako moja napaka v4 sem mel vejo odprto" — user je potrdil, da je bil na napačni veji
+
+---
+Task ID: 40
+Agent: lead
+Task: v1.0.0 Release — mark architectural completion. User explicit: "Od danes naprej nobene nove funkcionalnosti brez realnega razloga iz produkcije." This is not Sprint 32. This is Deployment 1.0.
+
+Work Log:
+- Prebral userjevo končno oceno — potrdil: projekt je dosegel architectural completion
+- Napisal docs/V1.0-RELEASE.md (162 vrstic):
+  - "The development phase ends here. The operational phase begins."
+  - What was built (Sprints 1-31b) z layer diagramom
+  - By the numbers (31 sprints, 140+ endpoints, 25+ panels, 12 AI modules, 7 invariants, 3 mechanisms, 5 autonomy levels, 6 trust components, 13 lifecycle stages, 4 stability tiers)
+  - The distinguishing feature (epistemological layer, ne AI capability)
+  - What this release is NOT (not deployed, not validated, not autonomous, not finished in traditional sense)
+  - Honest state at v1.0.0 (0 real sessions, 0 real decisions, 44 isReal=false, Trust Score 0/100, Level 0)
+  - What comes after (Deployment 1.0: Phase 1-4)
+  - What will NOT happen (no new agents, endpoints, memory types, governance layers, dashboards)
+  - Rule: "Every new line of code must answer: which real operational problem does this solve?"
+  - Release principle (honest AI > confident AI)
+- Commit: "release: v1.0.0 — architectural completion"
+- Tag: v1.0.0 (annotated, pushed)
+- GitHub Release ustvarjen preko API:
+  - tag: v1.0.0
+  - name: "v1.0.0 — Architectural Completion"
+  - body: full release notes z markdown formatting
+  - draft: false, prerelease: false
+  - url: https://github.com/markec12345678/rivendellradio/releases/tag/v1.0.0
+  - published_at: 2026-07-13T19:49:36Z
+
+Stage Summary:
+- v1.0.0 RELEASED — architectural completion marker
+- 31 sprints development phase: COMPLETE
+- GitHub Release objavljen z full release notes
+- Tag v1.0.0 pushed
+- docs/V1.0-RELEASE.md dokumentira konec development faze
+- "The framework is ready. The next real step is not in this repository."
+- Naslednji korak NI v kodi. Je: realna postaja, realni poslušalci, prvi realni session v prazni ListenerSession tabeli.
+- Pravilo od zdaj naprej: "No new functionality without a real reason from production."
+- Projekt je prestopil iz development phase v operational phase. Vrednost od zdaj prihaja iz realnih podatkov, ne iz nove kode.
