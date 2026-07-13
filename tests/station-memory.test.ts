@@ -183,4 +183,148 @@ describe('Station Intelligence Database API', () => {
     expect(data.previousAttempts.length).toBeGreaterThan(0)
     expect(data.recommendation).toBeDefined()
   })
+
+  // ========================================================================
+  // NEW: Confidence levels on lessons
+  // ========================================================================
+  test('lessons have confidence with level, timesObserved, yearsObserved', async () => {
+    const data = await fetchJson('/api/v1/ai/station-memory')
+
+    for (const lesson of data.institutionalLessons) {
+      expect(lesson.confidence).toBeDefined()
+      expect(lesson.confidence.level).toBeDefined()
+      expect(['very-high', 'high', 'medium', 'low', 'experimental']).toContain(lesson.confidence.level)
+      expect(lesson.confidence.timesObserved).toBeGreaterThanOrEqual(1)
+      expect(lesson.confidence.yearsObserved).toBeGreaterThanOrEqual(0)
+      expect(lesson.confidence.isReal).toBe(false) // all demonstration
+    }
+  })
+
+  test('very-high confidence lessons have multiple years of observation', async () => {
+    const data = await fetchJson('/api/v1/ai/station-memory')
+    const veryHigh = data.institutionalLessons.filter((l: any) => l.confidence.level === 'very-high')
+
+    for (const lesson of veryHigh) {
+      expect(lesson.confidence.yearsObserved).toBeGreaterThanOrEqual(5)
+      expect(lesson.confidence.timesObserved).toBeGreaterThanOrEqual(2)
+    }
+  })
+
+  test('confidence distribution is reported in stats', async () => {
+    const data = await fetchJson('/api/v1/ai/station-memory')
+    expect(data.stats.veryHighConfidence).toBeDefined()
+    expect(data.stats.highConfidence).toBeDefined()
+    expect(data.stats.mediumConfidence).toBeDefined()
+    expect(data.stats.veryHighConfidence).toBeGreaterThan(0)
+  })
+
+  // ========================================================================
+  // NEW: Expected vs Actual on programming decisions
+  // ========================================================================
+  test('decisions have expected vs actual ALT with prediction error', async () => {
+    const data = await fetchJson('/api/v1/ai/station-memory')
+
+    for (const dec of data.decisionHistory) {
+      expect(dec.expectedAlt).toBeDefined()
+      expect(dec.actualAlt).toBeDefined()
+      expect(dec.predictionError).toBeDefined()
+      // predictionError = actualAlt - expectedAlt
+      expect(dec.predictionError).toBeCloseTo(dec.actualAlt - dec.expectedAlt, 1)
+    }
+  })
+
+  test('failed decisions have whyWrong explanation', async () => {
+    const data = await fetchJson('/api/v1/ai/station-memory')
+    const failures = data.decisionHistory.filter((d: any) => d.outcome === 'failure')
+
+    for (const dec of failures) {
+      expect(dec.whyWrong).toBeDefined()
+      expect(dec.whyWrong.length).toBeGreaterThan(10)
+    }
+  })
+
+  test('prediction accuracy is reported in stats', async () => {
+    const data = await fetchJson('/api/v1/ai/station-memory')
+    expect(data.stats.avgPredictionError).toBeDefined()
+    expect(data.stats.overestimationCount).toBeDefined()
+    expect(data.stats.underestimationCount).toBeDefined()
+    // We should have both overestimations and underestimations (honest)
+    expect(data.stats.overestimationCount).toBeGreaterThan(0)
+  })
+
+  // ========================================================================
+  // NEW: Station Journal — daily diary
+  // ========================================================================
+  test('station journal has daily entries with reflection', async () => {
+    const data = await fetchJson('/api/v1/ai/station-memory')
+
+    expect(data.stationJournal).toBeDefined()
+    expect(Array.isArray(data.stationJournal)).toBe(true)
+    expect(data.stationJournal.length).toBeGreaterThan(0)
+
+    for (const entry of data.stationJournal) {
+      expect(entry.date).toBeDefined()
+      expect(entry.alt).toBeGreaterThan(0)
+      expect(entry.biggestSuccess).toBeDefined()
+      expect(entry.biggestMistake).toBeDefined()
+      expect(entry.biggestSurprise).toBeDefined()
+      expect(entry.whatWouldWeDoDifferently).toBeDefined()
+      expect(entry.newHypothesis).toBeDefined()
+      expect(entry.aiSelfReflection).toBeDefined()
+      expect(entry.isReal).toBe(false) // all demonstration
+    }
+  })
+
+  test('journal entries generate new hypotheses', async () => {
+    const data = await fetchJson('/api/v1/ai/station-memory')
+    expect(data.stats.hypothesesGenerated).toBeGreaterThan(0)
+
+    for (const entry of data.stationJournal) {
+      if (entry.newHypothesis) {
+        expect(entry.newHypothesis.length).toBeGreaterThan(20) // meaningful hypothesis
+      }
+    }
+  })
+
+  test('journal includes AI self-reflection (where predictions were wrong)', async () => {
+    const data = await fetchJson('/api/v1/ai/station-memory')
+
+    const reflections = data.stationJournal.filter((j: any) => j.aiSelfReflection)
+    expect(reflections.length).toBeGreaterThan(0)
+
+    // At least one reflection should mention prediction error or model adjustment
+    const hasPredictionError = reflections.some((r: any) =>
+      r.aiSelfReflection.toLowerCase().includes('predict') ||
+      r.aiSelfReflection.toLowerCase().includes('overestimate') ||
+      r.aiSelfReflection.toLowerCase().includes('underestimate') ||
+      r.aiSelfReflection.toLowerCase().includes('adjust')
+    )
+    expect(hasPredictionError).toBe(true)
+  })
+
+  test('journal entries can be added via POST', async () => {
+    const res = await fetch(`${BASE}/api/v1/ai/station-memory`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'add-journal',
+        date: '2026-07-13',
+        alt: 19.5,
+        listeners: 1600,
+        biggestSuccess: 'Test entry',
+        biggestMistake: 'Test mistake',
+        biggestSurprise: 'Test surprise',
+        whatWouldWeDoDifferently: 'Test differently',
+        newHypothesis: 'Test hypothesis',
+        aiSelfReflection: 'Test reflection',
+        weather: 'sunny',
+        daypart: 'morning',
+      }),
+    })
+    expect(res.status).toBe(200)
+    const data = await res.json()
+    expect(data.ok).toBe(true)
+    expect(data.entry.date).toBe('2026-07-13')
+    expect(data.entry.isReal).toBe(false)
+  })
 })
