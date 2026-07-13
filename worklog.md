@@ -4031,3 +4031,42 @@ Stage Summary:
 - Phases 31-34 (Music Intelligence, PD Dashboard, Voice AI, Digital Twin) DEFERRED — odvisne od realnih podatkov
 - "Until then, this file stays as it is. The pipeline waits. The table is empty. The honesty is intact."
 - Naslednji korak NI v kodi. Je: deploy na realno postajo + connect realni Icecast2 + first POST.
+
+---
+Task ID: 35
+Agent: lead
+Task: Make the epistemological layer operational. The 7 invariants + 3 mechanisms from Sprints 31-33 exist in code but are UNUSED — aspirational, not enforced. Build the observability endpoint that runs the checkers against live module data. No new features. No refactoring of audited modules. Pure observation.
+
+Work Log:
+- Identified the gap: invariants.ts has checkConfidenceInvariant, checkLegendPreventionInvariant, auditMemoryEntry — all unused
+- Built src/app/api/v1/epistemic-state/route.ts (~440 vrstic):
+  - GET only — pure observer, ne modificira ničesar
+  - Internal fetch 3 AI modulov (station-memory, knowledge-engine, learning-loop)
+  - db.listenerSession.count() — real sessions iz pipeline
+  - checkStationMemory(): runs checkConfidenceInvariant na vseh lessons, checkLegendPreventionInvariant na journal aiSelfReflection, sample-size check na segments
+  - checkKnowledgeEngine(): confidence.score check vs simulated cap (0.50), sampleSize na evidence
+  - checkLearningLoop(): checkLegendPreventionInvariant na selfAwareness field
+  - compareBaseline(): primerja found categories z AUDIT_BASELINE_2026
+  - computeSystemState(): realPercent, simulatedPercent, phase, summary
+- Bug fix: prva verzija je "sample-size" označila kot REGRESSION, a audit ga je označil kot "partial" (ne "violated")
+  - Popravljeno: "partial" in "violated" sta obe KNOWN issues
+  - Samo kategorija, ki je NE omenjena v baseline (niti kot partial), je true regression
+  - Status sedaj pravi: "stricter than baseline — 1 category promoted from partial to violated. All were known. No regression."
+- Rezultati (live test):
+  - System state: 0% real, 100% simulated. 44 demonstration entries. 0 real sessions.
+  - station-memory: 17 violations (7 honest-confidence, 5 legend-prevention, 5 sample-size)
+  - knowledge-engine: 8 violations (8 honest-confidence — score=45 > 0.50 cap for simulated)
+  - learning-loop: 1 violation (legend-prevention — selfAwareness field)
+  - Audit baseline: stricter than baseline, NO regression. Vse kršitve znane.
+- Lint: čist (0 errors, 0 warnings)
+- Dev server: 200 na vseh endpointih, internal fetchi delajo, Prisma count uspešen
+
+Stage Summary:
+- Epistemološki sloj je sedaj OPERATIVEN — checkers tečejo proti živim podatkom
+- /api/v1/epistemic-state je "epistemološki imunski sistem" ki dejansko preverja
+- Audit baseline je živ dokument — ne statična markdown tabela
+- Checker je STRICTERJI od audita: promovira "partial" v "violated" (sample-size na segmentih)
+- Brez refactoringa obstoječih modulov — Invariant 3 (Failure Preservation) aplicirana na audit
+- 26 individual violations najdenih, 5 categories, 0 regressions
+- "The system is honest about what it does not know." — 0% real, 100% simulated, acknowledged
+- Naslednji korak: ko pride prvi real session, se realPercent dvigne z 0 in systemState.phase postane "Transition"
