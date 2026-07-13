@@ -3554,3 +3554,88 @@ Stage Summary:
 - 1 nova UI komponenta (ai-radio-control-panel.tsx, ~400 vrstic) z 4 sub-tabi
 - Najpomembnejši moduli (Station Brain, Knowledge Engine, Experiments, Learning Loop) zdaj imajo UI
 - Total: 137 API endpointov, 24 UI panelov, 56 testov, 6 dokumentov, 22 sprintov
+
+---
+Task ID: sprint24-station-memory
+Agent: lead
+Task: Sprint 24 — Station Intelligence Database (dolgoročni spomin postaje)
+
+Work Log:
+- 1 nov API: /api/v1/ai/station-memory (GET/POST)
+- 1 nova test datoteka: tests/station-memory.test.ts (14 testov)
+- Koncept: NE nov AI modul — institucionalni spomin postaje
+- Razlika od Knowledge Engine:
+  - Knowledge Engine: strukturirana pravila z dokazi (semantic, statistical)
+  - Station Memory: narativni, longitudinalni, institucionalni (temporal, behavioral)
+  - Primer: KE: "Two consecutive low-energy tracks increase tune-out by 2.7% (P=0.008)" | SM: "Leta 2019 smo poskusili daljši jutranji blok brez novic. Ni delovalo. Poskusili ponovno 2024. Enak rezultat. Pravilo ostane."
+- 4 sekcije spomina:
+  1. Behavioral listener segments (5 segmentov — VZORCI ne posamezniki):
+     - Jutranji voznik (car, 6-9, 28min seja, responds to hits+traffic, NOT slow tracks)
+     - Službeni poslušalec (desktop, 9-17, 180min seja, responds to less talk, NOT ads)
+     - Popoldanski voznik (car, 15-19, 35min seja, responds to energy+traffic, NOT slow at 16:00)
+     - Večerni poslušalec (home, 19-23, 65min seja, responds to deep cuts, NOT too many hits)
+     - Vikend poslušalec (casual, weekend, 22min seja, responds to contests, NOT new music)
+  2. Music taste evolution (4 obdobja, 2020-2026):
+     - 2020 COVID: comfort listening, classic rock, ALT 14.2min
+     - 2022 recovery: return to energy, ALT 16.5min
+     - 2024 streaming gen: eclectic taste, discovery rate up, ALT 17.8min
+     - 2026 current: AI-optimized, classic+modern, ALT 18.9min
+  3. Programming decision history (8 odločitev z outcomes):
+     - 2019: Daljši jutranji blok brez novic → FAILURE (-1.4min ALT)
+     - 2020: AI DJ overnight → SUCCESS (+2.7min, saved 40k€/year)
+     - 2021: New Music Wednesday → SUCCESS (+1.7min, return rate +8%)
+     - 2022: Krajše reklame 3→2min → PARTIAL (+0.6min but revenue -12%)
+     - 2023: Listener requests in morning → SUCCESS (+2.1min, strongest factor)
+     - 2024: Retry jutranji blok brez novic → FAILURE (same result as 2019)
+     - 2025: AI Station Brain daily decisions → PARTIAL (+1.7min, AI better daily, human better strategic)
+     - 2026: Weather in voice links → PARTIAL (+0.4min, A/B test pending)
+  4. Institutional lessons (10 lekcij izkušenega PD):
+     - "Jutranji vozniški segment ima fiksno časovno okno — če jih izgubiš ob 7:15, se ne vrnejo"
+     - "Foo Fighters ob 7:15 vedno dvignejo poslušanost — najbolj zanesljiv anchor"
+     - "Novice ob 7:00 in 8:00 so sidro, ne motnja (potrjeno dvakrat)"
+     - "Službeni poslušalci iščejo ozadje, ne napetost — manj govora = daljše seje"
+     - "Izpolnjene zahteve so najmočnejši posamezni faktor ALT (+8.5min korelacija)"
+     - "AI DJ je dovolj dober za overnight, ne za jutranji program"
+     - "Večerni poslušalci so najbolj selektivni — ne iščejo hitov, iščejo razmerje"
+- POST actions:
+  - record-decision: zapiše novo odločitev v spomin
+  - add-lesson: zapiše novo institucionalno lekcijo
+  - check-retry: preveri ali je bila podobna odločitev že poskušana (prepreči ponavljanje napak)
+- Integration (kako AI moduli uporabljajo spomin):
+  - station-brain: bere lessons + segments pred vsako odločitvijo
+  - scheduler: bere taste evolution za BPM/energy targets
+  - show-prep: bere decision history da se izogne ponavljanju napak
+  - knowledge-engine: Feeds confirmed lessons → rule lifecycle
+  - optimizer: bere segment preferences za uteži
+- Vision (10-letni cilj):
+  - Year 1: real decisions accumulate, isReal → true
+  - Year 3: patterns emerge — seasonal, multi-year cycles
+  - Year 5: most valuable asset — institutional knowledge immune to employee turnover
+  - Year 10: AI has seen it all — recessions, pandemics, heatwaves, holidays
+  - Principle: "An experienced PD carries 20 years of memory in their head. When they leave, it leaves with them. Station Memory ensures it stays."
+- Honesty: ALL isReal=false. 0% real evidence. honestyRate: "0% real — all institutional memory is demonstration"
+- Lint: čist (0 errors, 0 warnings)
+- Testi: 99 pass, 0 fail, 1344 expect() calls
+  - 14 novih testov za Station Memory:
+    - Behavioral segments (5 segments, morning car, office longest sessions)
+    - Music taste evolution (multi-year, ALT growth)
+    - Decision history (successes AND failures, lessons, retry verdicts)
+    - 2019 morning block retried 2024 same result
+    - All isReal=false
+    - Lessons used by AI modules
+    - Lessons include counter-evidence
+    - Integration + vision
+    - check-retry finds similar past decisions
+
+Stage Summary:
+- Sprint 24 Station Intelligence Database: DONE
+- 1 nov API + 14 novih testov (99 total, 1344 assertions)
+- Instituticional memory: 5 segments + 4 taste periods + 8 decisions + 10 lessons
+- check-retry: prepreči ponavljanje napak ("We tried this in 2019, it failed")
+- 5 evolucijskih faz projekta:
+  1. Broadcast aplikacija (Sprint 1-5)
+  2. Enterprise platforma (Sprint 6-10)
+  3. Produkcijska platforma (Sprint 11-16)
+  4. Sistem ki se uči (Sprint 17-21)
+  5. Instituticionalni spomin (Sprint 22-24)
+- Total: 138 API endpointov, 24 UI panelov, 99 testov, 7 dokumentov, 24 sprintov
