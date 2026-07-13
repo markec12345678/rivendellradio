@@ -3493,3 +3493,64 @@ Stage Summary:
   3. Produkcijska platforma (Sprint 11-16)
   4. Sistem ki se uči na podlagi dokazov (Sprint 17-21)
 - Total: 137 API endpointov, 23 UI panelov, 41 testov, 6 dokumentov, 21 sprintov
+
+---
+Task ID: sprint22-ai-radio-ui-tests
+Agent: lead
+Task: Sprint 22 — AI Radio Control Panel UI + test coverage expansion
+
+Work Log:
+- Test coverage expansion (5. test datoteka, 15 novih testov):
+  - tests/scheduler-conflicts.test.ts (15 tests):
+    - DMCA rule verification (maxPerArtist3h=4, maxPerAlbum3h=3)
+    - Explicit-daypart rule verification (safeHarborStart=22, safeHarborEnd=6)
+    - Brand-competitor rule verification (pairs configured)
+    - checkConflicts flags DMCA album violation
+    - checkConflicts flags explicit at 2pm (outside safe harbor)
+    - checkConflicts does NOT flag explicit at 11pm (safe harbor)
+    - checkConflicts does NOT flag explicit at 4am (safe harbor)
+    - Demand scoring: fewer plays = higher demand
+    - Demand scoring: numeric + finite
+    - Separation edge cases: unique artist (no violation), BPM within tolerance, old plays outside window
+    - scheduleHour: no hard violations for valid hour
+    - scheduleHour with full config: schedules tracks
+    - Daypart coverage: 24h × 7d = 168 combinations all have matching daypart
+  - Total: 56 tests, 297 expect() calls, 0 fail (up from 41 tests, 104 expect() calls)
+- AI Radio Control Panel UI (ai-radio-control-panel.tsx, ~400 vrstic):
+  - 4 sub-tabs: Station Brain, Knowledge Engine, Experiments, Learning Loop
+  - Station Brain tab:
+    - North Star: ALT 18.9min → 25min target z baseline + trend
+    - Brain Perception: 8 perception cells (listeners, daypart, weather, traffic, energy, since hit, since ad, track left)
+    - Current Decision: action + track + reasoning + projected retention + confidence + target energy
+    - Explainability: whyThisTrack (6 reasons) + whyNotAlternatives (4 rejected)
+    - AI Module KPIs: 4 modules z hypothesis + baseline → current → target
+    - The ONLY question: "Does this increase Average Listening Time?"
+  - Knowledge Engine tab:
+    - 6 KPI cells (total, simulated, observed, running, proposed, deprecated)
+    - Honesty rate bar: "0% real evidence"
+    - Knowledge conflicts: 3 detected conflicts z resolution
+    - Rules list: 8 rules z status badges, confidence score, version, evidence (isReal indicators), applicability (applies/not), conflicts
+  - Experiments tab:
+    - 5 KPI cells (total, running, shipped, killed, success rate)
+    - Learning loop status
+    - Experiment list: hypothesis, status badge, results (treatment/control/delta/P-value), sample progress bar, decision (ship/kill/iterate)
+    - Honesty disclaimer
+  - Learning Loop tab:
+    - 4 KPI cells (decisions tracked, findings, A/B validated, avg confidence)
+    - Self-awareness: "I underestimate consecutive low-energy impact"
+    - Learning records: decision → projected vs actual → surprise bar → lesson → causal confidence
+    - Principle: "Never claims more than the evidence supports"
+  - Integrirana v System tab na vrh (najpomembnejši panel)
+- Lint: čist (0 errors, 0 warnings)
+- Testi: 56 pass, 0 fail, 297 expect() calls
+- Validacija:
+  - Agent Browser: AI Radio Control panel upodobljen z vsemi 4 sub-tabi
+  - North Star ALT, Brain Perception, Current Decision, Explainability prisotni
+  - 0 browser errors, 0 console errors
+
+Stage Summary:
+- Sprint 22 AI Radio Control Panel + Tests: DONE
+- 15 novih testov (56 total, 297 expect() calls)
+- 1 nova UI komponenta (ai-radio-control-panel.tsx, ~400 vrstic) z 4 sub-tabi
+- Najpomembnejši moduli (Station Brain, Knowledge Engine, Experiments, Learning Loop) zdaj imajo UI
+- Total: 137 API endpointov, 24 UI panelov, 56 testov, 6 dokumentov, 22 sprintov

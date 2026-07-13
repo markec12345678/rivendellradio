@@ -30,6 +30,7 @@ import { Sprint11Panel } from '@/components/rivendell/sprint11-panel'
 import { ReliabilityDashboard } from '@/components/rivendell/reliability-dashboard'
 import { ObservabilityPanel } from '@/components/rivendell/observability-panel'
 import { ProfessionalBroadcastPanel } from '@/components/rivendell/professional-broadcast-panel'
+import { AIRadioControlPanel } from '@/components/rivendell/ai-radio-control-panel'
 import { formatHms, formatClock, formatNumber } from '@/lib/rivendell/format'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -300,6 +301,9 @@ export function SystemTab() {
 
       {/* Next.js 16 + React 19 Modernization — Sprint 4 */}
       <ModernizationPanel />
+
+      {/* AI Radio Control — the brain that runs the radio */}
+      <AIRadioControlPanel />
 
       {/* AI / Playout Engine — Sprint 5 */}
       <AIPlayoutPanel />
