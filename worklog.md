@@ -3968,3 +3968,66 @@ Stage Summary:
   - 1 first-entry template (ready for Day 1)
   - 2 dokumenta (chronicle + invariants)
 - Naslednji korak NI v kodi. Je realna postaja + realni podatki + prvi pravi neuspeh.
+
+---
+Task ID: 34
+Agent: lead
+Task: Phase 30 — Real Data Foundation (Listener Pipeline). User gave 5-phase roadmap (30-34). Honest assessment: only Phase 30 can be built in sandbox, and only its HONEST part — the contract, empty, awaiting real Icecast2. No simulated sessions. No demo data. Phases 31-34 deferred (depend on real data).
+
+Work Log:
+- Prebral userjevo roadmapo (Phase 30-34). Affirmed priority: Real Audience Intelligence Pipeline first.
+- FLAGGED critical tension: v sandboxu ni realnega Icecast2. Building pipeline z demo data bi kršilo Invariant 1 (Reality) — simulirano podatkovino preoblečeno v realnost.
+- Decision: zgraditi samo pogodbo (contract) — reception mechanism, empty by design, awaiting real Icecast2.
+- Zgradil src/lib/listener-pipeline/schema.ts (~200 vrstic):
+  - ListenerSession interface — atomic unit of sourceType:'observed' evidence
+  - Polja: startedAt, endedAt, durationMs, mount, listenerHash (salted SHA-256), userAgent, device, geoRegion, referer, exitTrackId/Title/Artist, exitTrackPositionMs, daypart, tracksPlayed, returning, source:'measured', ingestedAt
+  - ListenerDevice type (11 možnosti: car-androidauto, car-carplay, mobile-ios, itd.)
+  - Daypart type + computeDaypart() function
+  - IngestionBatch + IngestionSession interfaces (kaj poller pošlje)
+  - PipelineStatus interface — honest contract: connected, totalSessions, lastIngestionAt
+  - ZERO data v datoteki. Samo tipi.
+- Zgradil src/lib/listener-pipeline/icecast-parser.ts (~270 vrstic):
+  - IcecastStatusResponse interface — REAL Icecast2 /status-json.xsl format (2.4.x)
+  - IcecastSourceEntry, IcecastListenerEntry interfaces
+  - parseIcecastStatus() — pure parser, no I/O
+  - InferredSessionEnd interface + diffListenerSnapshots() — diff dveh snapshotov za inferenco session end
+  - hashIp() — salted SHA-256 preko Web Crypto API. REFUSE delati brez LISTENER_HASH_SALT env var
+  - classifyDevice() — heuristic iz User-Agent (car-androidauto → ... → unknown)
+  - toIngestionSession() — conversion function
+  - DETAILED comment o Icecast2 listener tracking limitation (listeners_list je snapshot, ne sessions)
+  - 4 možnosti za real session capture: log tailer, reverse proxy, AzuraCast API, auth webhook
+  - Belt-and-suspenders: diff postavi raw IP kot placeholder, poller MORA hashirati, endpoint ZAVRNE ne-hashirane
+- Dodal ListenerSession model v prisma/schema.prisma:
+  - 17 polj, 7 indeksev
+  - source: 'measured' default — vedno
+  - Komentar: "This table is EMPTY by design"
+  - db:push uspešen — prazna tabela ustvarjena
+- Zgradil src/app/api/v1/listener-pipeline/route.ts:
+  - GET — honest status: totalSessions count iz DB, summary string ki NE laže
+  - POST — ingest batch:
+    - Validacija: source, fetchedAt, sessions[] required
+    - SHA256_HEX regex za listenerHash — REJECT raw IPs (64-char hex required)
+    - Validacija timestamps
+    - Enrichment: computeDaypart, classifyDevice, returning-listener lookup (7d)
+    - Persist v DB s source='measured'
+    - Response: firstRealSession flag — "YES — this was the first real session" ko prva seja pride
+    - nextStep: "Sessions persisted as source=measured. Downstream modules must label derived findings sourceType=observed, cap confidence at 0.70"
+  - In-memory pipelineState (sourceUrl, connected, lastIngestionAt, lastPollAt, lastError)
+  - ZERO demo data. ZERO simulation. Endpoint je reception mechanism, ne generator.
+- Updated docs/STATION-CHRONICLE.md:
+  - "How the first entry is triggered — technically" sekcija
+  - 4 koraki: 0→1 row, GET flip, firstRealSession flag, operator writes first entry
+  - "That day is not a sprint. It is a deployment."
+- Lint: čist (0 errors, 0 warnings)
+- Dev server: zdrav (GET / 200)
+- db:push: uspešen, ListenerSession tabela ustvarjena (prazna)
+
+Stage Summary:
+- Phase 30 — Real Data Foundation: RECEPTION LAYER COMPLETE
+- 4 nove datoteke: schema.ts (~200), icecast-parser.ts (~270), route.ts (~170), prisma schema extension (~40)
+- Pipeline je EMPTY by design. 0 sessions. To je honest state.
+- Endpoint ZAVRNE raw IPs (SHA-256 required) — belt-and-suspenders za privacy
+- firstRealSession flag bo signaliziral trenutek simulated→observed prehoda
+- Phases 31-34 (Music Intelligence, PD Dashboard, Voice AI, Digital Twin) DEFERRED — odvisne od realnih podatkov
+- "Until then, this file stays as it is. The pipeline waits. The table is empty. The honesty is intact."
+- Naslednji korak NI v kodi. Je: deploy na realno postajo + connect realni Icecast2 + first POST.

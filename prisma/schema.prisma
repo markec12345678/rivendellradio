@@ -148,6 +148,47 @@ model WebhookDelivery {
 }
 
 // ============================================================================
+// Phase 30: Listener Pipeline — real listener sessions from Icecast2.
+// This table is EMPTY by design. It will remain empty until a real Icecast2
+// server is connected and real sessions flow through the ingestion endpoint.
+// See: src/lib/listener-pipeline/schema.ts
+// See: docs/STATION-CHRONICLE.md — "The First Real Station Day"
+// See: docs/EPISTEMOLOGICAL-INVARIANTS.md — Invariant 1 (Reality)
+// ============================================================================
+
+/// A real listener session, captured from a real streaming server.
+/// source = 'measured' by definition. Never simulated, never demo.
+model ListenerSession {
+  id              String   @id // UUID v4, generated at ingestion
+  startedAt       DateTime // ISO timestamp when listener connected
+  endedAt         DateTime // ISO timestamp when listener disconnected
+  durationMs      Int      // endedAt - startedAt, stored for query speed
+  mount           String   // e.g. "/rock-887.mp3"
+  listenerHash    String   // salted SHA-256 of IP — never the raw IP
+  userAgent       String
+  device          String   // derived from userAgent at ingestion
+  geoRegion       String?
+  referer         String?
+  exitTrackId     String?
+  exitTrackTitle  String?
+  exitTrackArtist String?
+  exitTrackPositionMs Int?
+  daypart         String   // pre-computed at ingestion
+  tracksPlayed    Int      @default(0)
+  returning       Boolean  @default(false)
+  source          String   @default("measured") // always 'measured' — see Invariant 1
+  ingestedAt      DateTime @default(now())
+
+  @@index([startedAt])
+  @@index([endedAt])
+  @@index([mount])
+  @@index([daypart])
+  @@index([listenerHash])
+  @@index([device])
+  @@index([returning])
+}
+
+// ============================================================================
 // Phase 3: EAS/CAP Compliance (FCC 47 CFR Part 11 + OASIS CAP 1.2)
 // ============================================================================
 

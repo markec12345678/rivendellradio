@@ -214,6 +214,20 @@ The first line below it is history.
 
 That single transition — from `simulated` to `observed` — is the moment the system begins to deserve trust. Not because the AI became smarter. Because the system started telling the truth about what it actually knows.
 
+### How the first entry is triggered — technically
+
+The pipeline at `src/app/api/v1/listener-pipeline/route.ts` is the reception point. It is built. It is empty. It will stay empty until a real Icecast2 server is connected and an adapter POSTs a real `IngestionBatch`.
+
+The day the first POST succeeds:
+1. The `ListenerSession` table goes from 0 rows to 1 row.
+2. `GET /api/v1/listener-pipeline` flips from `totalSessions: 0` to `totalSessions: 1`.
+3. The response's `firstRealSession` field says: *"YES — this was the first real session ever ingested."*
+4. The operator on duty writes the first entry in this chronicle, using the template above.
+
+That day is not a sprint. It is a deployment. It cannot happen in this sandbox — there is no real Icecast2, no real listeners, no real radio station. It can only happen at a real station, on a real day, with real people tuning in.
+
+Until then, this file stays as it is. The pipeline waits. The table is empty. The honesty is intact.
+
 ---
 
 ## What comes next
