@@ -4221,3 +4221,46 @@ Stage Summary:
 - "Long-term stability is itself evidence. A finding that has held for 18 months is qualitatively different from one measured once last week."
 - Trace events se samodejno snemajo v POST/PATCH — ni treba klicati posebej
 - Test data počiščen — ledger + trace events prazni, čakajo na prvo realno odločitev
+
+---
+Task ID: 38
+Agent: lead
+Task: GitHub README + screenshots. User pointed out README was outdated (Sprint 29, 129 endpoints, 23 panels) and had no screenshots. Updated README to reflect Sprint 31b state and added 6 real screenshots.
+
+Work Log:
+- Prebral obstoječi README.md (298 vrstic, Sprint 29 vsebina) — zastarel
+- Zaženal dev server z -H 0.0.0.0 (potrebno za agent-browser dostop)
+- Ustvaril docs/screenshots/ direktorij
+- Vzel 6 screenshotov z agent-browser (v eni seji, ker server umre med sejami):
+  - 01-dashboard.png (687KB) — Now Playing hero, waveform, soundpanel, AI Orchestrator
+  - 02-library.png (193KB) — 38 rock tracks z album art
+  - 03-schedule.png (200KB) — Today's shows, weekly timetable
+  - 04-streams.png (87KB) — 3 stations z WebSocket stats
+  - 05-reports.png (81KB) — 24h listener analytics
+  - 06-system-top.png (129KB) — Studio clock, daemons, začetek System tab
+- Počistil stare failed screenshot poskuse
+- Prepisal README.md (348 vrstic) z novo strukturo:
+  - Hero quote: "An AI operating system for a radio station — built to earn trust, not demand it."
+  - "What this is" — osredotočen na epistemološki sloj, ne feature count
+  - The five layers diagram (Broadcast Platform → AI OS → AI Core → Epistemic → Governance → Real Station)
+  - Dashboard screenshot prominently displayed
+  - Screenshots tabela z vsemi 6 views
+  - "The AI Trust Center" sekcija — Trust Score (6 komponent), Autonomy Ladder (5 levels), Decision Ledger, Calibration, Stability
+  - "The Epistemic Layer" sekcija — 7 invariants + One Principle + 3 enforcement mechanisms
+  - "Honest Implementation Status" — real vs simulated, honest count (0 real sessions, 44 isReal=false)
+  - Architecture diagram z key directories
+  - API Reference z governance + AI core + listener pipeline + broadcast
+  - Documentation tabela z EPISTEMOLOGICAL-INVARIANTS.md in STATION-CHRONICLE.md prominentno
+  - Clean-Room Implementation section
+  - Closing: "Trust is not granted — it is earned through accumulated evidence."
+- Lint: čist (0 errors, 0 warnings)
+
+Stage Summary:
+- GitHub README + screenshots: COMPLETE
+- 6 real screenshots v docs/screenshots/ (vsak 80KB-690KB, pravi UI views)
+- README prepisana iz Sprint 29 (298 vrstic) v Sprint 31b (348 vrstic)
+- Fokus premaknjen iz "kaj AI zna" v "kdaj lahko zaupamo AI-ju"
+- Honest implementation status explicitno prikazan: 0 real sessions, 44 isReal=false
+- Trust Score, Autonomy Ladder, Decision Ledger, Calibration, Stability — vse dokumentirano v README
+- Epistemološke invariante prikazane kot "constitution of the AI system"
+- "Trust is not granted — it is earned through accumulated evidence." kot zaključek
