@@ -97,41 +97,105 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))
 
   if (body.message) {
-    // In production: send to LLM with tool-use, execute actions
-    const response: ConversationMessage = {
-      id: `msg-${Date.now()}`, role: 'assistant',
-      content: `Prejel sem: "${body.message}". Analiziram kontekst...`,
-      timestamp: new Date().toISOString(),
-      actions: [{ type: 'analyze', description: 'Analyzing user intent', result: 'in progress' }],
-      contextUsed: ['station-brain', 'listener-brain', 'event-bus'],
-    }
+    const timestamp = new Date().toISOString()
 
-    // Simulate intelligent response based on keywords
-    const msg = body.message.toLowerCase()
-    if (msg.includes('pripravi') || msg.includes('prepare')) {
-      response.content = 'Pripravljam program... ✅ Playlist (47 skladb), ✅ Voice tracki (8), ✅ Jingles (4), ✅ Novice (3), ✅ Družbena omrežja (3). Pripravljeno za predvajanje.'
-      response.actions = [
-        { type: 'generate-playlist', description: 'Generated 47-track playlist', result: '47 tracks scheduled' },
-        { type: 'generate-voice-tracks', description: '8 AI voice tracks', result: '8 VTs ready' },
-      ]
-    } else if (msg.includes('zakaj') || msg.includes('why')) {
-      response.content = 'Analiziram vzrok... 📊 Ob 14:23 je bila predvajana Black Hole Sun (energija 0.35). 12 poslušalcev je odšlo zaradi padca energije. Priporočilo: izmenjuj hitre in počasne skladbe.'
-      response.actions = [{ type: 'root-cause', description: 'Correlated track with listener drop', result: 'Root cause: low energy after rush hour' }]
-    } else if (msg.includes('posluša') || msg.includes('listening')) {
-      response.content = '📊 Trenutno stanje:\n• 1,492 poslušalcev (+14 v 5min)\n• Največ iz Ljubljana (487)\n• Sedaj: Everlong — Foo Fighters\n• 42s do konca skladbe\n• Naslednja: Thunderstruck — AC/DC\n\n🧠 Možgani: vzdržuj momentum, predvajaj hit'
-      response.actions = [{ type: 'query-status', description: 'Real-time listener status', result: '1,492 listeners, trending up' }]
-    } else {
-      response.content = `Razumem "${body.message}". Kako naj pomagam? Lahko: pripravim program, analiziram poslušanost, ustvarim voice link, ali pokažem poročilo.`
-    }
-
+    // Store user message
     CONVERSATION.push({
       id: `msg-${Date.now()}-user`, role: 'user', content: body.message,
-      timestamp: new Date().toISOString(),
+      timestamp,
     })
+
+    // ✅ REAL LLM RESPONSE via z-ai-web-dev-sdk
+    let llmContent = ''
+    let llmUsed = false
+    try {
+      const ZAIModule = await import('z-ai-web-dev-sdk')
+      const ZAI = ZAIModule.default
+      const zai = await ZAI.create()
+
+      // Build context from recent conversation + station state
+      const recentContext = CONVERSATION.slice(-6).map(m => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: m.content,
+      }))
+
+      const systemPrompt = `You are the AI Studio Assistant for Rock 88.7 FM, a radio broadcast control center.
+You help operators manage the radio station. You can:
+- Prepare shows (playlist, voice tracks, jingles, news, social media)
+- Analyze listener behavior (why they stay, why they leave)
+- Generate voice link scripts
+- Show reports and metrics
+- Override AI decisions
+
+Current station context:
+- Station: Rock 88.7 FM (Classic & Modern Rock)
+- Current ALT (Average Listening Time): 18.9 minutes (target: 25)
+- Current listeners: ~1,492
+- Now playing: Everlong - Foo Fighters
+- Next: Thunderstruck - AC/DC
+- Daypart: afternoon-drive
+- Weather: sunny, 24°C
+
+Key institutional knowledge:
+- Morning commuters need hits + traffic every 20min
+- Office workers want less talk (background listening)
+- Two consecutive low-energy tracks cause tune-outs
+- Fulfilled listener requests correlate with +8.5min ALT (correlation, not proven causation)
+- Ad breaks should be ≤2.5min
+
+Respond concisely in the user's language (Slovenian if they write in Slovenian, English if English).
+Use emojis sparingly. Be practical and actionable.`
+
+      const completion = await zai.chat.completions.create({
+        messages: [
+          { role: 'assistant', content: systemPrompt },
+          ...recentContext,
+        ],
+        thinking: { type: 'disabled' },
+      })
+
+      llmContent = completion.choices[0]?.message?.content ?? ''
+      llmUsed = true
+    } catch (err: any) {
+      // Fallback to keyword-based response if LLM fails
+      llmContent = generateFallbackResponse(body.message)
+      llmUsed = false
+    }
+
+    const response: ConversationMessage = {
+      id: `msg-${Date.now()}`, role: 'assistant',
+      content: llmContent,
+      timestamp: new Date().toISOString(),
+      actions: llmUsed
+        ? [{ type: 'llm-response', description: 'Real LLM response via z-ai-web-dev-sdk', result: 'success' }]
+        : [{ type: 'fallback', description: 'Keyword-based fallback (LLM unavailable)', result: 'fallback' }],
+      contextUsed: llmUsed
+        ? ['z-ai-web-dev-sdk', 'station-brain', 'listener-brain', 'conversation-history']
+        : ['keyword-matching'],
+    }
+
     CONVERSATION.push(response)
 
-    return NextResponse.json({ ok: true, response })
+    return NextResponse.json({
+      ok: true,
+      response,
+      llmPowered: llmUsed,
+      model: llmUsed ? 'glm-4-plus (z-ai-web-dev-sdk)' : 'fallback-keyword',
+    })
   }
 
   return NextResponse.json({ ok: false, error: 'Message required' }, { status: 400 })
+}
+
+// Fallback response generator (keyword-based, used when LLM is unavailable)
+function generateFallbackResponse(message: string): string {
+  const msg = message.toLowerCase()
+  if (msg.includes('pripravi') || msg.includes('prepare')) {
+    return 'Pripravljam program... ✅ Playlist (47 skladb), ✅ Voice tracki (8), ✅ Jingles (4), ✅ Novice (3), ✅ Družbena omrežja (3). Pripravljeno za predvajanje.'
+  } else if (msg.includes('zakaj') || msg.includes('why')) {
+    return 'Analiziram vzrok... 📊 Ob 14:23 je bila predvajana Black Hole Sun (energija 0.35). 12 poslušalcev je odšlo zaradi padca energije. Priporočilo: izmenjuj hitre in počasne skladbe.'
+  } else if (msg.includes('posluša') || msg.includes('listening')) {
+    return '📊 Trenutno stanje:\n• 1,492 poslušalcev (+14 v 5min)\n• Največ iz Ljubljana (487)\n• Sedaj: Everlong — Foo Fighters\n• 42s do konca skladbe\n• Naslednja: Thunderstruck — AC/DC\n\n🧠 Možgani: vzdržuj momentum, predvajaj hit'
+  }
+  return `Razumem "${message}". Kako naj pomagam? Lahko: pripravim program, analiziram poslušanost, ustvarim voice link, ali pokažem poročilo.`
 }

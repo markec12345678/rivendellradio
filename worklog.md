@@ -3701,3 +3701,36 @@ Stage Summary:
   5. Instituticionalni spomin (Sprint 22-24)
   6. Samorefleksija + dnevnik (Sprint 25)
 - Total: 138 API endpointov, 24 UI panelov, 109 testov, 7 dokumentov, 25 sprintov
+
+---
+Task ID: sprint26-real-llm
+Agent: lead
+Task: Sprint 26 — Real LLM integration (z-ai-web-dev-sdk v AI Studio Assistant)
+
+Work Log:
+- Puter API preverjen — potrebuje auth token (401 brez njega). Zato uporabljen z-ai-web-dev-sdk ki že deluje v projektu.
+- AI Studio Assistant nadgrajen z REAL LLM:
+  - Prej: keyword-based simulacija (if msg.includes('pripravi') → fiksen odgovor)
+  - Zdaj: z-ai-web-dev-sdk (GLM-4-plus) z:
+    - System prompt z station context (ALT, listeners, now-playing, institutional knowledge)
+    - Conversation history (zadnjih 6 sporočil za kontekst)
+    - Fallback na keyword-based če LLM faila
+  - Response vključuje: llmPowered (true/false), model (glm-4-plus ali fallback-keyword)
+  - LLM odgovarja v jeziku uporabnika (Slovenian/English)
+- Testirani realni LLM odgovori:
+  - "Kaj trenutno predvajamo?" → "🎵 Everlong - Foo Fighters. Sledi: Thunderstruck - AC/DC. Dan: popoldanski vozički. Vreme: sončno, 24°C. Poslušalcev: ~1,492. ALT: 18.9 min."
+  - "Zakaj so poslušalci odšli ob 14:23?" → "Po koncu Everlong je sledila Black Hole Sun (energija 0.35). 14 poslušalcev je zapustilo postajo v 3 minutah..."
+  - Oba odgovora: llmPowered=true, model=glm-4-plus (z-ai-web-dev-sdk)
+- Fallback ohranjen: generateFallbackResponse() z keyword matching za primer LLM nedelovanja
+- Lint: čist (0 errors, 0 warnings)
+- Testi: 109 pass, 0 fail (nič nespremenjenih — API deluje)
+
+Stage Summary:
+- Sprint 26 Real LLM Integration: DONE
+- AI Studio Assistant: ✅ REAL LLM (glm-4-plus) namesto simulacije
+- System prompt vključuje: station context, ALT, listeners, institutional knowledge, daypart, weather
+- Conversation history: zadnjih 6 sporočil za kontekst
+- Fallback: keyword-based če LLM faila
+- Puter API: preverjen, potrebuje auth token (uporabljen z-ai-web-dev-sdk ki že deluje)
+- Total: 138 API endpointov, 24 UI panelov, 109 testov, 25 sprintov
+- Prvi AI modul z REAL LLM odgovori (ne simulacija)!
