@@ -6,7 +6,7 @@ Open-source AI-powered radio broadcast automation platform for the [Rivendell Ra
 
 ---
 
-![Dashboard](docs/screenshots/01-dashboard.png)
+<img src="docs/screenshots/01-dashboard.png" alt="Dashboard" width="800" />
 
 ---
 
@@ -50,14 +50,23 @@ Real Station Experience     ← awaiting
 
 ## Screenshots
 
-| View | Description |
-|------|-------------|
-| ![Dashboard](docs/screenshots/01-dashboard.png) | **Dashboard** — Now Playing hero, real-time waveform, soundpanel (F1–F8), listener requests, AI Orchestrator |
-| ![Library](docs/screenshots/02-library.png) | **Library** — 38 real rock tracks with AI-generated album art, search, group filter |
-| ![Schedule](docs/screenshots/03-schedule.png) | **Schedule** — Today's shows, weekly timetable, drag-drop log editor, AI Voice Track generator |
-| ![Streams](docs/screenshots/04-streams.png) | **Streams** — 3 stations with real-time WebSocket listener stats |
-| ![Reports](docs/screenshots/05-reports.png) | **Reports** — 24h listener analytics with daypart patterns |
-| ![System](docs/screenshots/06-system-top.png) | **System** — Studio clock, daemons, RDS, SNMP, GPIO, AI Trust Center (governance dashboard) |
+### Dashboard — Now Playing hero, real-time waveform, soundpanel, listener requests
+<img src="docs/screenshots/01-dashboard.png" alt="Dashboard" width="800" />
+
+### Library — 38 real rock tracks with AI-generated album art, search, group filter
+<img src="docs/screenshots/02-library.png" alt="Library" width="800" />
+
+### Schedule — Today's shows, weekly timetable, drag-drop log editor, AI Voice Track generator
+<img src="docs/screenshots/03-schedule.png" alt="Schedule" width="800" />
+
+### Streams — 3 stations with real-time WebSocket listener stats
+<img src="docs/screenshots/04-streams.png" alt="Streams" width="800" />
+
+### Reports — 24h listener analytics with daypart patterns
+<img src="docs/screenshots/05-reports.png" alt="Reports" width="800" />
+
+### System — Studio clock, daemons, RDS, SNMP, GPIO, AI Trust Center (governance dashboard)
+<img src="docs/screenshots/06-system.png" alt="System" width="800" />
 
 ---
 
