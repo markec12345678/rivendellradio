@@ -87,6 +87,35 @@ This is the moment the project transforms from
 
 ---
 
+## AI Maturity — Measuring Trust Over Years (Not Sprints)
+
+The most important metric is not code — it's trust earned through correct decisions over time.
+
+| Metric | Year 1 Target | Year 3 Target | Why It Matters |
+|---|---|---|---|
+| Real evidence (isReal=true) | >90% | 100% | Framework → verified knowledge |
+| A/B experiments completed | >50 | >500 | Correlation → causation |
+| Rules externally validated | >100 | >1000 | Institutional knowledge base |
+| Station Memory entries | >10,000 | >100,000 | Accumulated wisdom |
+| Average ALT prediction error | <10% | <5% | AI becomes more accurate |
+| AI recommendations accepted by operators | >70% | >90% | Trust through proven results |
+| AI recommendations overridden | Track trend | Trend ↓ | Fewer overrides = growing trust |
+| Operator satisfaction with AI | >4/5 | >4.5/5 | Human-AI collaboration works |
+
+### The Trust Journey
+
+```
+Month 1: "AI suggested this track. Let's try it."
+Month 6: "AI is usually right about afternoon drive energy."
+Year 1: "AI has better track selection than I do for midday."
+Year 2: "I trust AI to run overnight completely autonomously."
+Year 3: "AI is part of our daily decision-making. We can't imagine running the station without it."
+```
+
+This cannot be built with code. It is built through successful decisions over time.
+
+---
+
 ## What NOT to Build Next
 
 - ❌ New API endpoints (140 is enough)
