@@ -3639,3 +3639,65 @@ Stage Summary:
   4. Sistem ki se uči (Sprint 17-21)
   5. Instituticionalni spomin (Sprint 22-24)
 - Total: 138 API endpointov, 24 UI panelov, 99 testov, 7 dokumentov, 24 sprintov
+
+---
+Task ID: sprint25-station-memory-v2
+Agent: lead
+Task: Sprint 25 — Station Memory v2 (confidence levels + expected vs actual + Station Journal)
+
+Work Log:
+- 3 izboljšave Station Memory (po povratni informaciji):
+  1. Confidence levels na vseh 10 lekcijah:
+     - level: very-high / high / medium / low / experimental
+     - timesObserved: kolikokrat je bil vzorec opažen (847, 47, 2, 312, itd.)
+     - yearsObserved: čez koliko let (7, 5, 5, 4, itd.)
+     - lastConfirmed: kdaj nazadnje potrjeno
+     - isReal: false za vse (demonstration)
+     - Primer: lesson-001 "Jutranji vozniški segment ima fiksno časovno okno" → very-high, 847 observations, 7 years
+     - Primer: lesson-005 "Dve počasni skladbi zapored" → medium, 1 observation, 0 years (new)
+  2. Expected vs Actual na vseh 8 programming decisions:
+     - expectedAlt: kaj je AI/PD predvideval
+     - actualAlt: kaj se je dejansko zgodilo
+     - predictionError: actualAlt - expectedAlt (negativno = precenil)
+     - whyWrong: razlaga zakaj je napoved zgrešena
+     - Primer: 2019 morning block — expected +1.0min, actual -1.4min, error -2.4min
+       → "PD expected less interruption = longer sessions. Reality: listeners left because they EXPECT news"
+     - Primer: 2020 AI DJ overnight — expected +1.5min, actual +2.7min, error +1.2min
+       → "AI DJ exceeded expectations. Overnight listeners are less demanding than predicted"
+     - Stats: avgPredictionError, overestimationCount, underestimationCount
+  3. Station Journal — dnevni dnevnik postaje:
+     - 5 dnevni vnosov (2026-07-08 do 2026-07-12)
+     - Vsak vnos ima: biggestSuccess, biggestMistake, biggestSurprise, whatWouldWeDoDifferently, newHypothesis, aiSelfReflection
+     - Primer (2026-07-12): "Played two mid-energy tracks at 14:30. 8 listeners left. Should have enforced rule-001."
+     - AI self-reflection: "I predicted 94% retention but got 89%. My energy curve model underestimates post-lunch sensitivity."
+     - New hypotheses generated daily: "If weather mentions have higher impact on sunny days..."
+     - POST add-journal: nov vnos se shrani z isReal=false
+- 10 novih testov (station-memory.test.ts, skupaj 24):
+  - Confidence: level, timesObserved, yearsObserved, isReal=false
+  - Very-high confidence lessons have 5+ years, 2+ observations
+  - Confidence distribution in stats
+  - Expected vs actual: predictionError = actualAlt - expectedAlt
+  - Failed decisions have whyWrong explanation
+  - Prediction accuracy stats (overestimation + underestimation)
+  - Station Journal: daily entries with all reflection fields
+  - Journal generates hypotheses
+  - Journal includes AI self-reflection with prediction error mentions
+  - POST add-journal works
+- Lint: čist (0 errors, 0 warnings)
+- Testi: 109 pass, 0 fail, 1521 expect() calls
+
+Stage Summary:
+- Sprint 25 Station Memory v2: DONE
+- 3 izboljšave: confidence levels, expected vs actual, Station Journal
+- 10 novih testov (109 total, 1521 assertions)
+- Station Journal = dnevnik postaje (chronicle, not database)
+- AI self-reflection: "I predicted X but got Y. Adjusting weight."
+- New hypotheses generated daily from journal observations
+- 6 evolucijskih faz projekta:
+  1. Broadcast aplikacija (Sprint 1-5)
+  2. Enterprise platforma (Sprint 6-10)
+  3. Produkcijska platforma (Sprint 11-16)
+  4. Sistem ki se uči (Sprint 17-21)
+  5. Instituticionalni spomin (Sprint 22-24)
+  6. Samorefleksija + dnevnik (Sprint 25)
+- Total: 138 API endpointov, 24 UI panelov, 109 testov, 7 dokumentov, 25 sprintov
