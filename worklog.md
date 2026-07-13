@@ -4327,3 +4327,42 @@ Stage Summary:
 - Naslednji korak NI v kodi. Je: realna postaja, realni poslušalci, prvi realni session v prazni ListenerSession tabeli.
 - Pravilo od zdaj naprej: "No new functionality without a real reason from production."
 - Projekt je prestopil iz development phase v operational phase. Vrednost od zdaj prihaja iz realnih podatkov, ne iz nove kode.
+
+---
+Task ID: 41
+Agent: lead
+Task: GitHub milestone "Operational Learning" — symbolic closing of the development phase. User explicit: "Odprl bi GitHub milestone z naslovom Operational Learning in vanj ne bi dodajal funkcij, ampak samo stvari, ki izvirajo iz realnega delovanja."
+
+Work Log:
+- Ustvaril GitHub milestone #1 "Operational Learning" preko API
+- Popoln opis milestone-a:
+  - "The v1.x phase — learning from production, not adding features"
+  - Kaj sodi: prediction errors, override patterns, failed rules, overturned hypotheses, calibration drift, stability promotions/demotions, surprises
+  - Kaj NE sodi: new AI agents, endpoints, memory types, dashboards, governance layers, any feature from an idea
+  - Rule: "Every item must answer: which real operational problem does this solve?"
+  - Four questions of every Operational Review
+- Ustvaril 6 GitHub labels z barvami:
+  - operational-review (blue) — production-driven, not a feature
+  - surprise (yellow) — belief that turned out wrong/nuanced
+  - failure (red) — decision with measured negative outcome
+  - confirmation (green) — confirmed hypothesis
+  - deprecation (gray) — deprecated rule or lesson
+  - template (light blue) — template issue
+- Enabled issues v repozitoriju (so bile disabled)
+- Ustvaril 4 template issues v milestone-u, vsak ustreza enemu od 4 vprašanj Operational Review:
+  - Issue #1: [TEMPLATE] What surprised us — record a surprise from real operation
+  - Issue #2: [TEMPLATE] What failed — record a decision that produced a negative outcome
+  - Issue #3: [TEMPLATE] What turned out to be true — record a confirmed hypothesis
+  - Issue #4: [TEMPLATE] What did we remove — record a deprecated rule or lesson
+- Vsak issue ima: format example, when to open, what belongs here, what does NOT belong here
+- Template issues so označene z label "template" in so navodila za prihodnje realne issues
+- Milestone URL: https://github.com/markec12345678/rivendellradio/milestone/1
+
+Stage Summary:
+- GitHub milestone "Operational Learning" ustvarjen — simbolični zaključek development faze
+- 4 template issues kažejo, kaj sodi v milestone (preslikava na 4 vprašanja Operational Review)
+- 6 labels za kategorizacijo: surprise, failure, confirmation, deprecation, operational-review, template
+- Issues enabled v repozitoriju
+- "The development phase ended at v1.0.0. The operational phase begins here."
+- To je zadnja akcija development faze. Od zdaj naprej: Operational Reviews, ne sprinti.
+- "Ne dokumentiraj tega, kar pričakuješ, da se bo zgodilo. Dokumentiraj samo to, kar se je zgodilo."
