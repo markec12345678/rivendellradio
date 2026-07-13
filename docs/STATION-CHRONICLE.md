@@ -151,6 +151,71 @@ The AI begins its real history only with the first real listener.
 
 ---
 
+## The First Real Station Day — template
+
+This is the shape of the first real entry. It will be small. It may be unimpressive. That does not matter — what matters is that it is real.
+
+Fill it in on the day the station connects to a real Icecast2 server, serves a real listener, and measures a real session. Do not fill it in before. Do not fill it in from a simulation.
+
+```
+Date:
+Station:
+
+AI recommendation:
+Human decision:
+Actual result:
+Evidence level:
+Lesson:
+```
+
+### What each field means
+
+- **Date** — the calendar day. Precision matters.
+- **Station** — which station. If this chronicle ever serves more than one, this field is why.
+- **AI recommendation** — what the AI proposed, in its own words, quoted. This is a prediction (`source: predicted`). It is never promoted to fact.
+- **Human decision** — what the operator actually did, including "followed the AI", "overrode the AI", or "the AI was not consulted". All three are valid.
+- **Actual result** — what was measured, with the sample size. "ALT 18.4 → 19.1, n = 312" is a result. "ALT improved" is not.
+- **Evidence level** — one of `simulated / observed / experiment / validated` (see `docs/EPISTEMOLOGICAL-INVARIANTS.md`). The first real day will almost always be `observed` with a small `n`. That is correct. Say so.
+- **Lesson** — derived from the signed difference between the AI's prediction and the actual outcome. Never written in the AI's voice. Never "the AI learned…". Always "the measured outcome was X versus prediction Y; the difference is Z."
+
+### A reasonable first entry might look like this
+
+```
+Date: 2027-02-18
+Station: Rock 88.7 FM
+
+AI recommendation:
+Play Foo Fighters — Everlong at 07:15 (predicted +1.5 min ALT)
+
+Human decision:
+Followed AI recommendation.
+
+Actual result:
+ALT 18.2 → 18.9 (+0.7 min), n = 47 morning sessions.
+Below AI prediction of +1.5.
+
+Evidence level:
+observed (n=47, no experiment)
+
+Lesson:
+AI overpredicted by +0.8 min. The track helped, but less than predicted.
+Possible confounders: track was played at 07:08 yesterday (24h fatigue),
+weather was overcast (lower mood boost than typical Foo Fighters slot).
+Re-observe for 7 days before promoting to experiment status.
+```
+
+### Why the first entry will be the most valuable one in this file
+
+Not because it will be impressive. It probably will not be.
+Because it will be the first line in this file that is `source: observed` instead of `source: simulated`.
+
+Every line above it is framework.
+The first line below it is history.
+
+That single transition — from `simulated` to `observed` — is the moment the system begins to deserve trust. Not because the AI became smarter. Because the system started telling the truth about what it actually knows.
+
+---
+
 ## What comes next
 
 *Nothing.*

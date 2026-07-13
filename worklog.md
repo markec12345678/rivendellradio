@@ -3930,3 +3930,41 @@ Stage Summary:
 - deriveOverrideLesson() zavrača AI-authored lesson string — lekcija se izračuna iz signed difference
 - "The truth does not decay. Our certainty about whether it still applies does."
 - Celoten sistem sedaj ima: 7 invariant (rules) + 3 mechanisms (enforcement) + 1 audit baseline (honest snapshot)
+
+---
+Task ID: 33
+Agent: lead
+Task: Add "First Real Station Day" template to STATION-CHRONICLE.md. User explicit: "Ne še eno funkcijo. Ne še en agent. Ne še en API." Only the chronicle's first-entry template — completing the document as a usable artifact for when Day 1 happens.
+
+Work Log:
+- Prebral userjevo analizo — potrdil: arhitektura je dosegla "sistem zaupanja" nivo
+- User skiciral "First Real Station Day" format:
+    Date:
+    Station:
+    AI recommendation:
+    Human decision:
+    Actual result:
+    Evidence level:
+    Lesson:
+- Dodal "The First Real Station Day — template" sekcijo v STATION-CHRONICLE.md:
+  - 6-poljni template (točno userjev sketch)
+  - "What each field means" — vsako polje pojasnjeno
+  - Konkreten primer "reasonable first entry" — AI overpredicted by +0.8 min, observed n=47, confounders noted
+  - "Why the first entry will be the most valuable" — transition from simulated to observed
+- KLJUČNO: template izrecno poveže z EPISTEMOLOGICAL-INVARIANTS.md (sourceType: simulated/observed/experiment/validated)
+- Discipline: NO new code, NO new modules, NO new APIs, NO new tests. Samo dokumentacija.
+- Primer first entry je namerno "unimpressive" — AI overpredicted, track helped less than expected. To je pošten. Prvi dan ne bo spektakularen. Bo pa resničen.
+
+Stage Summary:
+- STATION-CHRONICLE.md je sedaj popoln dokument — ima: One Rule, Entry format, Failure entry example, First Real Station Day template, Framework Year entry, Maintenance rules
+- Prvi realni vnos bo moral slediti točno temu formatu — AI recommendation (predicted) + Human decision + Actual result (measured, with n) + Evidence level (observed) + Lesson (derived, never narrated)
+- Template izrecno poveže chronicle z invariants.ts (sourceType hierarchy)
+- "Every line above it is framework. The first line below it is history."
+- Celoten epistemološni sloj je zdaj popoln:
+  - 1 princip (do not write what AI thinks happened)
+  - 7 invariant (rules)
+  - 3 mehanizmi (enforcement: EpistemicScore, Quarantine, OverrideLog)
+  - 1 audit baseline (honest snapshot 2026-07-13)
+  - 1 first-entry template (ready for Day 1)
+  - 2 dokumenta (chronicle + invariants)
+- Naslednji korak NI v kodi. Je realna postaja + realni podatki + prvi pravi neuspeh.
