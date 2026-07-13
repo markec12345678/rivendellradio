@@ -162,6 +162,117 @@ An unknown violation is a rotting foundation.
 
 ---
 
+## Strengthening Mechanisms — how the invariants are enforced in practice
+
+The seven invariants above are rules. Rules need enforcement.
+The mechanisms below are how the rules become operational.
+They live in `src/lib/ai-core/invariants.ts` and are available to any module that writes to long-term memory.
+
+They are **not new AI capabilities.** They are **not new features.** They are how the existing principle — *"do not write what the AI thinks happened"* — becomes a machine-checkable property of every memory entry.
+
+The existing memory modules (station-memory, knowledge-engine, learning-loop) are **not** refactored to use these mechanisms. The 2026-07-13 audit baseline above documents the current state. These mechanisms are the target state for new entries and for any future refactoring.
+
+### Mechanism 1 — Epistemic Score
+*Enforces Invariants 1 (Reality), 4 (Sample Size), 5 (Honest Confidence)*
+
+Every long-term memory entry carries an `EpistemicScore`:
+
+```
+{
+  sourceType: simulated | observed | experiment | validated,
+  evidence:   { sampleSize, durationDays, confidence },
+  age:        { lastConfirmedAt, daysSinceConfirmation },
+  decay:      { confidenceDecayPerYear, currentAdjustedConfidence }
+}
+```
+
+This replaces the binary `isReal` flag with a graded scale.
+Each source type permits a higher maximum confidence:
+
+| sourceType | max confidence | meaning |
+|------------|----------------|---------|
+| simulated  | 0.50           | demonstration data only — never above medium |
+| observed   | 0.70           | real observation, no experiment — caps below high |
+| experiment | 0.85           | A/B test, P<0.05, d>0.2 — may exceed predicted cap |
+| validated  | 0.99           | externally replicated across contexts — reserved |
+
+The lesson-001 finding from the 2026-07-13 audit (very-high confidence, 847 observations, isReal=false) would have been caught here: a `simulated` entry cannot carry confidence above 0.50. The cap is not a suggestion — it is a property of the source type. A simulated entry at 0.99 confidence is structurally impossible under this model, regardless of how many simulated observations back it.
+
+The score also tracks age and decay. A rule confirmed in 2019 at 0.82, never re-confirmed, is not wrong — but it is no longer 0.82. It is approximately 0.72. The system should know the difference.
+
+> *The truth does not decay. Our certainty about whether it still applies does.*
+
+### Mechanism 2 — Memory Quarantine
+*Enforces Invariants 1 (Reality), 5 (Honest Confidence)*
+
+Entries that have not earned the right to influence decisions are held aside:
+
+- `sourceType: 'simulated'` → always quarantined
+- `sourceType: 'observed'` with `sampleSize < 30` → quarantined
+- everything else → eligible for the memory proper
+
+A quarantined entry is:
+- **visible to operators** (transparency — never hidden)
+- **not used by the optimizer or scheduler** (no unearned influence)
+- **promoted only when an experiment upgrades its sourceType**
+
+This is the AI's *"I think this might be true, but I have not earned the right to act on it"* space.
+The hypothesis buffer is not a graveyard. It is a waiting room.
+Entries leave it only by being measured.
+
+Promotion is a one-way ratchet: `simulated → observed → experiment → validated`.
+An entry cannot skip levels. `validated` requires prior `experiment` status plus replication.
+This prevents a single lucky A/B test from cementing a rule as eternal truth.
+
+### Mechanism 3 — Human Override Log
+*Enforces Invariants 6 (Counterfactual Honesty), 7 (Legend Prevention)*
+
+When the AI proposes X and the program director chooses Y, the system records:
+
+```
+{
+  aiRecommendation:      "Play Foo Fighters at 7:15",
+  aiPredictedOutcome:    "+1.5 min ALT",
+  aiPredictedAltDelta:   1.5,
+  humanDecision:         "Play local band instead",
+  humanRationale:        "Local festival this weekend — relevance beats familiarity",
+  actualOutcome:         "ALT +1.8 min",
+  actualAltDelta:        1.8,
+  derivedLesson:         "Human decision produced ALT delta 1.80 min versus AI prediction 1.50 min (signed difference +0.30). Operator rationale: ...",
+  derivedLessonSource:   "human-asserted",
+  humanOutperformedAi:   true
+}
+```
+
+The counterfactual (Invariant 6) is built in: the AI's prediction *is* the counterfactual to the human's choice. The signed difference between the prediction and the outcome is the lesson.
+
+The lesson's source is `human-asserted` for the rationale and `measured` for the outcome delta. It is **never** `predicted`. The AI does not write the lesson. The system derives it from the difference.
+
+The `deriveOverrideLesson()` function deliberately does not accept an AI-authored lesson string. It accepts only:
+- the AI's predicted ALT delta
+- the actual measured ALT delta
+- an optional human rationale
+
+The lesson is constructed mechanically from those inputs.
+This is the operational form of Invariant 7 (Legend Prevention) applied to override events: the AI may propose, the human may decide, the system measures, and the lesson is derived — never narrated.
+
+Over years, this becomes the most valuable data in the station.
+It is where the AI learns from humans — not from itself.
+
+### What these mechanisms do NOT do
+
+They do not add new endpoints. They do not add new UI panels. They do not add new AI modules. They do not add new tests.
+They are enforcement tools, available to the existing memory modules when those modules are refactored to use them.
+
+The 2026-07-13 audit documented two violations. Those violations remain documented.
+The mechanisms above are how future entries — and the eventual refactoring of the existing ones — will avoid producing new violations.
+
+> *A known violation is a managed risk.*
+> *An unknown violation is a rotting foundation.*
+> *These mechanisms make violations harder to produce by accident.*
+
+---
+
 ## How these invariants relate to the Station Chronicle
 
 The `docs/STATION-CHRONICLE.md` file enforces the same principle at the human-readable layer:

@@ -332,3 +332,346 @@ export const AUDIT_BASELINE_2026: ModuleCompliance[] = [
     ],
   },
 ]
+
+// ===========================================================================
+// Strengthening mechanisms — how the 7 invariants are enforced in practice
+//
+// These are NOT new invariants. They are NOT new AI capabilities. They are
+// the operational mechanisms that make the existing 7 invariants checkable
+// in real memory entries.
+//
+// Three mechanisms, each mapped back to the invariants it enforces:
+//
+//   1. Epistemic Score     → Invariants 1 (Reality), 4 (Sample Size), 5 (Honest Confidence)
+//   2. Memory Quarantine   → Invariants 1 (Reality), 5 (Honest Confidence)
+//   3. Human Override Log  → Invariants 6 (Counterfactual Honesty), 7 (Legend Prevention)
+//
+// The existing memory modules (station-memory, knowledge-engine, learning-loop)
+// are NOT refactored to use these mechanisms. The 2026-07-13 audit baseline
+// above documents the current state. These mechanisms are the target state
+// for new entries and for any future refactoring. A known violation is a
+// managed risk; these mechanisms make future violations harder to produce
+// by accident.
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// Mechanism 1: Epistemic Score
+//    Enforces: Invariant 1 (Reality), 4 (Sample Size), 5 (Honest Confidence)
+// ---------------------------------------------------------------------------
+
+/**
+ * Source type — a graded replacement for the binary `isReal` flag.
+ *
+ * The 4-level hierarchy replaces isReal with a scale:
+ *   simulated  → observed → experiment → validated
+ *
+ * Each level permits a higher maximum confidence (see SOURCE_CONFIDENCE_CAPS).
+ * The current code uses isReal (boolean); this enum is the target state for
+ * new modules and for the eventual refactoring of the existing ones.
+ *
+ * Maps to Invariant 1 (Reality): every memory entry carries a sourceType,
+ * and only `validated` entries may influence decisions at full weight.
+ */
+export type EpistemicSourceType = 'simulated' | 'observed' | 'experiment' | 'validated'
+
+/**
+ * Maximum confidence permitted per source type.
+ *
+ * This is Invariant 5 (Honest Confidence) operationalized as a single table.
+ * The lesson-001 finding from the 2026-07-13 audit (very-high confidence,
+ * 847 observations, isReal=false) would have been caught here: a `simulated`
+ * entry cannot carry confidence above 0.50.
+ *
+ * The cap is not a suggestion — it is a property of the source type.
+ * A simulated entry at 0.99 confidence is structurally impossible under
+ * this model, regardless of how many simulated observations back it.
+ */
+export const SOURCE_CONFIDENCE_CAPS: Record<EpistemicSourceType, number> = {
+  simulated: 0.5,   // demonstration data only — never above medium
+  observed: 0.7,    // real observation, no experiment — caps below "high"
+  experiment: 0.85, // A/B test, P<0.05, d>0.2 — may exceed predicted cap
+  validated: 0.99,  // externally replicated across contexts — reserved
+}
+
+/**
+ * Epistemic Score — the composite that every long-term memory entry carries.
+ *
+ * Operationalizes Invariants 1 (Reality), 4 (Sample Size), and 5 (Honest
+ * Confidence) as a single checkable unit. Adds two dimensions the current
+ * code does not track:
+ *
+ *   - age: how long since this was last confirmed by reality
+ *   - decay: knowledge that has not been re-confirmed loses freshness
+ *
+ * The truth does not decay. Our certainty about whether it still applies
+ * does. A rule confirmed in 2019 at 0.82, never re-confirmed, is not wrong
+ * — but it is no longer 0.82. The system should know the difference.
+ */
+export interface EpistemicScore {
+  sourceType: EpistemicSourceType
+  evidence: {
+    sampleSize: number           // Invariant 4 — without n, no claim
+    durationDays?: number        // how long the observation ran
+    confidence: number           // [0, 1], capped per sourceType
+  }
+  age: {
+    lastConfirmedAt: string | null   // ISO date, or null if never
+    daysSinceConfirmation: number    // computed from lastConfirmedAt
+  }
+  decay: {
+    confidenceDecayPerYear: number   // default 0.02 — gentle
+    currentAdjustedConfidence: number // after decay applied, floored at simulated cap
+  }
+}
+
+/**
+ * Default confidence decay — 2% per year.
+ *
+ * A rule confirmed 5 years ago loses 0.10 of confidence. This is gentle on
+ * purpose: the goal is not to erase old knowledge, but to flag it for
+ * re-confirmation. Decay never reduces confidence below the simulated cap —
+ * old confirmed knowledge is at least as good as new simulation, never worse.
+ */
+export const DEFAULT_CONFIDENCE_DECAY_PER_YEAR = 0.02
+
+/**
+ * Apply confidence decay based on age.
+ *
+ * A rule confirmed 5 years ago at 0.82 now has effective confidence ~0.72.
+ * The rule is not deleted (Invariant 3 — Failure Preservation, applied to
+ * memory itself). It stays. Its influence on future decisions is weakened
+ * until re-confirmed.
+ *
+ * Decay never reduces confidence below SOURCE_CONFIDENCE_CAPS.simulated.
+ * Old confirmed knowledge is at least as good as new simulation, never worse.
+ */
+export function applyConfidenceDecay(score: EpistemicScore): number {
+  const yearsSince = score.age.daysSinceConfirmation / 365
+  const decayRate =
+    score.decay.confidenceDecayPerYear || DEFAULT_CONFIDENCE_DECAY_PER_YEAR
+  const decayAmount = yearsSince * decayRate
+  const floor = SOURCE_CONFIDENCE_CAPS.simulated
+  return Math.max(floor, score.evidence.confidence - decayAmount)
+}
+
+/**
+ * Validate an EpistemicScore against the source-type confidence caps.
+ * Returns a violation if the confidence exceeds what the sourceType permits,
+ * or if the sample size is missing (Invariant 4).
+ *
+ * This is the machine-checkable form of Invariant 5. A module that adopts
+ * EpistemicScore can call this before persisting an entry and refuse to
+ * write if it returns a violation.
+ */
+export function validateEpistemicScore(
+  score: EpistemicScore,
+): InvariantViolation | null {
+  const cap = SOURCE_CONFIDENCE_CAPS[score.sourceType]
+  if (score.evidence.confidence > cap) {
+    return {
+      invariant: 'honest-confidence',
+      severity: 'error',
+      message: `sourceType="${score.sourceType}" caps confidence at ${cap}, but score.evidence.confidence=${score.evidence.confidence}. A ${score.sourceType} entry has not earned confidence above ${cap}. Either lower the confidence or upgrade the sourceType by running a real experiment.`,
+    }
+  }
+  if (!score.evidence.sampleSize || score.evidence.sampleSize <= 0) {
+    return {
+      invariant: 'sample-size',
+      severity: 'error',
+      message: `EpistemicScore missing sampleSize. A claim without n is a feeling, not a score (Invariant 4).`,
+    }
+  }
+  return null
+}
+
+// ---------------------------------------------------------------------------
+// Mechanism 2: Memory Quarantine
+//    Enforces: Invariant 1 (Reality), 5 (Honest Confidence)
+// ---------------------------------------------------------------------------
+
+/**
+ * A quarantined entry. It is held aside — not forgotten, but not promoted
+ * to the memory proper. It lives in the hypothesis buffer until an
+ * experiment upgrades its sourceType.
+ *
+ * The hypothesis buffer is the AI's "I think this might be true, but I
+ * have not earned the right to act on it" space.
+ */
+export interface QuarantinedHypothesis {
+  id: string
+  hypothesis: string
+  epistemicScore: EpistemicScore
+  quarantinedAt: string // ISO date
+  // What is needed to promote this to the memory proper
+  promotionRequires: {
+    upgradeTo: EpistemicSourceType // typically 'experiment' or 'validated'
+    proposedExperiment?: string    // the A/B test that would promote it
+  }
+  // Visibility: quarantined entries are visible to operators (transparency)
+  // but NOT used by the optimizer or scheduler (no unearned influence).
+  visibleToOperators: true
+  influencesDecisions: false
+}
+
+/**
+ * Quarantine check — does this entry belong in the hypothesis buffer,
+ * or in the memory proper?
+ *
+ * Entries that have not earned the right to influence decisions are held
+ * aside. This is the operational form of Invariant 1 (Reality): a predicted
+ * entry may exist, but it may not act.
+ *
+ * Rules:
+ *   - sourceType 'simulated' → always quarantined (demonstration data only)
+ *   - sourceType 'observed' with sampleSize < 30 → quarantined (anecdote)
+ *   - everything else → eligible for the memory proper
+ *
+ * Quarantine is not deletion. The entry is visible to operators. It is
+ * promoted only when an experiment upgrades its sourceType.
+ */
+export function shouldQuarantine(score: EpistemicScore): boolean {
+  if (score.sourceType === 'simulated') return true
+  if (score.sourceType === 'observed' && score.evidence.sampleSize < 30) {
+    return true
+  }
+  return false
+}
+
+/**
+ * Promote a quarantined hypothesis to the memory proper.
+ *
+ * Promotion requires a real upgrade to the sourceType — typically by running
+ * an A/B test that moves the entry from 'observed' to 'experiment', or from
+ * 'experiment' to 'validated' via replication.
+ *
+ * This function does not perform the upgrade. It checks whether the upgrade
+ * is permitted and returns the requirement if not. The actual upgrade is a
+ * separate, audited operation.
+ */
+export function checkPromotionEligibility(
+  current: EpistemicScore,
+  target: EpistemicSourceType,
+): { eligible: true } | { eligible: false; reason: string } {
+  const order: EpistemicSourceType[] = [
+    'simulated',
+    'observed',
+    'experiment',
+    'validated',
+  ]
+  const currentIndex = order.indexOf(current.sourceType)
+  const targetIndex = order.indexOf(target)
+
+  if (targetIndex <= currentIndex) {
+    return {
+      eligible: false,
+      reason: `Cannot promote to "${target}" — that is not an upgrade from "${current.sourceType}". Promotion must move up the hierarchy: simulated → observed → experiment → validated.`,
+    }
+  }
+
+  // 'validated' requires replication — at least 2 experiments
+  if (
+    target === 'validated' &&
+    current.sourceType !== 'experiment'
+  ) {
+    return {
+      eligible: false,
+      reason: `Cannot promote directly from "${current.sourceType}" to "validated". Validation requires prior "experiment" status plus replication.`,
+    }
+  }
+
+  return { eligible: true }
+}
+
+// ---------------------------------------------------------------------------
+// Mechanism 3: Human Override Log
+//    Enforces: Invariant 6 (Counterfactual Honesty), 7 (Legend Prevention)
+// ---------------------------------------------------------------------------
+
+/**
+ * Human Override Record — when an operator overrides the AI's recommendation.
+ *
+ * Strengthens Invariant 7 (Legend Prevention) by ensuring the AI's proposal
+ * is recorded as a *prediction* (source: 'predicted'), not as a memory.
+ * The outcome is recorded as a *measurement* (source: 'measured'). The
+ * lesson is derived from the difference — never written in the AI's voice.
+ *
+ * The counterfactual (Invariant 6) is built in:
+ *   - aiPredictedOutcome: what the AI said would happen if it were followed
+ *   - actualOutcome: what did happen under the human's choice
+ * The signed difference between these is the lesson.
+ *
+ * Over years, this becomes the most valuable data in the station: it is
+ * where the AI learns from humans, not from itself.
+ *
+ * The AI does not write the lesson. The system records the measurement and
+ * the human-asserted rationale; the lesson is derived from the difference.
+ */
+export interface HumanOverrideRecord {
+  id: string
+  timestamp: string
+  context: string
+
+  // The AI's proposal — stored as a prediction (source: 'predicted')
+  // Never promoted to fact. Never written in the AI's voice in the chronicle.
+  aiRecommendation: string
+  aiPredictedOutcome: string
+  aiPredictedAltDelta: number
+
+  // The human's decision — stored as human-asserted
+  humanDecision: string
+  humanRationale?: string // the human may state why, or may not — both are valid
+
+  // The measured outcome — stored as measured
+  actualOutcome: string
+  actualAltDelta: number
+
+  // Derived lesson — the system computes the signed difference.
+  // Source is 'measured' for the outcome delta, 'human-asserted' for the
+  // rationale if one was given. NEVER 'predicted'. NEVER in the AI's voice.
+  derivedLesson: string
+  derivedLessonSource: 'measured' | 'human-asserted'
+
+  // Was the human's call better than the AI's prediction?
+  // Measured, not asserted. null if the outcome is ambiguous or
+  // the AI's prediction had no clear threshold.
+  humanOutperformedAi: boolean | null
+}
+
+/**
+ * Construct a HumanOverrideRecord from raw inputs.
+ *
+ * This function deliberately does NOT accept an AI-authored lesson. The
+ * lesson is derived mechanically from the signed difference between the
+ * AI's prediction and the actual outcome. The human's rationale, if
+ * provided, is attached as a human-asserted annotation — never as the
+ * lesson itself.
+ *
+ * This is the operational form of Invariant 7 (Legend Prevention) applied
+ * to override events: the AI may propose, the human may decide, the system
+ * measures, and the lesson is derived — never narrated.
+ */
+export function deriveOverrideLesson(args: {
+  aiPredictedAltDelta: number
+  actualAltDelta: number
+  humanRationale?: string
+}): { lesson: string; source: 'measured' | 'human-asserted'; humanOutperformedAi: boolean | null } {
+  const delta = args.actualAltDelta - args.aiPredictedAltDelta
+
+  // Mechanically derived, measured
+  const measuredLesson = `Human decision produced ALT delta ${args.actualAltDelta.toFixed(2)} min versus AI prediction ${args.aiPredictedAltDelta.toFixed(2)} min (signed difference ${delta >= 0 ? '+' : ''}${delta.toFixed(2)}).`
+
+  // If the human provided a rationale, attach it as human-asserted annotation
+  if (args.humanRationale) {
+    return {
+      lesson: `${measuredLesson} Operator rationale: "${args.humanRationale}"`,
+      source: 'human-asserted',
+      humanOutperformedAi: delta > 0 ? true : delta < 0 ? false : null,
+    }
+  }
+
+  return {
+    lesson: measuredLesson,
+    source: 'measured',
+    humanOutperformedAi: delta > 0 ? true : delta < 0 ? false : null,
+  }
+}

@@ -3883,3 +3883,50 @@ Stage Summary:
 - Two-layer guarantee: STATION-CHRONICLE.md (human layer) + EPISTEMOLOGICAL-INVARIANTS.md (machine layer) — če ena plasti odpove, druga ujame
 - Audit je dokumentiran, ne fixed — known violation je managed risk, unknown violation je rotting foundation
 - "An AI system that can honestly say 'I do not know' is more trustworthy than one that confidently narrates."
+
+---
+Task ID: 32
+Agent: lead
+Task: Strengthen the epistemological principle with three operational mechanisms (Epistemic Score, Memory Quarantine, Human Override Log). User explicitly: "Ne dodajaj funkcij. Samo utrdi princip." — these are enforcement tools for the existing 7 invariants, NOT new AI capabilities.
+
+Work Log:
+- Prebral userjevo analizo — potrdil: tri ideje so utrjevanje principa, ne nove funkcije
+- Mapping treh mehanizmov na obstoječe 7 invariant:
+  1. Epistemic Score    → Invariant 1 (Reality), 4 (Sample Size), 5 (Honest Confidence)
+  2. Memory Quarantine  → Invariant 1 (Reality), 5 (Honest Confidence)
+  3. Human Override Log → Invariant 6 (Counterfactual Honesty), 7 (Legend Prevention)
+- Razširil src/lib/ai-core/invariants.ts (~340 dodatnih vrstic):
+  - EpistemicSourceType: 'simulated' | 'observed' | 'experiment' | 'validated' (graded replacement za binary isReal)
+  - SOURCE_CONFIDENCE_CAPS: simulated=0.50, observed=0.70, experiment=0.85, validated=0.99
+  - EpistemicScore interface: sourceType + evidence (sampleSize, durationDays, confidence) + age (lastConfirmedAt, daysSinceConfirmation) + decay (confidenceDecayPerYear, currentAdjustedConfidence)
+  - DEFAULT_CONFIDENCE_DECAY_PER_YEAR = 0.02 (2% na leto, gentle)
+  - applyConfidenceDecay() — floor na simulated cap, nikoli pod
+  - validateEpistemicScore() — preveri cap + sampleSize
+  - QuarantinedHypothesis interface — visibleToOperators=true, influencesDecisions=false
+  - shouldQuarantine() — simulated vedno, observed z n<30
+  - checkPromotionEligibility() — one-way ratchet simulated→observed→experiment→validated, validated zahteva prior experiment
+  - HumanOverrideRecord interface — aiRecommendation (predicted) + humanDecision (human-asserted) + actualOutcome (measured) + derivedLesson + derivedLessonSource (measured | human-asserted, NIKDOR predicted) + humanOutperformedAi
+  - deriveOverrideLesson() — NE sprejme AI-authored lesson string. Mehansko izračuna iz signed difference + optional human rationale
+- Razširil docs/EPISTEMOLOGICAL-INVARIANTS.md z "Strengthening Mechanisms" sekcijo:
+  - Eksplicitno framing: "NOT new AI capabilities. NOT new features."
+  - 3 podsekcije, vsaka z mapping nazaj na invarianto ki jo enforce-a
+  - Konkreten primer za vsak mehanizem
+  - "What these mechanisms do NOT do" — ne dodajajo endpointov, UI, modulov, testov
+  -audit baseline ostane nespremenjen (Invariant 3 aplicirana na sam audit)
+- KLJUČNA DISCIPLINA: obstoječi memory moduli (station-memory, knowledge-engine, learning-loop) NISO refactorirani
+  - 2026-07-13 audit baseline ostane dokumentiran
+  - Mehanizmi so target state za nove vnose in future refactoring
+  - "Known violation is managed risk. These mechanisms make future violations harder to produce by accident."
+- Lint: čist (0 errors, 0 warnings)
+- Type-check: čist (tsc --noEmit passed)
+
+Stage Summary:
+- Epistemološki princip utrjen z 3 operacijskimi mehanizmi — ne novimi funkcijami
+- Epistemic Score: binary isReal → graded 4-level hierarchy (simulated/observed/experiment/validated) z confidence caps per level
+- Memory Quarantine: predicted entries živijo v hypothesis buffer, ne v memory proper — visible to operators, NE vplivajo na odločitve
+- Human Override Log: AI predlaga (predicted), človek odloči (human-asserted), sistem izmeri (measured), lekcija se izpelje mehansko — NIKDOR v AI glasu
+- Confidence decay: 2%/leto, floor na simulated cap — staro znanje ne izgine, ampak izgubi svežino
+- Promotion je one-way ratchet: simulated→observed→experiment→validated, brez skipping levels
+- deriveOverrideLesson() zavrača AI-authored lesson string — lekcija se izračuna iz signed difference
+- "The truth does not decay. Our certainty about whether it still applies does."
+- Celoten sistem sedaj ima: 7 invariant (rules) + 3 mechanisms (enforcement) + 1 audit baseline (honest snapshot)
