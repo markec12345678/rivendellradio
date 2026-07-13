@@ -251,8 +251,9 @@ This dashboard is a clean-room implementation:
 | [Plugin SDK Guide](docs/PLUGIN-SDK-GUIDE.md) | Plugin development, permissions, sandbox, publishing, marketplace |
 | [Broadcast Integration Guide](docs/BROADCAST-INTEGRATION-GUIDE.md) | Hardware integration (RVR, Inovonics, Omnia, AES67, NMOS, GPIO) |
 | [Disaster Recovery Guide](docs/DISASTER-RECOVERY-GUIDE.md) | RTO/RPO targets, failover scenarios, DR drills, backup strategy |
+| [Production Readiness](docs/PRODUCTION-READINESS.md) | What's real vs demo, deployment phases, the milestone that matters |
 | [UPGRADE-ROADMAP.md](UPGRADE-ROADMAP.md) | 81 upgrade opportunities researched from 23 web searches |
-| [worklog.md](worklog.md) | Full development log (15 sprints, 2900+ lines) |
+| [worklog.md](worklog.md) | Full development log (29 sprints, 3800+ lines) |
 
 ## Implementation Status
 
