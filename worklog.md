@@ -3734,3 +3734,59 @@ Stage Summary:
 - Puter API: preverjen, potrebuje auth token (uporabljen z-ai-web-dev-sdk ki že deluje)
 - Total: 138 API endpointov, 24 UI panelov, 109 testov, 25 sprintov
 - Prvi AI modul z REAL LLM odgovori (ne simulacija)!
+
+---
+Task ID: sprint27-ai-core
+Agent: lead
+Task: Sprint 27 — AI Core (enotni možgani z Tool Calling + Memory System + Action Engine)
+
+Work Log:
+- AI Core arhitektura (src/lib/ai-core/):
+  1. tools.ts (~280 vrstic): 9 orodij (MCP-style)
+     - get_now_playing: trenutno predvajanje + poslušalci
+     - get_station_brain: perception + decision + ALT
+     - get_listener_insights: retention drivers + segments + leave/stay reasons
+     - get_knowledge: verified rules z evidence + boundaries
+     - get_station_memory: lessons + decisions + segments + journal
+     - check_retry: prepreči ponavljanje napak
+     - get_schedule: current music schedule
+     - get_reliability: ALT + MTTR + uptime + incidents
+     - get_experiments: active + completed A/B tests
+     - executeTools(): parallel tool execution
+  2. index.ts (~350 vrstic): AI Core z 6 funkcijami
+     - Think(): razume vprašanje, načrtuje orodja
+     - Plan(): določi vrstni red klicev (question → tool mapping)
+     - Execute(): kliče orodja (parallel)
+     - Learn(): posodobi working memory
+     - Remember(): shrani v Station Memory
+     - Explain(): razloži z dokazi
+  - Memory System (4 tipi):
+     - Working Memory: trenutni kontekst (zadnje interakcije)
+     - Semantic Memory: dejstva ("Foo Fighters dobro delujejo 7:00-8:00")
+     - Episode Memory: dogodki ("12.7.2026 ob 7:12 predvajali Everlong, ALT +2.3")
+     - Procedural Memory: procedure ("morning show = news → weather → traffic → hit → jingle")
+  - Action Engine:
+     - Safe actions (auto-executed): log_to_journal, record_observation, generate_hypothesis, update_working_memory
+     - Approval actions (need human): change_playlist, move_ad_break, add_jingle, generate_voice_track, start_ab_experiment, override_brain_decision
+  - Flow: Question → Plan → Tool Calls → Reasoning → Evidence → Answer → Actions
+- API endpoint: /api/v1/ai/core (GET + POST)
+  - GET: architecture, memory, available tools, action engine
+  - POST: ask AI Core a question → returns plan, evidence, reasoning, answer, actions
+- Realni test: "Zakaj je danes ALT padel ob 14:30?"
+  - Provider: puter (GLM-5.1)
+  - 5 tools called (all ✅ success)
+  - Duration: 12.9s
+  - Answer: "Dve zaporedni mid-energy skladbi → 8 poslušalcev odšlo → ALT -2.4min. Korelacija z semantičnim pomnilnikom..."
+  - Actions: generate_voice_track (🔒 approval) + log_to_journal (✅ auto)
+- Lint: čist (0 errors, 0 warnings)
+- Testi: 109 pass (nič spremenjenih)
+
+Stage Summary:
+- Sprint 27 AI Core: DONE
+- 3 nove datoteke: tools.ts (~280), index.ts (~350), route.ts (~60)
+- 9 orodij (MCP-style) + 4-tipni memory system + Action Engine
+- AI ne ugiba — vpraša orodje, dobi dejanske podatke, nato reasona z LLM
+- Puter GLM-5.1 kot primarni LLM z z-ai-sdk fallback
+- 6 evolucijskih faz: platforma → enterprise → production → učenje → spomin → **AI Core**
+- Total: 139 API endpointov, 24 UI panelov, 109 testov, 27 sprintov
+- Prvi pravi AI agent (ne chatbot) — Tool Calling + Memory + Actions
