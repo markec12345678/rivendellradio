@@ -27,21 +27,30 @@ export const dynamic = 'force-dynamic'
 
 export async function GET() {
   const { MEMORY, TOOL_DESCRIPTIONS } = await import('@/lib/ai-core')
+  const { getGoalProgress } = await import('@/lib/ai-core/goals')
+  const { getAllSkills } = await import('@/lib/ai-core/skills')
+  const { TOOL_REGISTRY } = await import('@/lib/ai-core/planner')
+  const goalProgress = getGoalProgress()
+  const skills = getAllSkills()
 
   return NextResponse.json({
     _disclaimer: '✅ REAL LLM + REAL TOOLS — AI Core uses Puter GLM-5.1 (or z-ai-sdk fallback) with real station data from tool calls. Memory is in-memory demonstration. Tool evidence is real (fetched from live APIs).',
     architecture: {
-      flow: 'Question → Plan → Tool Calls → Reasoning → Evidence → Answer → Actions',
-      functions: ['Think()', 'Plan()', 'Execute()', 'Learn()', 'Remember()', 'Explain()'],
+      flow: 'Question → Intent → Goals → Plan (multi-stage) → Tool Calls → Reasoning → Evidence → Answer → Confidence → Reflection → Actions',
+      functions: ['Think()', 'Plan() (multi-stage)', 'Execute()', 'Learn()', 'Remember()', 'Explain()', 'Reflect()'],
       llm: 'Puter GLM-5.1 (primary) → z-ai-sdk GLM-4-plus (fallback) → keyword (last resort)',
+      new: ['Goal Engine', 'Multi-stage Planner 2.0', 'Tool Registry', 'Self-Reflection', 'Skill Library', 'Confidence Scoring'],
     },
+    goals: goalProgress,
     memory: {
       working: MEMORY.working.slice(0, 5),
       semantic: MEMORY.semantic,
       episode: MEMORY.episode,
       procedural: MEMORY.procedural,
     },
+    skills: skills.map(s => ({ id: s.id, name: s.name, description: s.description, triggers: s.triggers })),
     availableTools: TOOL_DESCRIPTIONS,
+    toolRegistry: TOOL_REGISTRY,
     actionEngine: {
       safeActions: ['log_to_journal', 'record_observation', 'generate_hypothesis', 'update_working_memory'],
       approvalActions: ['change_playlist', 'move_ad_break', 'add_jingle', 'generate_voice_track', 'start_ab_experiment', 'override_brain_decision'],
@@ -49,7 +58,7 @@ export async function GET() {
     },
     usage: {
       ask: 'POST /api/v1/ai/core { "question": "Zakaj je ALT padel?" }',
-      response: 'Returns: plan, evidence (tool results), reasoning, answer, actions, memory updates',
+      enhanced: 'POST /api/v1/ai/core { "question": "...", "enhanced": true } → multi-stage planner + reflection + confidence',
     },
   })
 }
@@ -62,6 +71,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'question is required' }, { status: 400 })
   }
 
+  // Enhanced mode: multi-stage planner + goals + skills + confidence + reflection
+  if (body.enhanced) {
+    const { enhancedCoreThink } = await import('@/lib/ai-core/planner')
+    const response = await enhancedCoreThink(question)
+
+    return NextResponse.json({
+      ok: true,
+      ...response,
+      message: response.isReal
+        ? `🧠 AI Core (Enhanced) answered via ${response.provider} (${response.model}) — ${response.confidence.evidenceCount} tools, confidence: ${response.confidence.score}, reflection: ${response.reflection.shouldRePlan ? 'should re-plan' : 'satisfied'}`
+        : '⚠️ AI Core (Enhanced) answered with fallback — tool evidence still real',
+    })
+  }
+
+  // Standard mode (backward compatible)
   const { coreThink } = await import('@/lib/ai-core')
   const response = await coreThink(question)
 
