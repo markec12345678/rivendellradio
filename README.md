@@ -5,7 +5,7 @@ Open-source AI-powered radio broadcast automation platform for the [Rivendell Ra
 ## CI/CD Quality Badges
 
 ![Build](https://img.shields.io/github/actions/workflow/status/markec12345678/rivendellradio/ci-cd.yml?branch=main&label=Build)
-![Tests](https://img.shields.io/badge/Tests-41%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-85%20passing-brightgreen)
 ![Lint](https://img.shields.io/badge/Lint-ESLint-green)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)
 ![Next.js](https://img.shields.io/badge/Next.js-16.1.3-black)
@@ -15,7 +15,7 @@ Open-source AI-powered radio broadcast automation platform for the [Rivendell Ra
 ![API Endpoints](https://img.shields.io/badge/API%20Endpoints-129-blue)
 ![UI Panels](https://img.shields.io/badge/UI%20Panels-23-purple)
 ![Test Scenarios](https://img.shields.io/badge/Test%20Scenarios-12%20passing-green)
-![Unit Tests](https://img.shields.io/badge/Unit%20Tests-41%20passing-brightgreen)
+![Unit Tests](https://img.shields.io/badge/Tests-85%20passing%20(1113%20assertions)-brightgreen)
 ![SLO Compliance](https://img.shields.io/badge/SLO-99.99%25%20(30d)-brightgreen)
 ![OpenTelemetry](https://img.shields.io/badge/Observability-OpenTelemetry%201.36-blue)
 
