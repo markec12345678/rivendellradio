@@ -31,6 +31,7 @@ import { ReliabilityDashboard } from '@/components/rivendell/reliability-dashboa
 import { ObservabilityPanel } from '@/components/rivendell/observability-panel'
 import { ProfessionalBroadcastPanel } from '@/components/rivendell/professional-broadcast-panel'
 import { AIRadioControlPanel } from '@/components/rivendell/ai-radio-control-panel'
+import { GovernanceDashboard } from '@/components/rivendell/governance-dashboard'
 import { formatHms, formatClock, formatNumber } from '@/lib/rivendell/format'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -304,6 +305,9 @@ export function SystemTab() {
 
       {/* AI Radio Control — the brain that runs the radio */}
       <AIRadioControlPanel />
+
+      {/* AI Governance & Trust Layer — Sprint 31 */}
+      <GovernanceDashboard />
 
       {/* AI / Playout Engine — Sprint 5 */}
       <AIPlayoutPanel />

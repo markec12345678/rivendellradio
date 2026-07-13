@@ -189,6 +189,61 @@ model ListenerSession {
 }
 
 // ============================================================================
+// Phase 31: AI Governance & Trust Layer — Decision Ledger
+// This table is EMPTY by design. It records AI-influenced decisions over time
+// so the system can answer: "Was the AI right? Where? How often? By how much?"
+//
+// Each entry is a decision → outcome → lesson record. The lesson is DERIVED
+// mechanically (never AI-authored, see Invariant 7). The outcome is MEASURED
+// (source: 'measured', see Invariant 1).
+//
+// See: docs/EPISTEMOLOGICAL-INVARIANTS.md — Invariants 1, 2, 5, 6, 7
+// See: src/lib/governance/ledger.ts
+// ============================================================================
+
+/// A single AI-influenced programming decision, tracked end-to-end.
+/// Persists the AI's prediction (source: predicted), the human's choice
+/// (source: human-asserted), and the measured outcome (source: measured).
+model DecisionLedgerEntry {
+  id String @id // DEC-00001 format, human-readable
+
+  timestamp DateTime // when the decision was made
+  context String // e.g. "morning-drive", "afternoon", "overnight"
+
+  // The AI's proposal — source: 'predicted'. Never promoted to fact.
+  aiRecommendation String
+  aiReasoning String
+  aiConfidence Float // 0-1, what the AI claimed
+  aiPredictedAltDelta Float // min, predicted ALT change
+
+  // The human's decision — source: 'human-asserted'
+  humanDecision String // approved | overridden | not-consulted
+  humanRationale String? // optional, why the human chose as they did
+  actualAction String // what was actually done
+
+  // The measured outcome — source: 'measured'. Null until measured.
+  actualAltDelta Float? // min, null until the session data comes in
+  measuredAt DateTime?
+
+  // Derived — computed when the outcome is recorded. Never AI-authored.
+  predictionError Float? // actualAltDelta - aiPredictedAltDelta (signed)
+  sourceType String @default("simulated") // simulated | observed | experiment | validated
+  lesson String? // mechanically derived, see deriveLedgerLesson()
+
+  // Categorization for analytics
+  decisionDomain String // music | voice-link | ad-strategy | schedule | format
+  rejectionReason String? // if overridden: timing | brand | local-knowledge | risk | other
+
+  ingestedAt DateTime @default(now())
+
+  @@index([timestamp])
+  @@index([context])
+  @@index([humanDecision])
+  @@index([decisionDomain])
+  @@index([sourceType])
+}
+
+// ============================================================================
 // Phase 3: EAS/CAP Compliance (FCC 47 CFR Part 11 + OASIS CAP 1.2)
 // ============================================================================
 

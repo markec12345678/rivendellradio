@@ -4070,3 +4070,79 @@ Stage Summary:
 - 26 individual violations najdenih, 5 categories, 0 regressions
 - "The system is honest about what it does not know." — 0% real, 100% simulated, acknowledged
 - Naslednji korak: ko pride prvi real session, se realPercent dvigne z 0 in systemState.phase postane "Transition"
+
+---
+Task ID: 36
+Agent: lead
+Task: Sprint 31 — AI Governance & Trust Layer. User explicit: no new AI agents, no new tools, no blockchain, no avatars. Build the answer to "Why should a human trust this AI after 3 years?" Five components: Epistemic Dashboard, Decision Ledger, Confidence Calibration, Human Override Analytics, Autonomy Readiness Score.
+
+Work Log:
+- Prebral userjevo analizo — potrdil: governance layer, ne nove funkcije
+- Dodal DecisionLedgerEntry model v prisma/schema.prisma:
+  - 17 polj: id (DEC-00001), timestamp, context, aiRecommendation, aiReasoning, aiConfidence, aiPredictedAltDelta, humanDecision, humanRationale, actualAction, actualAltDelta, measuredAt, predictionError, sourceType, lesson, decisionDomain, rejectionReason
+  - 5 indeksev, db:push uspešen
+- Zgradil src/lib/governance/ledger.ts (~280 vrstic):
+  - LedgerEntry interface, HumanDecision (approved|overridden|not-consulted), RejectionReason, DecisionDomain, LedgerSourceType
+  - formatLedgerId() — DEC-XXXXX human-readable format
+  - deriveLedgerLesson() — MEHANSKA izpeljava, NIKDOR AI-authored. Sprejme samo: humanDecision, aiPredictedAltDelta, actualAltDelta, humanRationale, rejectionReason. Lesson se konstruira iz signed difference + context + optional rationale + verdict
+  - computeLedgerStats() — aggregate: total, withOutcome, approved, overridden, notConsulted, acceptanceRate, meanAbsError, meanSignedError (BIAS direction), byDomain, byRejectionReason, bySourceType
+- Zgradil src/lib/governance/calibration.ts (~200 vrstic):
+  - 10-bucket scheme: [0.0,0.1) ... [0.9,1.0]
+  - computeCalibration() — za vsak bucket: n, successRate, meanActualDelta, meanPredictedDelta, calibrationGap
+  - meanAbsCalibrationGap, overallBias (positive=under-confident, negative=over-confident)
+  - verdict: insufficient-data | uncalibrated | roughly-calibrated | well-calibrated
+  - explainCalibrationVerdict() — human-readable explanation
+  - minSampleSize=30 per bucket — statistical floor
+- Zgradil src/lib/governance/autonomy.ts (~280 vrstic):
+  - 5 levels: 0 (Observe only) → 1 (Suggest) → 2 (Human approval) → 3 (Automatic overnight) → 4 (Full autonomous)
+  - LEVEL_REQUIREMENTS: cumulative hard requirements per level (minObservedDecisions, maxPredictionError, minAcceptanceRate, maxEpistemicViolations, minDaysSinceViolation, minCalibration)
+  - assessAutonomy() — computes earnedLevel, currentLevel, nextLevel, nextLevelRequirements, readyForPromotion, ladder
+  - Promotions NEVER automatic — human decision. Demotions automatic (violation drops level immediately).
+  - LEVEL_DESCRIPTIONS — labels + descriptions for dashboard
+- Zgradil src/app/api/v1/decision-ledger/route.ts (~190 vrstic):
+  - GET — list entries + computeLedgerStats
+  - POST — record new decision (validates enums, confidence range [0,1], generates DEC-XXXXX id)
+  - PATCH — record measured outcome (DERIVES lesson mehansko, sourceType promoted simulated→observed, outcome immutable — Invariant 3)
+  - Validation: aiConfidence must be [0,1] (Invariant 5), rejectionReason only if overridden
+- Zgradil src/app/api/v1/governance/route.ts (~230 vrstic):
+  - Aggregira: listenerPipeline count + ledger stats + calibration + epistemic-state fetch + autonomy assessment
+  - computeTrustSummary() — 5 komponent z utežmi (realData 0.30, calibration 0.25, acceptance 0.20, prediction 0.15, epistemic 0.10)
+  - trustScore 0-100, components breakdown, summary
+  - overrideAnalytics — acceptanceRate, rejectionReasons, byDomain z verdict (trusted|borderline|not-trusted|no-data)
+  - memoryMaturity — realDataPoints, ledgerEntries, phase
+- Zgradil src/components/rivendell/governance-dashboard.tsx (~420 vrstic):
+  - TrustScoreSection — big score + 5 komponent z progress bars + utežmi + contributions
+  - AutonomyLadder — 5 rungs z requirements, current/earned/locked states, next-level requirements z check/x
+  - CalibrationSection — 10-bucket calibration curve z success rate bars, expected lines, gap coloring
+  - OverrideAnalyticsSection — acceptance rate, by domain (trusted/borderline/not-trusted), rejection reasons
+  - MemoryMaturitySection — real vs simulated bar, 3 data point cards (sessions/decisions/measured)
+  - Epistemic integrity badge z violation count
+  - Honest disclaimer: "Trust is not granted — it is earned"
+- Wire-al v system.tsx tab za AIRadioControlPanel
+- Lint: čist (0 errors, 0 warnings)
+
+BROWSER VERIFICATION (single session):
+- Root page: HTTP 200
+- GET /api/v1/governance: Trust Score 0/100, Level 0, insufficient-data, Framework Year phase, 0 ledger entries, 0 real sessions — ALL HONEST ZEROS
+- POST /api/v1/decision-ledger: Created DEC-00001, sourceType=simulated, ok=true
+- PATCH /api/v1/decision-ledger (outcome 1.4 vs predicted 1.5):
+  - predictionError: -0.10 (AI overpredicted by 0.10 min)
+  - sourceType: simulated → observed (PROMOTED)
+  - lessonSource: human-asserted (NOT predicted, NOT AI-authored — Invariant 7 upheld)
+  - derivedLesson: "Human approved AI recommendation. Measured ALT delta 1.40 min vs AI prediction 1.50 min (signed difference -0.10). AI prediction was optimistic..."
+- GET /api/v1/governance (after ledger entry): Trust Score 30/100 (acceptance rate 1.0 × 0.20 = 0.20, plus prediction accuracy), Level 0 (need 50+ decisions), 1 ledger entry, 1 with outcome
+- Počistil testni entry — ledger je zdaj pristen (0 rows), kot listener pipeline
+
+Stage Summary:
+- Sprint 31 AI Governance & Trust Layer: COMPLETE
+- 7 novih datotek: ledger.ts (~280), calibration.ts (~200), autonomy.ts (~280), decision-ledger/route.ts (~190), governance/route.ts (~230), governance-dashboard.tsx (~420), prisma schema extension (~50)
+- Decision Ledger: POST/PATCH/GET z honest validation, lesson DERIVED mehansko (nikdar AI-authored)
+- Confidence Calibration: 10-bucket scheme, verdict system, bias detection (over/under-confident)
+- Autonomy Readiness: 5-level ladder z hard requirements, promotions never automatic, demotions automatic
+- Trust Score: 0-100 computed iz 5 komponent z utežmi, NE občutek
+- Dashboard UI: Trust Center z vsemi 5 sekcijami, honest "0" state ko ni podatkov
+- Invariant 7 (Legend Prevention) upheld v kodi: deriveLedgerLesson() zavrača AI-authored lesson string
+- Invariant 3 (Failure Preservation) upheld: outcomes immutable, no DELETE endpoint
+- Invariant 5 (Honest Confidence) upheld: aiConfidence validation [0,1], calibration detects overconfidence
+- Test entry počiščen — ledger pristen, čaka na prvo realno odločitev
+- "Trust is not granted — it is earned through accumulated evidence."
