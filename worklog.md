@@ -3827,3 +3827,59 @@ Stage Summary:
 - Poudarek na napakah kot najbolj dragocenih vnosih
 - Learning loop ekspliciten: Decision → Evidence → Outcome → Lesson → Future decision
 - Datoteka je zdaj "najbolj profesionalen del celotnega projekta" — sposobnost reči "še ne vemo"
+
+---
+Task ID: 31
+Agent: lead
+Task: Epistemological refactoring — encode the chronicle's core principle ("do not write what the AI thinks happened, write what actually happened") as executable invariants the AI memory modules must obey, then audit the current modules honestly.
+
+Work Log:
+- Prebral station-memory/route.ts (668 vrstic) — našel:
+  - isReal boolean flag obstaja (dober)
+  - MANJKA: source: measured | human-asserted | predicted (Invariant 1)
+  - Journal aiSelfReflection field: AI piše v prvi osebi ("I predicted... My model...") — Invariant 7 violation
+  - lesson-001: level='very-high', timesObserved=847, isReal=false — INCOHERENT (Invariant 5 violation)
+  - Segments: avgSessionMin/returnRate7d/churnRisk brez sample size (Invariant 4 partial)
+  - Decisions: expectedAlt/actualAlt/predictionError — dober (Invariant 2 upheld)
+- Prebral knowledge-engine/route.ts — isReal na evidence, sampleSize na vsakem evidence, deprecated rules kept — dobro. confidence.score=45 z isReal=false inflated.
+- Prebral learning-loop/route.ts (203 vrstice) — GOLD STANDARD:
+  - projectedOutcome / actualOutcome / surprise / confounders / causalConfidence čisto ločeno
+  - selfAwareness field ["I underestimate..."] — tudi first-person AI narration (Invariant 7 violation)
+- Sintetiziral 7 invariant:
+  1. Reality (predicted vs measured vs human-asserted source field)
+  2. Prediction-Reality Separation (predvideno + dejansko + razlika, ločeno)
+  3. Failure Preservation (napake nikoli izbrisane, deprecated nikoli odstranjen)
+  4. Sample Size (brez n = brez pravila)
+  5. Honest Confidence (predicted cap 0.75, very-high z isReal=false = incoherent)
+  6. Counterfactual Honesty ("versus what" je trditev)
+  7. Legend Prevention (AI ne sme pisati v long-term memory v svojem glasu)
+- Napisal docs/EPISTEMOLOGICAL-INVARIANTS.md:
+  - The One Principle prominentno
+  - 7 invariant s pojasnilom "why" za vsako
+  - Honest audit tabela — vsak modul vsaka invarianta: upheld / partial / violated
+  - Dve konkretni kršitvi izpostavljeni (Violation A: confidence inflation, Violation B: legend risk)
+  - "What this audit does NOT do" — ne predpisuje code change, dokumentira kršitve
+  - Povezava s STATION-CHRONICLE.md (two-layer guarantee: chronicle + invariants)
+- Napisal src/lib/ai-core/invariants.ts (~200 vrstic):
+  - MemorySource type: 'measured' | 'human-asserted' | 'predicted'
+  - EPISTEMOLOGICAL_INVARIANTS const (7 invariant, stable IDs, appliesTo)
+  - Confidence caps: PREDICTED_CONFIDENCE_CAP=0.75, EXTERNAL_VALIDATION_THRESHOLD=0.9, MAXIMUM_CONFIDENCE=0.99
+  - checkConfidenceInvariant() — ujame lesson-001 finding (very-high + isReal=false)
+  - checkLegendPreventionInvariant() — ujame aiSelfReflection/selfAwareness brez measured counterpart
+  - auditMemoryEntry() — run all applicable checks
+  - AUDIT_BASELINE_2026 — honest state of all 3 modules z notes
+  - Dependency-free, one-way (invariants ne import-a iz modulov)
+- Lint: čist (0 errors, 0 warnings)
+- Type-check: čist (tsc --noEmit passed)
+
+Stage Summary:
+- Epistemološki refactoring: princip iz kronike postane executabilna invarianta v kodi
+- 2 dokumenti: docs/EPISTEMOLOGICAL-INVARIANTS.md (constitution + audit) + src/lib/ai-core/invariants.ts (executable)
+- 7 invariant, od katerih je Invariant 7 (Legend Prevention) "crown jewel" — AI ne sme biti narrator lastnih legend
+- Honest audit razkril 2 pravi kršitvi v trenutni kodi:
+  1. Confidence inflation: very-high confidence z isReal=false (lesson-001)
+  2. Legend risk: aiSelfReflection / selfAwareness fields so AI v prvi osebi
+- Learning-loop je gold standard (projectedOutcome/actualOutcome/surprise ločeno)
+- Two-layer guarantee: STATION-CHRONICLE.md (human layer) + EPISTEMOLOGICAL-INVARIANTS.md (machine layer) — če ena plasti odpove, druga ujame
+- Audit je dokumentiran, ne fixed — known violation je managed risk, unknown violation je rotting foundation
+- "An AI system that can honestly say 'I do not know' is more trustworthy than one that confidently narrates."
