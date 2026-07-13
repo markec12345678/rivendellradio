@@ -105,21 +105,18 @@ export async function POST(req: Request) {
       timestamp,
     })
 
-    // ✅ REAL LLM RESPONSE via z-ai-web-dev-sdk
+    // ✅ REAL LLM RESPONSE via unified provider (Puter → z-ai-sdk → fallback)
     let llmContent = ''
     let llmUsed = false
-    try {
-      const ZAIModule = await import('z-ai-web-dev-sdk')
-      const ZAI = ZAIModule.default
-      const zai = await ZAI.create()
+    let llmProvider = 'fallback'
+    let llmModel = 'fallback-keyword'
 
-      // Build context from recent conversation + station state
-      const recentContext = CONVERSATION.slice(-6).map(m => ({
-        role: m.role === 'assistant' ? 'assistant' : 'user',
-        content: m.content,
-      }))
+    const recentContext = CONVERSATION.slice(-6).map(m => ({
+      role: (m.role === 'assistant' ? 'assistant' : 'user') as 'user' | 'assistant',
+      content: m.content,
+    }))
 
-      const systemPrompt = `You are the AI Studio Assistant for Rock 88.7 FM, a radio broadcast control center.
+    const systemPrompt = `You are the AI Studio Assistant for Rock 88.7 FM, a radio broadcast control center.
 You help operators manage the radio station. You can:
 - Prepare shows (playlist, voice tracks, jingles, news, social media)
 - Analyze listener behavior (why they stay, why they leave)
@@ -146,20 +143,23 @@ Key institutional knowledge:
 Respond concisely in the user's language (Slovenian if they write in Slovenian, English if English).
 Use emojis sparingly. Be practical and actionable.`
 
-      const completion = await zai.chat.completions.create({
-        messages: [
-          { role: 'assistant', content: systemPrompt },
-          ...recentContext,
-        ],
-        thinking: { type: 'disabled' },
+    try {
+      const { llmChat } = await import('@/lib/llm-provider')
+      const result = await llmChat({
+        systemPrompt,
+        messages: recentContext,
       })
 
-      llmContent = completion.choices[0]?.message?.content ?? ''
-      llmUsed = true
-    } catch (err: any) {
-      // Fallback to keyword-based response if LLM fails
+      if (result.success && result.content) {
+        llmContent = result.content
+        llmUsed = true
+        llmProvider = result.provider
+        llmModel = result.model
+      } else {
+        llmContent = generateFallbackResponse(body.message)
+      }
+    } catch {
       llmContent = generateFallbackResponse(body.message)
-      llmUsed = false
     }
 
     const response: ConversationMessage = {
@@ -167,10 +167,10 @@ Use emojis sparingly. Be practical and actionable.`
       content: llmContent,
       timestamp: new Date().toISOString(),
       actions: llmUsed
-        ? [{ type: 'llm-response', description: 'Real LLM response via z-ai-web-dev-sdk', result: 'success' }]
+        ? [{ type: 'llm-response', description: `Real LLM response via ${llmProvider}`, result: 'success' }]
         : [{ type: 'fallback', description: 'Keyword-based fallback (LLM unavailable)', result: 'fallback' }],
       contextUsed: llmUsed
-        ? ['z-ai-web-dev-sdk', 'station-brain', 'listener-brain', 'conversation-history']
+        ? [llmProvider, 'station-brain', 'listener-brain', 'conversation-history']
         : ['keyword-matching'],
     }
 
@@ -180,7 +180,8 @@ Use emojis sparingly. Be practical and actionable.`
       ok: true,
       response,
       llmPowered: llmUsed,
-      model: llmUsed ? 'glm-4-plus (z-ai-web-dev-sdk)' : 'fallback-keyword',
+      provider: llmProvider,
+      model: llmModel,
     })
   }
 

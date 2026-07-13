@@ -151,7 +151,64 @@ export async function GET(req: Request) {
       totalTopics: prep.topics.length,
       avgTopicRetention: Math.round(prep.topics.reduce((s, t) => s + t.retentionScore, 0) / prep.topics.length * 100),
       totalRequests: prep.listenerRequests.length,
-      prepDurationMin: 4, // AI generated this in 4 minutes (vs 2 hours manual)
+      prepDurationMin: 4,
     },
   })
+}
+
+/**
+ * POST — Generate real AI show prep using LLM (Puter → z-ai-sdk)
+ */
+export async function POST(req: Request) {
+  const body = await req.json().catch(() => ({}))
+  const showName = body.showName ?? 'Morning Show'
+  const showDate = body.showDate ?? new Date().toISOString().slice(0, 10)
+
+  try {
+    const { llmChat } = await import('@/lib/llm-provider')
+    const result = await llmChat({
+      systemPrompt: `You are the AI Show Prep assistant for Rock 88.7 FM (Classic & Modern Rock radio).
+Generate a concise show prep document for the host. Include:
+1. 3 discussion topics (music news, local events, fun facts)
+2. 3 fun facts (rock music trivia, this day in history)
+3. Birthday shoutouts (famous musicians born on this date)
+4. Weather comment for the host to mention
+5. 1 listener engagement idea (contest, question, poll)
+
+Format as clean text with sections. Keep it concise — host reads this in 5 minutes.
+Write in Slovenian if the show name is in Slovenian, otherwise English.`,
+      messages: [{
+        role: 'user',
+        content: `Prepare show prep for "${showName}" on ${showDate}.
+Station: Rock 88.7 FM (Classic & Modern Rock)
+Current ALT: 18.9 minutes (target: 25)
+Daypart context: morning drive (06:00-10:00)
+Key rule: morning commuters need hits + traffic + time checks every 20min`,
+      }],
+    })
+
+    if (result.success) {
+      return NextResponse.json({
+        ok: true,
+        llmPowered: true,
+        provider: result.provider,
+        model: result.model,
+        showName,
+        showDate,
+        prep: result.content,
+        message: `✅ Show prep generated via ${result.provider} (${result.model})`,
+      })
+    }
+
+    return NextResponse.json({
+      ok: false,
+      error: result.error ?? 'LLM failed',
+      fallback: 'Use GET /api/v1/ai/show-prep for static demo prep',
+    }, { status: 503 })
+  } catch (err: any) {
+    return NextResponse.json({
+      ok: false,
+      error: err?.message ?? 'Unknown error',
+    }, { status: 500 })
+  }
 }
