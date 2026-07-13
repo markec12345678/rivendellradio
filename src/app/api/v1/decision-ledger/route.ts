@@ -154,10 +154,36 @@ export async function POST(req: Request) {
     },
   })
 
+  // Record trace events for the lifecycle stages that have occurred
+  await db.decisionTraceEvent.createMany({
+    data: [
+      {
+        decisionId: id,
+        stage: 'recommendation-made',
+        payload: JSON.stringify({
+          recommendation: body.aiRecommendation,
+          predictedAltDelta: body.aiPredictedAltDelta,
+          confidence: body.aiConfidence,
+        }),
+        source: 'ai-core',
+      },
+      {
+        decisionId: id,
+        stage: 'human-decided',
+        payload: JSON.stringify({
+          decision: body.humanDecision,
+          rationale: body.humanRationale ?? null,
+          rejectionReason,
+        }),
+        source: 'human',
+      },
+    ],
+  })
+
   return NextResponse.json({
     ok: true,
     entry: rowToEntry(created),
-    message: `Decision ${id} recorded. Outcome is pending — PATCH /api/v1/decision-ledger with { id, actualAltDelta } when the session data comes in. The lesson will be derived mechanically at that time.`,
+    message: `Decision ${id} recorded. Outcome is pending — PATCH /api/v1/decision-ledger with { id, actualAltDelta } when the session data comes in. The lesson will be derived mechanically at that time. Trace events recorded: recommendation-made, human-decided. View full lifecycle at /api/v1/decision-ledger/${id}/trace.`,
   })
 }
 
@@ -205,12 +231,47 @@ export async function PATCH(req: Request) {
     },
   })
 
+  // Record trace events for the outcome + lesson derivation
+  await db.decisionTraceEvent.createMany({
+    data: [
+      {
+        decisionId: body.id,
+        stage: 'outcome-measured',
+        payload: JSON.stringify({
+          actualAltDelta,
+          predictionError,
+          measuredAt: new Date().toISOString(),
+        }),
+        source: 'pipeline',
+      },
+      {
+        decisionId: body.id,
+        stage: 'lesson-derived',
+        payload: JSON.stringify({
+          lesson,
+          source: 'human-asserted',
+        }),
+        source: 'governance',
+      },
+      {
+        decisionId: body.id,
+        stage: 'promoted',
+        payload: JSON.stringify({
+          fromSourceType: 'simulated',
+          toSourceType: 'observed',
+          evidence: `Outcome measured: actual ${actualAltDelta} vs predicted ${existing.aiPredictedAltDelta}`,
+        }),
+        source: 'governance',
+      },
+    ],
+  })
+
   return NextResponse.json({
     ok: true,
     entry: rowToEntry(updated),
     derivedLesson: lesson,
     lessonSource: 'human-asserted' as const,
-    message: `Outcome recorded for ${body.id}. predictionError=${predictionError.toFixed(2)} min. Lesson derived mechanically — never AI-authored (Invariant 7). sourceType promoted: simulated → observed.`,
+    message: `Outcome recorded for ${body.id}. predictionError=${predictionError.toFixed(2)} min. Lesson derived mechanically — never AI-authored (Invariant 7). sourceType promoted: simulated → observed. Trace events recorded: outcome-measured, lesson-derived, promoted. View lifecycle at /api/v1/decision-ledger/${body.id}/trace.`,
   })
 }
 

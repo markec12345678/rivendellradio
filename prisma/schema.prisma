@@ -244,6 +244,38 @@ model DecisionLedgerEntry {
 }
 
 // ============================================================================
+// Phase 31b: Decision Traceability — lifecycle events per decision ID.
+// A decision (DEC-XXXXX) flows through the system: Planner → Tools →
+// Reasoning → Recommendation → Human → Outcome → Chronicle. Each stage
+// is recorded as a trace event, so the full life of any decision can be
+// reconstructed for audit.
+//
+// See: src/lib/governance/trace.ts
+// ============================================================================
+
+/// A single lifecycle event for a Decision Ledger entry.
+/// Multiple events per decision ID, ordered by timestamp.
+model DecisionTraceEvent {
+  id          Int      @id @default(autoincrement())
+  decisionId  String   // references DecisionLedgerEntry.id (not a FK because
+                       // trace events may be recorded before the ledger entry
+                       // is created, e.g. during planning)
+  stage       String   // planner-invoked | tools-called | reasoning-produced |
+                       // recommendation-made | human-decided | outcome-measured |
+                       // chronicle-recorded | calibration-updated
+  timestamp   DateTime @default(now())
+  /// JSON payload — stage-specific data (tools called, reasoning summary,
+  /// human rationale, measured delta, chronicle entry text, etc.)
+  payload     String
+  /// Provenance of this event — who/what produced it.
+  source      String   // ai-core | human | pipeline | governance
+
+  @@index([decisionId])
+  @@index([stage])
+  @@index([timestamp])
+}
+
+// ============================================================================
 // Phase 3: EAS/CAP Compliance (FCC 47 CFR Part 11 + OASIS CAP 1.2)
 // ============================================================================
 

@@ -12,6 +12,11 @@ import {
   assessAutonomy,
   LEVEL_DESCRIPTIONS,
 } from '@/lib/governance/autonomy'
+import {
+  assessStability,
+  computeStabilityProfile,
+  applyStabilityMultiplier,
+} from '@/lib/governance/stability'
 
 export const dynamic = 'force-dynamic'
 
@@ -158,6 +163,27 @@ export async function GET() {
             : 'Mature — real data dominates',
   }
 
+  // 7b. Temporal stability — how stable are the system's findings?
+  // Each ledger entry with a measured outcome is a "finding". Its stability
+  // is assessed by how long ago it was confirmed (measuredAt) and how many
+  // confirmations exist (currently 1 per entry — future iterations would
+  // correlate findings across entries).
+  const stabilityAssessments = ledgerEntries
+    .filter((e) => e.actualAltDelta !== undefined && e.measuredAt)
+    .map((e) => {
+      // For now, each ledger entry is one confirmation. A future iteration
+      // would group entries by finding (e.g. "Foo Fighters at 7:15" across
+      // multiple days) and count confirmations across the group.
+      const firstConfirmedAt = e.measuredAt!
+      const lastConfirmedAt = e.measuredAt!
+      return assessStability({
+        lastConfirmedAt,
+        firstConfirmedAt,
+        confirmationCount: 1,
+      })
+    })
+  const stabilityProfile = computeStabilityProfile(stabilityAssessments)
+
   // 8. Overall trust summary
   const trustSummary = computeTrustSummary({
     realSessions,
@@ -165,6 +191,7 @@ export async function GET() {
     calibration,
     epistemicViolationCount,
     autonomy,
+    stabilityProfile,
   })
 
   return NextResponse.json({
@@ -200,6 +227,9 @@ export async function GET() {
       : null,
 
     memoryMaturity,
+
+    // Sprint 31b: temporal stability
+    stability: stabilityProfile,
   })
 }
 
@@ -209,6 +239,7 @@ function computeTrustSummary(args: {
   calibration: ReturnType<typeof computeCalibration>
   epistemicViolationCount: number
   autonomy: ReturnType<typeof assessAutonomy>
+  stabilityProfile: ReturnType<typeof computeStabilityProfile>
 }): {
   /** A single 0-100 score. NOT a feeling — computed from the components. */
   trustScore: number
@@ -218,16 +249,18 @@ function computeTrustSummary(args: {
   summary: string
 } {
   // Components and weights — sum to 1.0
-  //   Real data existence     0.30 — without real data, nothing else matters
-  //   Calibration verdict     0.25 — is the AI's confidence honest?
-  //   Acceptance rate          0.20 — do humans actually accept the AI?
+  //   Real data existence     0.25 — without real data, nothing else matters
+  //   Calibration verdict     0.20 — is the AI's confidence honest?
+  //   Acceptance rate          0.15 — do humans actually accept the AI?
   //   Prediction accuracy      0.15 — is the AI right?
+  //   Temporal stability       0.15 — has the AI's knowledge held over time?
   //   Epistemic cleanliness    0.10 — does the system obey its own rules?
   const weights = {
-    realData: 0.30,
-    calibration: 0.25,
-    acceptance: 0.20,
+    realData: 0.25,
+    calibration: 0.20,
+    acceptance: 0.15,
     prediction: 0.15,
+    stability: 0.15,
     epistemic: 0.10,
   }
 
@@ -252,6 +285,10 @@ function computeTrustSummary(args: {
     ? 0
     : Math.max(0, 1 - (args.ledgerStats.meanAbsPredictionError / 0.30))
 
+  // Stability score — the average multiplier from the stability profile.
+  // 0 if no findings, else the averageMultiplier (0.5 ephemeral → 1.0 entrenched)
+  const stabilityScore = args.stabilityProfile.averageMultiplier
+
   // Epistemic score — 0 if any violations, else 1
   const epistemicScore = args.epistemicViolationCount === 0 ? 1 : 0
 
@@ -260,6 +297,7 @@ function computeTrustSummary(args: {
     { name: 'Confidence calibration', score: calibrationScore, weight: weights.calibration, contribution: calibrationScore * weights.calibration },
     { name: 'Human acceptance rate', score: acceptanceScore, weight: weights.acceptance, contribution: acceptanceScore * weights.acceptance },
     { name: 'Prediction accuracy', score: predictionScore, weight: weights.prediction, contribution: predictionScore * weights.prediction },
+    { name: 'Temporal stability', score: stabilityScore, weight: weights.stability, contribution: stabilityScore * weights.stability },
     { name: 'Epistemic cleanliness', score: epistemicScore, weight: weights.epistemic, contribution: epistemicScore * weights.epistemic },
   ]
 

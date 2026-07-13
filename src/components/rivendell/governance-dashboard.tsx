@@ -78,6 +78,13 @@ interface GovernanceData {
     yearsOfOperation: number
     phase: string
   }
+  stability: {
+    total: number
+    byTier: Record<string, number>
+    averageMultiplier: number
+    dominantTier: string
+    summary: string
+  }
 }
 
 export function GovernanceDashboard() {
@@ -197,6 +204,15 @@ export function GovernanceDashboard() {
           phase={mm.phase}
           realPercent={es?.systemState.realPercent ?? 0}
           simulatedPercent={es?.systemState.simulatedPercent ?? 100}
+        />
+
+        {/* === TEMPORAL STABILITY === */}
+        <StabilitySection
+          total={data.stability.total}
+          byTier={data.stability.byTier}
+          averageMultiplier={data.stability.averageMultiplier}
+          dominantTier={data.stability.dominantTier}
+          summary={data.stability.summary}
         />
 
         {/* === EPISTEMIC STATE === */}
@@ -693,6 +709,97 @@ function MemoryMaturitySection({
             {ledgerWithOutcome}
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function StabilitySection({
+  total,
+  byTier,
+  averageMultiplier,
+  dominantTier,
+  summary,
+}: {
+  total: number
+  byTier: Record<string, number>
+  averageMultiplier: number
+  dominantTier: string
+  summary: string
+}) {
+  const tiers = ['ephemeral', 'recent', 'established', 'entrenched'] as const
+  const tierColors: Record<string, string> = {
+    ephemeral: 'bg-amber-500/40',
+    recent: 'bg-blue-500/40',
+    established: 'bg-emerald-500/50',
+    entrenched: 'bg-primary',
+  }
+  const tierText: Record<string, string> = {
+    ephemeral: 'text-amber-400',
+    recent: 'text-blue-400',
+    established: 'text-emerald-400',
+    entrenched: 'text-primary',
+  }
+
+  return (
+    <div className="rounded-md border border-border/60 bg-background/40 p-3">
+      <div className="mb-2 flex items-center gap-2">
+        <Clock className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+        <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
+          Temporal Stability
+        </span>
+        <Badge variant="outline" className="ml-auto text-[9px] text-muted-foreground">
+          {total} finding{total === 1 ? '' : 's'}
+        </Badge>
+      </div>
+
+      {/* The 4-tier bar */}
+      <div className="mb-3">
+        <div className="mb-1 flex items-center justify-between text-[10px] text-muted-foreground">
+          <span>Stability distribution</span>
+          <span className="font-mono text-foreground">
+            avg multiplier: {averageMultiplier.toFixed(2)}
+          </span>
+        </div>
+        {total === 0 ? (
+          <div className="h-3 rounded bg-secondary/30 text-center text-[9px] leading-3 text-muted-foreground">
+            no findings yet
+          </div>
+        ) : (
+          <div className="flex h-3 overflow-hidden rounded bg-secondary/30">
+            {tiers.map((tier) => {
+              const count = byTier[tier] ?? 0
+              const pct = total > 0 ? (count / total) * 100 : 0
+              return pct > 0 ? (
+                <div
+                  key={tier}
+                  className={cn('transition-all', tierColors[tier])}
+                  style={{ width: `${pct}%` }}
+                  title={`${tier}: ${count} (${pct.toFixed(0)}%)`}
+                />
+              ) : null
+            })}
+          </div>
+        )}
+        <div className="mt-1 flex justify-between text-[9px] text-muted-foreground">
+          {tiers.map((tier) => (
+            <span key={tier} className={cn('font-mono', byTier[tier] ? tierText[tier] : 'text-muted-foreground/50')}>
+              {tier}: {byTier[tier] ?? 0}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Tier explanations — always visible so operators learn the ladder */}
+      <div className="mb-2 space-y-0.5 text-[9px] text-muted-foreground">
+        <div><span className={tierText.ephemeral}>●</span> ephemeral: &lt;7 days or unconfirmed (×0.5)</div>
+        <div><span className={tierText.recent}>●</span> recent: 7–90 days, ≥2 confirmations (×0.7)</div>
+        <div><span className={tierText.established}>●</span> established: 90–365 days, ≥5 confirmations (×0.85)</div>
+        <div><span className={tierText.entrenched}>●</span> entrenched: &gt;365 days, ≥10 confirmations (×1.0)</div>
+      </div>
+
+      <div className="text-[10px] leading-relaxed text-muted-foreground">
+        {summary}
       </div>
     </div>
   )

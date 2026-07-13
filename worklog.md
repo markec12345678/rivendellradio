@@ -4146,3 +4146,78 @@ Stage Summary:
 - Invariant 5 (Honest Confidence) upheld: aiConfidence validation [0,1], calibration detects overconfidence
 - Test entry počiščen — ledger pristen, čaka na prvo realno odločitev
 - "Trust is not granted — it is earned through accumulated evidence."
+
+---
+Task ID: 37
+Agent: lead
+Task: Sprint 31b — Decision Traceability + Temporal Stability. User identified two strengthenings: (1) Decision ID that follows a decision through the entire system (Planner → Tools → Reasoning → Recommendation → Human → Outcome → Chronicle), (2) Temporal stability ("0.82 stable for 3 days" ≠ "0.82 stable for 18 months"). Both are pure strengthenings of the governance layer, not new AI capabilities.
+
+Work Log:
+- Dodal DecisionTraceEvent model v prisma/schema.prisma:
+  - id (autoincrement), decisionId, stage, timestamp, payload (JSON), source
+  - 3 indeksi: decisionId, stage, timestamp
+  - db:push uspešen
+- Zgradil src/lib/governance/trace.ts (~250 vrstic):
+  - 13 DecisionStage types: planner-invoked, tools-called, reasoning-produced, recommendation-made, human-decided, outcome-measured, chronicle-recorded, calibration-updated, autonomy-reassessed, lesson-derived, quarantined, promoted, deprecated
+  - TracePayload union — 13 stage-specific payload interfaces
+  - TraceSource: ai-core | human | pipeline | governance
+  - STAGE_ORDER — canonical lifecycle order
+  - TERMINAL_STAGES — chronicle-recorded, quarantined, deprecated
+  - reconstructLifecycle() — reconstructs full lifecycle from events: stagesCompleted, stagesPending, isComplete, totalDurationMs, summary
+  - serializeTraceEvent() + deserializeTraceEvent() — JSON payload handling
+- Zgradil /api/v1/decision-ledger/[id]/trace/route.ts (~130 vrstic):
+  - GET — full lifecycle reconstruction + ledger entry context + stage descriptions
+  - POST — append new trace event (validates stage + source enums)
+  - Trace events may be recorded BEFORE ledger entry exists (e.g. during planning)
+- Zgradil src/lib/governance/stability.ts (~220 vrstic):
+  - StabilityTier: ephemeral | recent | established | entrenched
+  - TIER_THRESHOLDS: 7 days / 90 days / 365 days, 2/5/10 confirmations
+  - STABILITY_MULTIPLIERS: ephemeral=0.5, recent=0.7, established=0.85, entrenched=1.0
+  - assessStability() — computes tier from lastConfirmedAt + confirmationCount + spanDays
+  - computeStabilityProfile() — aggregate distribution + averageMultiplier + dominantTier
+  - applyStabilityMultiplier() — effective confidence = stored confidence × multiplier
+  - "A finding with 0 confirmations is ephemeral no matter how confident the AI claims to be."
+- Integriral trace events v decision-ledger POST:
+  - recommendation-made (source: ai-core)
+  - human-decided (source: human)
+- Integriral trace events v decision-ledger PATCH:
+  - outcome-measured (source: pipeline)
+  - lesson-derived (source: governance)
+  - promoted (source: governance) — simulated → observed
+- Integriral stability v governance endpoint:
+  - computeStabilityProfile() iz ledger entries z measured outcomes
+  - Trust Score sedaj 6 komponent (prej 5): realData 0.25, calibration 0.20, acceptance 0.15, prediction 0.15, stability 0.15, epistemic 0.10
+  - stability score = averageMultiplier iz stabilityProfile
+- Dodal StabilitySection v governance-dashboard.tsx:
+  - 4-tier distribution bar (ephemeral/recent/established/entrenched z barvami)
+  - average multiplier display
+  - tier legend z multipliers (×0.5, ×0.7, ×0.85, ×1.0)
+  - summary text
+- Lint: čist (0 errors, 0 warnings)
+
+BROWSER VERIFICATION (single session):
+- Root page: HTTP 200
+- Governance endpoint: Trust Score 0/100, 6 components (vse na 0), stability "no findings"
+- POST decision-ledger → DEC-00001 created (sourceType: simulated), 2 trace events recorded
+- PATCH outcome (1.4 vs 1.5): predictionError=-0.10, sourceType promoted simulated→observed, 3 more trace events
+- GET /api/v1/decision-ledger/DEC-00001/trace:
+  - 5 events total
+  - Stages completed: recommendation-made → human-decided → outcome-measured → lesson-derived (+ promoted)
+  - Stages pending: planner-invoked, tools-called, reasoning-produced, chronicle-recorded, calibration-updated, autonomy-reassessed
+  - isComplete: false (chronicle-recorded + calibration-updated še manjkata)
+  - Summary: "Decision DEC-00001: 5 event(s) over 0s. Stages: recommendation-made → human-decided → outcome-measured → lesson-derived."
+- Governance after ledger entry: Trust Score 32/100, stability total=1, dominantTier=ephemeral, avgMultiplier=0.5
+  - (1 finding z 1 confirmation, <7 days = ephemeral — pravilno!)
+- Test data počiščen: 5 trace events + 1 ledger entry deleted
+
+Stage Summary:
+- Sprint 31b Decision Traceability + Temporal Stability: COMPLETE
+- 4 nove datoteke: trace.ts (~250), stability.ts (~220), [id]/trace/route.ts (~130), prisma schema extension (~30)
+- Decision ID (DEC-XXXXX) sedaj spremlja odločitev skozi ves sistem — full lifecycle audit trail
+- 13 lifecycle stages, 4 terminal stages, reconstruction function
+- Temporal stability: 4 tiers z multipliers (0.5 → 1.0), thresholds za 7/90/365 days + 2/5/10 confirmations
+- Trust Score sedaj 6 komponent (stability added z weight 0.15, ostali proportionally zmanjšani)
+- Stability modulira confidence: effective = stored × multiplier (ephemeral 0.82 → effective 0.41)
+- "Long-term stability is itself evidence. A finding that has held for 18 months is qualitatively different from one measured once last week."
+- Trace events se samodejno snemajo v POST/PATCH — ni treba klicati posebej
+- Test data počiščen — ledger + trace events prazni, čakajo na prvo realno odločitev
