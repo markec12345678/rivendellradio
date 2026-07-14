@@ -53,3 +53,10 @@ prompt
 server.log
 # Skills directory
 /skills/
+# Runtime generated files (not source code)
+public/voice-links/*.wav
+public/voice-links/*.mp3
+playlists/*.m3u
+playlists/*.json
+test-music/*.mp3
+test-music/*.wav
