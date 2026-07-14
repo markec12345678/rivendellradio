@@ -51,6 +51,8 @@ export interface TTSResult {
     mapped: boolean
     note?: string
   }
+  audioProcessing?: string[]
+  bedMixed?: boolean
 }
 
 export interface TTSOptions {
@@ -60,6 +62,12 @@ export interface TTSOptions {
   fileName?: string
   language?: string // ISO 639-1 (en, de, fr, hr, sr, ...)
   provider?: 'piper' | 'gtts' | 'zai' | 'pyttsx3' | 'auto'
+  /** Run ffmpeg post-processing (noise reduction, compressor, EQ, loudnorm). Default: true */
+  postProcess?: boolean
+  /** Path to music bed file for voice-over-music mixing */
+  musicBedPath?: string
+  /** Music bed volume (0.0-1.0, default 0.15 = quiet background) */
+  bedVolume?: number
 }
 
 /**
@@ -392,9 +400,39 @@ export async function synthesizeSpeech(
     }
   } catch {}
 
+  // Post-process the audio with ffmpeg (noise reduction, compressor, EQ, loudnorm)
+  // This makes TTS sound professional — closes the "audio production quality" gap for free.
+  let processedAudioPath = audioPath
+  let processedAudioUrl = `/voice-links/${fileName}`
+  const processing: string[] = []
+  let bedMixed = false
+
+  if (options.postProcess !== false) {
+    try {
+      const { processAudio } = await import('./audio-processor')
+      const processed = await processAudio(audioPath, {
+        noiseReduction: true,
+        compressor: true,
+        eq: true,
+        loudnessNormalize: true,
+        musicBedPath: options.musicBedPath,
+        bedVolume: options.bedVolume ?? 0.15,
+        outputDir,
+        fileName: `processed-${fileName}`,
+      })
+      processedAudioPath = processed.outputPath
+      processedAudioUrl = processed.outputUrl
+      processing.push(...processed.processing)
+      bedMixed = processed.bedMixed
+    } catch {
+      // If post-processing fails, use the raw TTS output
+      processing.push('post-processing skipped (ffmpeg error)')
+    }
+  }
+
   return {
-    audioPath,
-    audioUrl: `/voice-links/${fileName}`,
+    audioPath: processedAudioPath,
+    audioUrl: processedAudioUrl,
     durationMs,
     format: 'wav',
     voice:
@@ -412,6 +450,8 @@ export async function synthesizeSpeech(
         ? `${rawLanguage} not supported by gTTS — used ${language} (closest Slavic language)`
         : undefined,
     },
+    audioProcessing: processing,
+    bedMixed,
   }
 }
 
