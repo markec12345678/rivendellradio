@@ -43,7 +43,7 @@ export interface TTSResult {
   format: 'wav'
   voice: string
   charCount: number
-  provider: 'gtts' | 'zai' | 'pyttsx3'
+  provider: 'piper' | 'gtts' | 'zai' | 'pyttsx3'
   providerLabel: string
   language: {
     requested: string
@@ -59,7 +59,7 @@ export interface TTSOptions {
   outputDir?: string
   fileName?: string
   language?: string // ISO 639-1 (en, de, fr, hr, sr, ...)
-  provider?: 'gtts' | 'zai' | 'pyttsx3' | 'auto'
+  provider?: 'piper' | 'gtts' | 'zai' | 'pyttsx3' | 'auto'
 }
 
 /**
@@ -100,6 +100,72 @@ export const SUPPORTED_SLAVIC_LANGUAGES = [
   { code: 'uk', name: 'Ukrainian (Українська)' },
   { code: 'bg', name: 'Bulgarian (Български)' },
 ] as const
+
+/**
+ * Piper TTS voice model paths.
+ *
+ * Piper uses ONNX voice models downloaded from HuggingFace.
+ * Models are stored in /data/piper-voices/ (or PIPER_VOICES_DIR env var).
+ *
+ * Download models:
+ *   mkdir -p /data/piper-voices
+ *   cd /data/piper-voices
+ *   # English (natural, female)
+ *   curl -LO https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx
+ *   curl -LO https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx.json
+ *   # Serbian (natural, for Slavic text)
+ *   curl -LO https://huggingface.co/rhasspy/piper-voices/resolve/main/sr/sr_RS/serbski_institut/medium/sr_RS-serbski_institut-medium.onnx
+ *   curl -LO https://huggingface.co/rhasspy/piper-voices/resolve/main/sr/sr_RS/serbski_institut/medium/sr_RS-serbski_institut-medium.onnx.json
+ */
+const PIPER_VOICES_DIR = process.env.PIPER_VOICES_DIR || '/data/piper-voices'
+
+/**
+ * Map language codes to Piper voice model filenames.
+ */
+const PIPER_VOICE_MAP: Record<string, string> = {
+  en: 'en_US-lessac-medium.onnx',
+  hr: 'sr_RS-serbski_institut-medium.onnx', // Croatian → Serbian (closest Piper voice)
+  sr: 'sr_RS-serbski_institut-medium.onnx',
+  bs: 'sr_RS-serbski_institut-medium.onnx', // Bosnian → Serbian
+  sl: 'sr_RS-serbski_institut-medium.onnx', // Slovenian → Serbian (closest)
+}
+
+/**
+ * Provider 0: Piper TTS — BEST quality, fully offline, free, neural voice
+ *
+ * Piper is a fast, local neural TTS system. It produces the most natural-
+ * sounding speech of all free TTS engines — comparable to commercial
+ * systems like ElevenLabs (though not identical).
+ *
+ * - 100% offline (no internet needed after model download)
+ * - Neural voice quality (not robotic)
+ * - Fast (runs on CPU, no GPU needed)
+ * - Free and open source (Apache 2.0)
+ * - Supports 30+ languages including Serbian (for Slavic text)
+ *
+ * Requires: pip install piper-tts
+ * Requires: voice models downloaded to PIPER_VOICES_DIR
+ */
+async function synthesizeWithPiper(
+  text: string,
+  outputPath: string,
+  language: string = 'en',
+): Promise<void> {
+  const voiceModel = PIPER_VOICE_MAP[language] || PIPER_VOICE_MAP['en']
+  const modelPath = join(PIPER_VOICES_DIR, voiceModel)
+
+  // Check if model exists
+  if (!existsSync(modelPath)) {
+    throw new Error(
+      `Piper voice model not found: ${modelPath}. ` +
+        `Download from https://huggingface.co/rhasspy/piper-voices ` +
+        `or set PIPER_VOICES_DIR env var.`,
+    )
+  }
+
+  // Piper reads text from stdin, writes WAV to output file
+  await execAsync(`echo "${text.replace(/"/g, '\\"')}" | piper -m "${modelPath}" -f "${outputPath}"`)
+}
 
 /**
  * Split text into chunks under 1024 characters, respecting sentence boundaries.
@@ -257,16 +323,22 @@ export async function synthesizeSpeech(
   const charCount = text.length
   const errors: string[] = []
 
-  // Provider chain
+  // Provider chain — best quality first
   const providers: Array<{
-    id: 'gtts' | 'zai' | 'pyttsx3'
+    id: 'piper' | 'gtts' | 'zai' | 'pyttsx3'
     label: string
     run: () => Promise<void>
     skip?: boolean
   }> = [
     {
+      id: 'piper',
+      label: 'Piper TTS (BEST — neural, offline, natural human voice)',
+      run: () => synthesizeWithPiper(text, audioPath, language),
+      skip: requestedProvider !== 'auto' && requestedProvider !== 'piper',
+    },
+    {
       id: 'gtts',
-      label: 'Google Translate TTS (most natural, free)',
+      label: 'Google Translate TTS (natural, free, online)',
       run: () => synthesizeWithGTTS(text, audioPath, language),
       skip: requestedProvider !== 'auto' && requestedProvider !== 'gtts',
     },
@@ -325,7 +397,10 @@ export async function synthesizeSpeech(
     audioUrl: `/voice-links/${fileName}`,
     durationMs,
     format: 'wav',
-    voice: usedProvider === 'gtts' ? `google-${language}` : usedProvider === 'zai' ? 'tongtong' : 'system',
+    voice:
+      usedProvider === 'piper' ? `piper-${language}` :
+      usedProvider === 'gtts' ? `google-${language}` :
+      usedProvider === 'zai' ? 'tongtong' : 'system',
     charCount,
     provider: usedProvider,
     providerLabel: usedLabel,
