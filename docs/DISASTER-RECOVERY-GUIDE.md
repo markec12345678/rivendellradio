@@ -168,3 +168,176 @@ git push origin main
 | Station Manager | Janez (+386 41 ...) | — | CTO |
 | Transmitter Vendor | RVR Support | — | — |
 | ISP/Network | Telekom SI | — | — |
+
+---
+
+## Scenario: "Server died at 03:00"
+
+The most common production failure. The server crashes (hardware, kernel panic, OOM kill, power loss). This is the recovery procedure.
+
+### What happened
+
+At 03:00, the server died. The backup service was scheduled to run at 03:00 — it may or may not have completed. Docker restarts the containers automatically when the server comes back (restart: unless-stopped).
+
+### Step 1: Assess (5 minutes)
+
+```bash
+# Check if server is back
+ssh user@your-server
+
+# Check if Docker is running
+docker ps
+
+# Check if Rock 88.7 containers are up
+docker compose -f docker-compose.production.yml ps
+```
+
+**If containers are up:**
+```bash
+# Check if the web app is healthy
+curl http://localhost:3000/api/v1/health
+
+# If healthy — verify data integrity
+curl http://localhost:3000/api/v1/governance | python3 -c "import json,sys; d=json.load(sys.stdin); print(f'Ledger entries: {d[\"ledger\"][\"total\"]}')"
+```
+
+**If containers are down:**
+```bash
+docker compose -f docker-compose.production.yml up -d
+# Wait for health check
+sleep 30
+curl http://localhost:3000/api/v1/health
+```
+
+### Step 2: Verify data (5 minutes)
+
+```bash
+# Check listener sessions
+curl http://localhost:3000/api/v1/listener-pipeline | python3 -c "import json,sys; d=json.load(sys.stdin); print(f'Sessions: {d[\"status\"][\"totalSessions\"]}')"
+
+# Check decision ledger
+curl http://localhost:3000/api/v1/decision-ledger | python3 -c "import json,sys; d=json.load(sys.stdin); print(f'Decisions: {d[\"stats\"][\"total\"]}')"
+
+# Check epistemic state
+curl http://localhost:3000/api/v1/epistemic-state | python3 -c "import json,sys; d=json.load(sys.stdin); print(f'Violations: {sum(m[\"violationCount\"] for m in d[\"modules\"].values())}')"
+```
+
+If all three return expected values, the system recovered successfully. No further action needed.
+
+### Step 3: Restore from backup (if data is corrupted)
+
+Only if Step 2 shows missing or corrupted data.
+
+```bash
+# List available backups
+docker compose -f docker-compose.production.yml run --rm backup ls -la /backups
+
+# Find the most recent backup
+LATEST=$(docker compose -f docker-compose.production.yml run --rm backup ls /backups | grep rock887_ | sort | tail -1)
+echo "Latest backup: $LATEST"
+
+# Stop the web app
+docker compose -f docker-compose.production.yml stop web
+
+# Restore the database
+docker compose -f docker-compose.production.yml run --rm backup sh -c "gunzip -c /backups/$LATEST > /data/custom.db"
+
+# Restart
+docker compose -f docker-compose.production.yml up -d
+sleep 30
+
+# Verify
+curl http://localhost:3000/api/v1/health
+```
+
+### Step 4: Record the incident
+
+Write an entry in `docs/STATION-CHRONICLE.md`:
+
+```
+DATE: 2026-XX-XX
+EVENT: Server crash at 03:00
+DOWNTIME: X minutes
+DATA LOSS: 0 (backup was current) / X sessions lost
+RECOVERY: Restored from backup YYYYMMDD_HHMMSS
+LESSON: [what caused the crash, what to prevent]
+```
+
+### Recovery Checklist
+
+- [ ] Server is back online
+- [ ] Docker service is running
+- [ ] Rock 88.7 containers are up (`docker compose ps`)
+- [ ] Health check passes (`curl /api/v1/health`)
+- [ ] Listener sessions count is correct
+- [ ] Decision ledger count is correct
+- [ ] Epistemic state has no new violations
+- [ ] Backup service is running
+- [ ] Icecast2 adapter is sending sessions again
+- [ ] Incident recorded in Station Chronicle
+
+---
+
+## Restore Test (Monthly)
+
+Run this test once a month to verify backups are restorable.
+
+### Procedure
+
+1. **Spin up a test instance:**
+   ```bash
+   docker compose -f docker-compose.production.yml -p rock887-test up -d
+   ```
+
+2. **Restore a backup to the test instance:**
+   ```bash
+   # Get the latest backup
+   LATEST=$(ls /path/to/backups/rock887_*.db.gz | sort | tail -1)
+
+   # Copy to test instance volume
+   docker cp $LATEST rock887-test-web:/tmp/backup.db.gz
+
+   # Restore in test container
+   docker exec rock887-test-web sh -c "gunzip -c /tmp/backup.db.gz > /app/db/custom.db"
+   ```
+
+3. **Verify data:**
+   ```bash
+   curl http://localhost:3001/api/v1/governance  # test instance on different port
+   ```
+
+4. **Tear down test instance:**
+   ```bash
+   docker compose -f docker-compose.production.yml -p rock887-test down -v
+   ```
+
+### Pass Criteria
+
+- [ ] Backup file exists and is non-empty
+- [ ] Restore completes without errors
+- [ ] Test instance starts and responds to health check
+- [ ] Data counts match production (within 24h of backup time)
+
+### If restore fails
+
+- Check if backup file is corrupt: `gzip -t backup.db.gz`
+- Check if SQLite database is valid: `sqlite3 backup.db "PRAGMA integrity_check;"`
+- If backup is corrupt, investigate why (disk full, concurrent write, etc.)
+- Keep the last 3 known-good backups to ensure recoverability
+
+---
+
+## Backup Strategy Summary
+
+| Backup | Frequency | Retention | Location |
+|--------|-----------|-----------|----------|
+| SQLite database | Daily at 03:00 | 30 days | Docker volume `rock887-backups` |
+| Configuration (.env) | On change | Indefinite (git) | Git repository |
+| Icecast2 config | On change | Indefinite (git) | Git repository |
+
+**RPO (Recovery Point Objective):** Up to 24 hours (daily backup)
+**RTO (Recovery Time Objective):** 15 minutes (restore + restart)
+
+For lower RPO, consider:
+- Litestream (continuous SQLite replication to S3)
+- PostgreSQL with WAL streaming (for high-traffic deployments)

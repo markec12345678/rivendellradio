@@ -1,0 +1,112 @@
+# ============================================================================
+# docker-compose.production.yml — Rock 88.7 Production Deployment
+#
+# One command to run Rock 88.7 in production:
+#   docker compose -f docker-compose.production.yml up -d
+#
+# Includes:
+#   - Rock 88.7 web application
+#   - Broadcast feed WebSocket service
+#   - SQLite database (persistent volume)
+#   - Automatic backups (daily)
+#   - Log rotation
+#   - Health monitoring
+#
+# Prerequisites:
+#   - Docker + Docker Compose installed
+#   - .env file created (copy from .env.example)
+#   - Ports 3000 (web) and 3003 (websocket) available
+#
+# See: docs/INSTALL-IN-15-MINUTES.md
+# ============================================================================
+
+name: rock887-production
+
+services:
+  # ============================================================================
+  # Rock 88.7 Web Application (Next.js)
+  # ============================================================================
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rock887-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/db/custom.db
+      - LISTENER_HASH_SALT=${LISTENER_HASH_SALT}
+      - INTERNAL_API_BASE=http://localhost:3000
+      - BROADCAST_FEED_URL=http://feed:3003
+      - NEXT_TELEMETRY_DISABLED=1
+    volumes:
+      - rock887-db:/app/db
+      - rock887-logs:/app/logs
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://localhost:3000/api/v1/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    depends_on:
+      - feed
+
+  # ============================================================================
+  # Broadcast Feed WebSocket Service
+  # ============================================================================
+  feed:
+    build:
+      context: ./mini-services/broadcast-feed
+      dockerfile: Dockerfile
+    container_name: rock887-feed
+    restart: unless-stopped
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=production
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://localhost:3003/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ============================================================================
+  # Automatic Database Backup (daily at 03:00)
+  # ============================================================================
+  backup:
+    image: alpine:3.19
+    container_name: rock887-backup
+    restart: unless-stopped
+    environment:
+      - BACKUP_SCHEDULE=0 3 * * *
+      - BACKUP_RETENTION_DAYS=30
+    volumes:
+      - rock887-db:/data:ro
+      - rock887-backups:/backups
+      - ./scripts/backup.sh:/backup.sh:ro
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+volumes:
+  rock887-db:
+    driver: local
+  rock887-logs:
+    driver: local
+  rock887-backups:
+    driver: local
