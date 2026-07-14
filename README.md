@@ -239,7 +239,50 @@ src/
 
 ---
 
-## Getting Started
+## Production Deployment
+
+### Quick start (15 minutes, no developer required)
+
+See [`docs/INSTALL-IN-15-MINUTES.md`](docs/INSTALL-IN-15-MINUTES.md) for the complete guide.
+
+```bash
+git clone https://github.com/markec12345678/rivendellradio.git
+cd rivendellradio
+
+# Create .env with LISTENER_HASH_SALT
+echo "LISTENER_HASH_SALT=$(openssl rand -hex 32)" > .env
+echo "DATABASE_URL=file:/app/db/custom.db" >> .env
+
+# Start production stack (web + websocket + automatic backup)
+docker compose -f docker-compose.production.yml up -d --build
+
+# Verify
+curl http://localhost:3000/api/v1/health
+```
+
+### Production hardening
+
+| Document | What it covers |
+|----------|---------------|
+| [Install in 15 Minutes](docs/INSTALL-IN-15-MINUTES.md) | Complete setup guide — no developer required |
+| [Performance & Security Audit](docs/PERFORMANCE-AND-SECURITY-AUDIT.md) | Real benchmarks (API latency, memory) + security scan (0 vulnerabilities, 7 headers) |
+| [Disaster Recovery Guide](docs/DISASTER-RECOVERY-GUIDE.md) | "Server died at 03:00" scenario, restore test, RPO 24h / RTO 15min |
+| [Pilot Deployment Checklist](docs/PILOT-DEPLOYMENT-CHECKLIST.md) | Phase 1–5: from first session to first A/B experiment |
+
+### Measured performance (2026-07-14)
+
+| Endpoint | Latency |
+|----------|---------|
+| `/api/v1/health` | 12 ms |
+| `/api/v1/decision-ledger` | 13 ms |
+| `/api/v1/governance` | 140 ms |
+| `/` (Dashboard page load) | 54 ms |
+
+npm audit: **0 vulnerabilities**. Security headers: **7 configured**. Rate limiting: **implemented**.
+
+---
+
+## Development
 
 ### Prerequisites
 - Node.js 18+ / Bun
@@ -312,18 +355,35 @@ DATABASE_URL=file:./db/custom.db
 
 ## Documentation
 
+### Operational (start here)
+
 | Document | Description |
 |---|---|
+| [Install in 15 Minutes](docs/INSTALL-IN-15-MINUTES.md) | Complete production setup guide — no developer required |
+| [Pilot Deployment Checklist](docs/PILOT-DEPLOYMENT-CHECKLIST.md) | Phase 1–5: from first session to first A/B experiment |
+| [Performance & Security Audit](docs/PERFORMANCE-AND-SECURITY-AUDIT.md) | Real benchmarks + security scan results |
+| [Disaster Recovery Guide](docs/DISASTER-RECOVERY-GUIDE.md) | "Server died at 03:00" scenario, restore test, RPO/RTO |
+
+### Foundational
+
+| Document | Description |
+|---|---|
+| [v1.0 Release Notes](docs/V1.0-RELEASE.md) | The development phase ends. The operational phase begins. |
 | [Epistemological Invariants](docs/EPISTEMOLOGICAL-INVARIANTS.md) | The 7 invariants + 3 enforcement mechanisms — the constitution of the AI system |
-| [Station Chronicle](docs/STATION-CHRONICLE.md) | The story of the station — written by years of operation, not sprints. Currently one entry; awaiting the first real one. |
+| [Station Chronicle](docs/STATION-CHRONICLE.md) | The story of the station — written by years of operation, not sprints |
+| [Operational Review Template](docs/OPERATIONAL-REVIEW-TEMPLATE.md) | The four questions every review answers (30/90/180/365 days) |
+| [Architecture Decision Records](docs/adr/README.md) | 7 ADRs documenting key decisions and their rationale |
+
+### Technical
+
+| Document | Description |
+|---|---|
 | [Architecture Guide](docs/ARCHITECTURE.md) | System architecture, data flow, design principles |
 | [SRE Guide](docs/SRE-GUIDE.md) | SLOs, error budgets, incident response, test harness |
 | [Deployment Guide](docs/DEPLOYMENT-GUIDE.md) | Quick start, Docker, Kubernetes, production checklist |
-| [Plugin SDK Guide](docs/PLUGIN-SDK-GUIDE.md) | Plugin development, permissions, sandbox, publishing |
 | [Broadcast Integration Guide](docs/BROADCAST-INTEGRATION-GUIDE.md) | Hardware integration (RVR, Inovonics, Omnia, AES67, NMOS, GPIO) |
-| [Disaster Recovery Guide](docs/DISASTER-RECOVERY-GUIDE.md) | RTO/RPO targets, failover scenarios, DR drills |
 | [Production Readiness](docs/PRODUCTION-READINESS.md) | What's real vs demo, deployment phases, AI Maturity metrics |
-| [worklog.md](worklog.md) | Full development log (37 sprints, 4000+ lines) |
+| [worklog.md](worklog.md) | Full development log (42 sprints, 4500+ lines) |
 
 ---
 
