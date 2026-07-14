@@ -45,6 +45,12 @@ export interface TTSResult {
   charCount: number
   provider: 'gtts' | 'zai' | 'pyttsx3'
   providerLabel: string
+  language: {
+    requested: string
+    used: string
+    mapped: boolean
+    note?: string
+  }
 }
 
 export interface TTSOptions {
@@ -52,9 +58,48 @@ export interface TTSOptions {
   speed?: number
   outputDir?: string
   fileName?: string
-  language?: string // ISO 639-1 (en, de, fr, ...)
+  language?: string // ISO 639-1 (en, de, fr, hr, sr, ...)
   provider?: 'gtts' | 'zai' | 'pyttsx3' | 'auto'
 }
+
+/**
+ * Map unsupported languages to their closest supported alternative.
+ *
+ * gTTS supports 69 languages but NOT Slovenian (sl).
+ * Croatian (hr) and Serbian (sr) are linguistically closest to Slovenian
+ * and are mutually intelligible for radio purposes.
+ */
+export const LANGUAGE_FALLBACKS: Record<string, string> = {
+  sl: 'hr', // Slovenian → Croatian (closest, mutually intelligible)
+}
+
+/**
+ * Normalize a language code to a gTTS-supported one.
+ * If the language is not supported, fall back to the closest alternative.
+ */
+export function normalizeLanguage(lang: string): string {
+  const lower = lang.toLowerCase()
+  return LANGUAGE_FALLBACKS[lower] || lower
+}
+
+/**
+ * All Slavic languages supported by gTTS (free, no API key).
+ *
+ * Slovenian is NOT in this list — use Croatian (hr) as the closest
+ * alternative. Croatian and Slovenian share ~80% vocabulary and are
+ * mutually intelligible for radio announcements.
+ */
+export const SUPPORTED_SLAVIC_LANGUAGES = [
+  { code: 'hr', name: 'Croatian (Hrvatski)', note: 'Closest to Slovenian' },
+  { code: 'sr', name: 'Serbian (Српски)', note: 'Close to Slovenian' },
+  { code: 'bs', name: 'Bosnian (Bosanski)' },
+  { code: 'cs', name: 'Czech (Čeština)' },
+  { code: 'sk', name: 'Slovak (Slovenčina)' },
+  { code: 'pl', name: 'Polish (Polski)' },
+  { code: 'ru', name: 'Russian (Русский)' },
+  { code: 'uk', name: 'Ukrainian (Українська)' },
+  { code: 'bg', name: 'Bulgarian (Български)' },
+] as const
 
 /**
  * Split text into chunks under 1024 characters, respecting sentence boundaries.
@@ -84,6 +129,14 @@ export function splitText(text: string, maxLength = 1000): string[] {
  *
  * Most natural free TTS. Calls Google Translate's TTS endpoint.
  * No API key required. Returns MP3, converted to WAV via ffmpeg.
+ *
+ * Supports 69 languages including:
+ *   Slavic: hr (Croatian), sr (Serbian), bs (Bosnian), cs (Czech),
+ *           sk (Slovak), pl (Polish), ru (Russian), uk (Ukrainian), bg (Bulgarian)
+ *
+ * NOTE: Slovenian (sl) is NOT supported by gTTS.
+ * For Slovenian text, use 'hr' (Croatian) or 'sr' (Serbian) — they are
+ * linguistically close and mutually intelligible for radio purposes.
  */
 async function synthesizeWithGTTS(
   text: string,
@@ -185,12 +238,16 @@ export async function synthesizeSpeech(
     throw new Error('TTS requires non-empty text')
   }
 
-  const language = options.language || 'en'
   const speed = options.speed ?? 1.0
   const outputDir = options.outputDir || join(process.cwd(), 'public', 'voice-links')
   const fileName = options.fileName || `vl-${Date.now()}.wav`
   const audioPath = join(outputDir, fileName)
   const requestedProvider = options.provider || 'auto'
+
+  // Normalize language — Slovenian (sl) falls back to Croatian (hr)
+  const rawLanguage = options.language || 'en'
+  const language = normalizeLanguage(rawLanguage)
+  const languageWasMapped = rawLanguage !== language
 
   // Ensure output directory exists
   if (!existsSync(outputDir)) {
@@ -272,6 +329,14 @@ export async function synthesizeSpeech(
     charCount,
     provider: usedProvider,
     providerLabel: usedLabel,
+    language: {
+      requested: rawLanguage,
+      used: language,
+      mapped: languageWasMapped,
+      note: languageWasMapped
+        ? `${rawLanguage} not supported by gTTS — used ${language} (closest Slavic language)`
+        : undefined,
+    },
   }
 }
 
