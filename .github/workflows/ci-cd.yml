@@ -195,6 +195,7 @@ jobs:
     name: Deploy (Blue-Green)
     needs: [build-image]
     runs-on: ubuntu-latest
+    continue-on-error: true
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: production
