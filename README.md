@@ -360,8 +360,10 @@ DATABASE_URL=file:./db/custom.db
 | Document | Description |
 |---|---|
 | [Install in 15 Minutes](docs/INSTALL-IN-15-MINUTES.md) | Complete production setup guide — no developer required |
+| [Media Library Guide](docs/MEDIA-LIBRARY-GUIDE.md) | How to import MP3 files, set categories, generate playlists |
 | [Pilot Deployment Checklist](docs/PILOT-DEPLOYMENT-CHECKLIST.md) | Phase 1–5: from first session to first A/B experiment |
 | [Performance & Security Audit](docs/PERFORMANCE-AND-SECURITY-AUDIT.md) | Real benchmarks + security scan results |
+| [Privacy & GDPR](docs/PRIVACY-AND-GDPR.md) | How listener IPs are hashed, salt rotation, data subject rights |
 | [Disaster Recovery Guide](docs/DISASTER-RECOVERY-GUIDE.md) | "Server died at 03:00" scenario, restore test, RPO/RTO |
 
 ### Foundational
