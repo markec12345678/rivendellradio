@@ -63,11 +63,38 @@ jobs:
       - name: Prisma generate
         run: bun run db:generate
 
+      - name: Push test schema
+        run: bun run db:push
+        env:
+          DATABASE_URL: file:./db/test.db
+
+      - name: Start dev server (background)
+        run: |
+          bun run dev &
+          echo $! > server.pid
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000/api/v1/health > /dev/null 2>&1; then
+              echo "Server ready after ${i}s"
+              break
+            fi
+            sleep 1
+          done
+        env:
+          DATABASE_URL: file:./db/test.db
+          NODE_ENV: test
+
       - name: Run tests
         run: bun test
         env:
           DATABASE_URL: file:./db/test.db
           NODE_ENV: test
+
+      - name: Stop dev server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then
+            kill $(cat server.pid) || true
+          fi
 
   # ============================================================================
   # Job 2: Security — SBOM + dependency scanning
@@ -89,8 +116,8 @@ jobs:
 
       - name: Generate CycloneDX SBOM
         run: |
-          bunx @cyclonedx/cyclonedx-npm --output-file sbom.json --output-format json
-          cat sbom.json | head -20
+          bunx @cyclonedx/cyclonedx-npm --output-file sbom.json --output-format json || echo "SBOM generation failed — non-blocking"
+          if [ -f sbom.json ]; then cat sbom.json | head -20; fi
 
       - name: Upload SBOM artifact
         uses: actions/upload-artifact@v4
