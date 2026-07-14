@@ -259,14 +259,92 @@ export async function scanDirectory(dirPath: string): Promise<string[]> {
 }
 
 /**
+ * Detect the version/edition of an asset from its filename or metadata.
+ * Common patterns:
+ *   "everlong-radio-edit.mp3" → version="radio-edit", isRadioEdit=true
+ *   "everlong-clean.mp3" → version="clean-edit", isCleanEdit=true
+ *   "everlong-live.mp3" → version="live"
+ *   "everlong.flac" → version="album" (default)
+ */
+export function detectVersion(
+  filePath: string,
+  metadata: ExtractedMetadata,
+): {
+  version: string
+  isRadioEdit: boolean
+  isCleanEdit: boolean
+} {
+  const name = basename(filePath, extname(filePath)).toLowerCase()
+
+  if (name.includes('radio-edit') || name.includes('radio edit') || name.includes('(radio)')) {
+    return { version: 'radio-edit', isRadioEdit: true, isCleanEdit: false }
+  }
+  if (name.includes('clean') || name.includes('censored')) {
+    return { version: 'clean-edit', isRadioEdit: false, isCleanEdit: true }
+  }
+  if (name.includes('live')) {
+    return { version: 'live', isRadioEdit: false, isCleanEdit: false }
+  }
+  if (name.includes('acoustic')) {
+    return { version: 'acoustic', isRadioEdit: false, isCleanEdit: false }
+  }
+  if (name.includes('extended') || name.includes('remix')) {
+    return { version: 'extended', isRadioEdit: false, isCleanEdit: false }
+  }
+  return { version: 'album', isRadioEdit: false, isCleanEdit: false }
+}
+
+/**
+ * Find or create a Track for the given metadata.
+ *
+ * A Track is the musical entity (the song), independent of file format.
+ * If a Track with the same title+artist already exists, return it.
+ * Otherwise, create a new one.
+ */
+export async function findOrCreateTrack(
+  metadata: ExtractedMetadata,
+): Promise<{ track: any; created: boolean }> {
+  const title = metadata.title
+  const artist = metadata.artist || 'Unknown Artist'
+
+  // Try to find by title + artist
+  const existing = await db.track.findUnique({
+    where: { title_artist: { title, artist } },
+  })
+
+  if (existing) {
+    return { track: existing, created: false }
+  }
+
+  // Create new Track with musical properties
+  const track = await db.track.create({
+    data: {
+      title,
+      artist,
+      album: metadata.album,
+      year: metadata.year,
+      genre: metadata.genre,
+      bpm: metadata.bpm,
+      isExplicit: metadata.isExplicit ?? false,
+      language: metadata.language,
+    },
+  })
+  return { track, created: true }
+}
+
+/**
  * Import a single audio file into the Media Library.
  *
- * Extracts metadata, computes a content hash, and persists to the database.
- * If the file (by path or hash) already exists, it is updated.
+ * Creates or updates:
+ *   1. A Track (the song) — if this title+artist doesn't exist yet
+ *   2. A MediaAsset (the file) — linked to the Track
+ *
+ * If the same file already exists (by path or hash), it is updated.
+ * If the Track already exists (same title+artist), the Asset is linked to it.
  */
 export async function importFile(
   filePath: string,
-): Promise<{ asset: any; created: boolean }> {
+): Promise<{ asset: any; track: any; trackCreated: boolean; assetCreated: boolean }> {
   const format = getFormat(filePath)
   if (!format) {
     throw new Error(`Unsupported format: ${filePath}`)
@@ -276,7 +354,13 @@ export async function importFile(
   const metadata = await extractMetadata(filePath, stats.size)
   const hash = await computeFileHash(filePath)
 
-  // Check if already exists (by path or hash)
+  // Find or create the Track
+  const { track, created: trackCreated } = await findOrCreateTrack(metadata)
+
+  // Detect version from filename
+  const version = detectVersion(filePath, metadata)
+
+  // Check if Asset already exists (by path or hash)
   const existing = await db.mediaAsset.findFirst({
     where: {
       OR: [{ filePath }, ...(hash ? [{ importHash: hash }] : [])],
@@ -284,51 +368,47 @@ export async function importFile(
   })
 
   if (existing) {
-    // Update
+    // Update existing Asset
     const updated = await db.mediaAsset.update({
       where: { id: existing.id },
       data: {
+        trackId: track.id,
         fileName: basename(filePath),
         fileSizeBytes: stats.size,
         format,
-        title: metadata.title,
-        artist: metadata.artist,
-        album: metadata.album,
-        year: metadata.year,
-        genre: metadata.genre,
-        bpm: metadata.bpm,
-        isExplicit: metadata.isExplicit ?? false,
         durationMs: metadata.durationMs,
         bitrate: metadata.bitrate,
         sampleRate: metadata.sampleRate,
+        version: version.version,
+        isRadioEdit: version.isRadioEdit,
+        isCleanEdit: version.isCleanEdit,
         importHash: hash,
         updatedAt: new Date(),
       },
+      include: { track: true },
     })
-    return { asset: updated, created: false }
+    return { asset: updated, track, trackCreated, assetCreated: false }
   }
 
-  // Create
+  // Create new Asset linked to Track
   const created = await db.mediaAsset.create({
     data: {
+      trackId: track.id,
       filePath,
       fileName: basename(filePath),
       fileSizeBytes: stats.size,
       format,
-      title: metadata.title,
-      artist: metadata.artist,
-      album: metadata.album,
-      year: metadata.year,
-      genre: metadata.genre,
-      bpm: metadata.bpm,
-      isExplicit: metadata.isExplicit ?? false,
       durationMs: metadata.durationMs,
       bitrate: metadata.bitrate,
       sampleRate: metadata.sampleRate,
+      version: version.version,
+      isRadioEdit: version.isRadioEdit,
+      isCleanEdit: version.isCleanEdit,
       importHash: hash,
     },
+    include: { track: true },
   })
-  return { asset: created, created: true }
+  return { asset: created, track, trackCreated, assetCreated: true }
 }
 
 /**
@@ -339,32 +419,39 @@ export async function importDirectory(
   dirPath: string,
 ): Promise<{
   scanned: number
-  created: number
-  updated: number
+  tracksCreated: number
+  assetsCreated: number
+  assetsUpdated: number
   failed: number
   errors: string[]
 }> {
   const files = await scanDirectory(dirPath)
-  let created = 0
-  let updated = 0
+  let tracksCreated = 0
+  let assetsCreated = 0
+  let assetsUpdated = 0
   let failed = 0
   const errors: string[] = []
 
   for (const file of files) {
     try {
       const result = await importFile(file)
-      if (result.created) {
-        created++
-      } else {
-        updated++
-      }
+      if (result.trackCreated) tracksCreated++
+      if (result.assetCreated) assetsCreated++
+      else assetsUpdated++
     } catch (err) {
       failed++
       errors.push(`${file}: ${err instanceof Error ? err.message : 'unknown error'}`)
     }
   }
 
-  return { scanned: files.length, created, updated, failed, errors }
+  return {
+    scanned: files.length,
+    tracksCreated,
+    assetsCreated,
+    assetsUpdated,
+    failed,
+    errors,
+  }
 }
 
 /**
@@ -383,17 +470,30 @@ export async function generatePlaylist(
     limit?: number
   } = {},
 ): Promise<string[]> {
-  const where: any = {}
-  if (filter.category) where.category = filter.category
-  if (filter.genre) where.genre = filter.genre
-  if (filter.artist) where.artist = { contains: filter.artist }
+  // Filter on Track properties (category, genre, artist), then get Assets
+  const trackWhere: any = {}
+  if (filter.category) trackWhere.category = filter.category
+  if (filter.genre) trackWhere.genre = filter.genre
+  if (filter.artist) trackWhere.artist = { contains: filter.artist }
 
-  const assets = await db.mediaAsset.findMany({
-    where,
-    orderBy: { lastPlayedAt: 'asc' }, // least-recently-played first
+  const tracks = await db.track.findMany({
+    where: trackWhere,
+    orderBy: { lastPlayedAt: 'asc' }, // least-recently-played Track first
     take: filter.limit ?? 100,
-    select: { filePath: true },
+    include: {
+      assets: {
+        // Prefer the best format available: FLAC > MP3 high bitrate > others
+        orderBy: [
+          { format: 'asc' }, // flac comes before mp3 alphabetically
+          { bitrate: 'desc' },
+        ],
+        take: 1, // one Asset per Track
+      },
+    },
   })
 
-  return assets.map((a) => a.filePath)
+  // Extract the file paths — Liquidsoap needs file paths, not Track IDs
+  return tracks
+    .map((t) => t.assets[0]?.filePath)
+    .filter((p): p is string => !!p)
 }

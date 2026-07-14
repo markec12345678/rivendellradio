@@ -245,16 +245,78 @@ model DecisionLedgerEntry {
 
 // ============================================================================
 // Phase 32: Media Library Service — real audio asset management.
-// Tracks real MP3/FLAC files on disk, with metadata extracted at import.
-// This is NOT an AI module — it is the bridge between the file system and
-// Liquidsoap/Rivendell. Rock 88.7 reads from here; it never reads files
-// directly.
+//
+// Professional radio systems separate "Track" (the song) from "Asset" (a
+// specific file version of the song). One Track can have many Assets:
+//
+//   Track: Queen - Bohemian Rhapsody
+//     ├── Asset: /music/rock/bohemian-rhapsody.mp3 (320k MP3, album version)
+//     ├── Asset: /music/rock/bohemian-rhapsody-flac.flac (FLAC, album version)
+//     ├── Asset: /music/rock/bohemian-rhapsody-clean.mp3 (128k MP3, clean edit)
+//     └── Asset: /music/rock/bohemian-rhapsody-radio.mp3 (192k MP3, radio edit 4:02)
+//
+// The AI reasons about Tracks (musical properties, rotation rules).
+// Liquidsoap plays Assets (file paths, formats).
+// This separation prevents the AI from seeing the same song as two different
+// entries just because it exists in both MP3 and FLAC.
 // ============================================================================
 
-/// A real audio file in the media library.
-/// Scanned from a directory, metadata extracted at import time.
+/// A Track — the musical entity (a song), independent of file format.
+/// Has musical properties (BPM, key, energy) and rotation metadata.
+/// One Track has many MediaAssets (different formats/edits).
+model Track {
+  id String @id @default(cuid())
+
+  // Musical identity
+  title String
+  artist String
+  album String?
+  year Int?
+  genre String?
+  isrc String? // International Standard Recording Code — unique per song
+
+  // Musical properties (format-independent)
+  bpm Float?
+  key String? // musical key, e.g. "5A"
+  energy Float? // 0-1
+  mood String? // uplifting | melancholic | aggressive | neutral | calm
+  language String? // ISO 639-1
+
+  // Classification (for rotation rules — applied to the Track, not the Asset)
+  category String? // power | current | recurrent | gold | new
+  soundCode String? // A | B | C (energy/intensity code)
+  isExplicit Boolean @default(false)
+
+  // Play history (aggregated across all Assets — the song's history, not a file's)
+  lastPlayedAt DateTime?
+  playCount7d Int @default(0)
+  playCount30d Int @default(0)
+  playCountAll Int @default(0)
+
+  // Relationships
+  assets MediaAsset[]
+
+  // Metadata
+  importedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([title, artist]) // one Track per title+artist combination
+  @@index([artist])
+  @@index([genre])
+  @@index([category])
+  @@index([lastPlayedAt])
+  @@index([isExplicit])
+}
+
+/// A MediaAsset — a specific audio file on disk. One format/version of a Track.
+/// Has file properties (path, format, bitrate, duration, ReplayGain).
+/// Multiple Assets can belong to the same Track.
 model MediaAsset {
   id String @id @default(cuid())
+
+  // Relationship to Track (the song this file is a version of)
+  trackId String?
+  track Track? @relation(fields: [trackId], references: [id], onDelete: SetNull)
 
   // File system
   filePath String @unique // absolute path: /music/rock/foo-fighters-everlong.mp3
@@ -265,39 +327,21 @@ model MediaAsset {
   bitrate Int?
   sampleRate Int?
 
-  // Metadata (from ID3/FLAC tags)
-  title String
-  artist String?
-  album String?
-  year Int?
-  genre String?
-  bpm Float?
-  key String? // musical key, e.g. "5A"
-  energy Float? // 0-1, if analyzed
-  isExplicit Boolean @default(false)
-  language String? // ISO 639-1
+  // Version/edition info (what makes this Asset different from siblings)
+  version String? // album | radio-edit | clean-edit | extended | live | acoustic
+  isRadioEdit Boolean @default(false) // shortened for radio
+  isCleanEdit Boolean @default(false) // explicit content removed
 
-  // Audio analysis
+  // Audio analysis (file-specific — different formats may have different loudness)
   replayGainDb Float? // ReplayGain track gain
   lufsIntegrated Float? // EBU R128 integrated loudness
-  fingerprint String? // AcoustID/Chromaprint (future)
+  fingerprint String? // AcoustID/Chromaprint
 
-  // Artwork
-  artworkPath String? // path to extracted/linked artwork
+  // Artwork (can be per-asset or shared via Track)
+  artworkPath String?
 
-  // Classification (for rotation rules)
-  category String? // power | current | recurrent | gold | new
-  soundCode String? // A | B | C (energy/intensity code)
-
-  // Play history (for separation rules)
-  lastPlayedAt DateTime?
-  playCount7d Int @default(0)
-  playCount30d Int @default(0)
-  playCountAll Int @default(0)
-
-  // Copyright/licensing
-  copyright String? // label/publisher info
-  isrc String? // International Standard Recording Code
+  // Copyright/licensing (file-specific)
+  copyright String?
   licenseType String? // royalty-free | PRO-managed | direct-license
 
   // Import metadata
@@ -305,12 +349,9 @@ model MediaAsset {
   updatedAt DateTime @updatedAt
   importHash String? // file content hash for dedup
 
-  @@index([artist])
-  @@index([album])
-  @@index([genre])
-  @@index([category])
-  @@index([lastPlayedAt])
-  @@index([isExplicit])
+  @@index([trackId])
+  @@index([format])
+  @@index([version])
 }
 
 // ============================================================================

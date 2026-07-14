@@ -35,47 +35,58 @@ export async function GET(req: Request) {
     return NextResponse.json({ action: 'playlist', filter, tracks: playlist, count: playlist.length })
   }
 
-  // List assets
+  // List tracks with their assets
   const category = url.searchParams.get('category')
   const genre = url.searchParams.get('genre')
   const limit = Math.min(parseInt(url.searchParams.get('limit') ?? '100'), 500)
 
-  const where: any = {}
-  if (category) where.category = category
-  if (genre) where.genre = genre
+  const trackWhere: any = {}
+  if (category) trackWhere.category = category
+  if (genre) trackWhere.genre = genre
 
-  const assets = await db.mediaAsset.findMany({
-    where,
+  // Tracks with their Assets (one Track, many Assets)
+  const tracks = await db.track.findMany({
+    where: trackWhere,
     orderBy: { importedAt: 'desc' },
     take: limit,
+    include: {
+      assets: {
+        orderBy: { format: 'asc' },
+      },
+    },
   })
 
-  const total = await db.mediaAsset.count()
+  const totalTracks = await db.track.count()
+  const totalAssets = await db.mediaAsset.count()
 
-  // Stats
-  const byFormat = await db.mediaAsset.groupBy({
-    by: ['format'],
-    _count: true,
-  })
-  const byCategory = await db.mediaAsset.groupBy({
+  // Stats — now on Tracks, not Assets
+  const byCategory = await db.track.groupBy({
     by: ['category'],
     _count: true,
   })
-  const byGenre = await db.mediaAsset.groupBy({
+  const byGenre = await db.track.groupBy({
     by: ['genre'],
+    _count: true,
+  })
+  const byFormat = await db.mediaAsset.groupBy({
+    by: ['format'],
     _count: true,
   })
 
   return NextResponse.json({
     _disclaimer:
-      'Media Library. Real audio files with extracted metadata. Rock 88.7 AI never reads files directly — it reads from this library. Liquidsoap/Rivendell read from here too.',
+      'Media Library. Tracks (musical entities) with their Assets (file versions). ' +
+      'One Track = one song; many Assets = different formats/edits of that song. ' +
+      'AI reasons about Tracks; Liquidsoap plays Assets.',
 
-    assets,
+    tracks,
     stats: {
-      total,
-      byFormat: Object.fromEntries(byFormat.map((f) => [f.format, f._count])),
+      totalTracks,
+      totalAssets,
+      avgAssetsPerTrack: totalTracks > 0 ? Math.round((totalAssets / totalTracks) * 10) / 10 : 0,
       byCategory: Object.fromEntries(byCategory.map((c) => [c.category ?? 'uncategorized', c._count])),
       byGenre: Object.fromEntries(byGenre.map((g) => [g.genre ?? 'unknown', g._count])),
+      byFormat: Object.fromEntries(byFormat.map((f) => [f.format, f._count])),
     },
 
     // For Liquidsoap integration
@@ -129,7 +140,7 @@ export async function POST(req: Request) {
       return NextResponse.json({
         ok: result.failed === 0,
         ...result,
-        message: `Scanned ${result.scanned} files: ${result.created} created, ${result.updated} updated, ${result.failed} failed`,
+        message: `Scanned ${result.scanned} files: ${result.tracksCreated} tracks created, ${result.assetsCreated} assets created, ${result.assetsUpdated} assets updated, ${result.failed} failed`,
         ...(result.errors.length > 0 ? { errors: result.errors.slice(0, 20) } : {}),
       })
     } catch (err) {
