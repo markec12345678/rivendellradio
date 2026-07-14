@@ -244,6 +244,76 @@ model DecisionLedgerEntry {
 }
 
 // ============================================================================
+// Phase 32: Media Library Service — real audio asset management.
+// Tracks real MP3/FLAC files on disk, with metadata extracted at import.
+// This is NOT an AI module — it is the bridge between the file system and
+// Liquidsoap/Rivendell. Rock 88.7 reads from here; it never reads files
+// directly.
+// ============================================================================
+
+/// A real audio file in the media library.
+/// Scanned from a directory, metadata extracted at import time.
+model MediaAsset {
+  id String @id @default(cuid())
+
+  // File system
+  filePath String @unique // absolute path: /music/rock/foo-fighters-everlong.mp3
+  fileName String // everlong.mp3
+  fileSizeBytes Int
+  format String // mp3 | flac | aac | ogg
+  durationMs Int
+  bitrate Int?
+  sampleRate Int?
+
+  // Metadata (from ID3/FLAC tags)
+  title String
+  artist String?
+  album String?
+  year Int?
+  genre String?
+  bpm Float?
+  key String? // musical key, e.g. "5A"
+  energy Float? // 0-1, if analyzed
+  isExplicit Boolean @default(false)
+  language String? // ISO 639-1
+
+  // Audio analysis
+  replayGainDb Float? // ReplayGain track gain
+  lufsIntegrated Float? // EBU R128 integrated loudness
+  fingerprint String? // AcoustID/Chromaprint (future)
+
+  // Artwork
+  artworkPath String? // path to extracted/linked artwork
+
+  // Classification (for rotation rules)
+  category String? // power | current | recurrent | gold | new
+  soundCode String? // A | B | C (energy/intensity code)
+
+  // Play history (for separation rules)
+  lastPlayedAt DateTime?
+  playCount7d Int @default(0)
+  playCount30d Int @default(0)
+  playCountAll Int @default(0)
+
+  // Copyright/licensing
+  copyright String? // label/publisher info
+  isrc String? // International Standard Recording Code
+  licenseType String? // royalty-free | PRO-managed | direct-license
+
+  // Import metadata
+  importedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  importHash String? // file content hash for dedup
+
+  @@index([artist])
+  @@index([album])
+  @@index([genre])
+  @@index([category])
+  @@index([lastPlayedAt])
+  @@index([isExplicit])
+}
+
+// ============================================================================
 // Phase 31b: Decision Traceability — lifecycle events per decision ID.
 // A decision (DEC-XXXXX) flows through the system: Planner → Tools →
 // Reasoning → Recommendation → Human → Outcome → Chronicle. Each stage
