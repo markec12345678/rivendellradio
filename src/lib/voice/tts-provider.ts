@@ -151,10 +151,10 @@ const PIPER_VOICE_MAP: Record<string, string> = {
  * Without a key, the system falls back to Piper (free, offline).
  */
 const ELEVENLABS_VOICE_MAP: Record<string, string> = {
-  en: '21m00Tcm4TlvDq8ikWAM', // Rachel — natural female English
-  sl: 'pNInz6obpgDQGcFmaJgB', // Adam — works well for Slovenian text
-  hr: 'pNInz6obpgDQGcFmaJgB', // Croatian
-  sr: 'pNInz6obpgDQGcFmaJgB', // Serbian
+  en: 'JBFqnCBsd6RMkjVDRZzb',  // George — Warm, Captivating Storyteller (premade, free tier)
+  sl: 'JBFqnCBsd6RMkjVDRZzb',  // George — multilingual_v2 supports Slovenian
+  hr: 'JBFqnCBsd6RMkjVDRZzb',  // George — Croatian
+  sr: 'JBFqnCBsd6RMkjVDRZzb',  // George — Serbian
 }
 
 /**
