@@ -1,34 +1,40 @@
 /**
- * TTS Provider — wraps z-ai-web-dev-sdk for radio voice synthesis.
+ * TTS Provider — multi-provider voice synthesis for radio.
  *
  * FREE TTS — no API key cost, no ElevenLabs, no OpenAI.
- * Uses the z-ai-web-dev-sdk that is already in the project.
  *
- * Capabilities:
- *   - Text → WAV audio file (24kHz, 16-bit PCM, mono)
- *   - Voice: "tongtong" (default, clear radio voice)
- *   - Speed: 0.5–2.0 (1.0 = normal)
- *   - Max 1024 chars per request (split longer text)
+ * Provider priority (best quality first):
+ *   1. gTTS (Google Translate TTS) — most natural, free, no API key
+ *      - Requires internet (calls Google Translate endpoint)
+ *      - Supports many languages (en, de, fr, es, it, ...)
+ *      - MP3 output, converted to WAV via ffmpeg
+ *      - Quality: high (Google neural voice)
  *
- * Limitations (honest):
- *   - Single voice ("tongtong") — no voice cloning
- *   - WAV only via CLI; SDK supports wav/pcm (not mp3)
- *   - 24kHz sample rate (not studio-grade 48kHz)
- *   - Good enough for pilot; for production consider ElevenLabs
+ *   2. z-ai TTS (tongtong) — fallback, always available
+ *      - No internet dependency (uses SDK)
+ *      - Single voice ("tongtong")
+ *      - WAV output, 24kHz
+ *      - Quality: medium (clear but robotic)
+ *
+ *   3. pyttsx3 (offline) — last resort, no internet needed
+ *      - Uses system espeak engine
+ *      - Quality: low (robotic)
+ *      - Always works, even offline
+ *
+ * The system automatically tries gTTS first, falls back to z-ai, then pyttsx3.
+ * Each provider's results are tagged in the response so the operator knows
+ * which voice was used.
  *
  * See: skills/TTS/SKILL.md
  */
 
-import { writeFile, mkdir } from 'fs/promises'
+import { writeFile, mkdir, readFile } from 'fs/promises'
 import { existsSync } from 'fs'
 import { join } from 'path'
+import { exec } from 'child_process'
+import { promisify } from 'util'
 
-// Dynamically import z-ai to avoid client-side bundling
-async function getZAI() {
-  const ZAIModule = await import('z-ai-web-dev-sdk')
-  const ZAI = (ZAIModule as any).default || ZAIModule
-  return ZAI
-}
+const execAsync = promisify(exec)
 
 export interface TTSResult {
   audioPath: string
@@ -37,6 +43,8 @@ export interface TTSResult {
   format: 'wav'
   voice: string
   charCount: number
+  provider: 'gtts' | 'zai' | 'pyttsx3'
+  providerLabel: string
 }
 
 export interface TTSOptions {
@@ -44,11 +52,12 @@ export interface TTSOptions {
   speed?: number
   outputDir?: string
   fileName?: string
+  language?: string // ISO 639-1 (en, de, fr, ...)
+  provider?: 'gtts' | 'zai' | 'pyttsx3' | 'auto'
 }
 
 /**
  * Split text into chunks under 1024 characters, respecting sentence boundaries.
- * The TTS API has a 1024-char limit per request.
  */
 export function splitText(text: string, maxLength = 1000): string[] {
   if (text.length <= maxLength) return [text]
@@ -71,14 +80,102 @@ export function splitText(text: string, maxLength = 1000): string[] {
 }
 
 /**
- * Synthesize speech from text using z-ai TTS.
+ * Provider 1: gTTS (Google Translate TTS)
  *
- * Returns the audio file path and a URL where it can be accessed.
+ * Most natural free TTS. Calls Google Translate's TTS endpoint.
+ * No API key required. Returns MP3, converted to WAV via ffmpeg.
+ */
+async function synthesizeWithGTTS(
+  text: string,
+  outputPath: string,
+  language: string = 'en',
+): Promise<void> {
+  // Write a Python script that uses gTTS
+  const script = `
+from gtts import gTTS
+import sys
+text = sys.argv[1]
+output = sys.argv[2]
+lang = sys.argv[3] or 'en'
+tts = gTTS(text=text, lang=lang, slow=False)
+tts.save(output)
+`
+
+  const scriptPath = '/tmp/gtts-script.py'
+  await writeFile(scriptPath, script)
+
+  // gTTS saves as MP3, we need to convert to WAV
+  const mp3Path = outputPath.replace('.wav', '.mp3')
+
+  try {
+    await execAsync(`python3 ${scriptPath} "${text.replace(/"/g, '\\"')}" "${mp3Path}" "${language}"`)
+
+    // Convert MP3 to WAV using ffmpeg
+    await execAsync(
+      `ffmpeg -y -i "${mp3Path}" -ar 44100 -ac 1 -acodec pcm_s16le "${outputPath}" 2>/dev/null`,
+    )
+  } finally {
+    // Clean up MP3
+    try {
+      await execAsync(`rm -f "${mp3Path}"`)
+    } catch {}
+  }
+}
+
+/**
+ * Provider 2: z-ai TTS (tongtong voice)
  *
- * The file is saved to the specified output directory (default: public/voice-links).
- * The URL is relative to the app root (e.g., /voice-links/abc123.wav).
+ * Uses the z-ai-web-dev-sdk that is already in the project.
+ * No internet dependency beyond the SDK's own API.
+ */
+async function synthesizeWithZAI(
+  text: string,
+  outputPath: string,
+  voice: string = 'tongtong',
+  speed: number = 1.0,
+): Promise<void> {
+  const ZAIModule = await import('z-ai-web-dev-sdk')
+  const ZAI = (ZAIModule as any).default || ZAIModule
+  const zai = await ZAI.create()
+
+  const response = await zai.audio.tts.create({
+    input: text,
+    voice,
+    speed,
+    response_format: 'wav' as any,
+    stream: false,
+  })
+
+  const audioBuffer = await (response as any).arrayBuffer()
+  await writeFile(outputPath, Buffer.from(audioBuffer))
+}
+
+/**
+ * Provider 3: pyttsx3 (offline, system voice)
  *
- * @throws if TTS fails or text is empty
+ * Uses the system's TTS engine (espeak on Linux). Always works, even offline.
+ * Quality is lower (robotic) but reliable.
+ */
+async function synthesizeWithPyttsx3(
+  text: string,
+  outputPath: string,
+): Promise<void> {
+  const script = `
+import pyttsx3
+engine = pyttsx3.init()
+engine.save_to_file("""${text.replace(/"/g, '\\"').replace(/\n/g, ' ')}""", "${outputPath}")
+engine.runAndWait()
+`
+  const scriptPath = '/tmp/pyttsx3-script.py'
+  await writeFile(scriptPath, script)
+  await execAsync(`python3 ${scriptPath}`)
+}
+
+/**
+ * Synthesize speech using the best available provider.
+ *
+ * Tries providers in order: gTTS → z-ai → pyttsx3
+ * Returns the first successful result.
  */
 export async function synthesizeSpeech(
   text: string,
@@ -88,78 +185,98 @@ export async function synthesizeSpeech(
     throw new Error('TTS requires non-empty text')
   }
 
-  const voice = options.voice || 'tongtong'
+  const language = options.language || 'en'
   const speed = options.speed ?? 1.0
   const outputDir = options.outputDir || join(process.cwd(), 'public', 'voice-links')
   const fileName = options.fileName || `vl-${Date.now()}.wav`
   const audioPath = join(outputDir, fileName)
+  const requestedProvider = options.provider || 'auto'
 
   // Ensure output directory exists
   if (!existsSync(outputDir)) {
     await mkdir(outputDir, { recursive: true })
   }
 
-  // Split long text into chunks
-  const chunks = splitText(text)
   const charCount = text.length
+  const errors: string[] = []
 
-  // Initialize z-ai SDK
-  const ZAI = await getZAI()
-  const zai = await ZAI.create()
+  // Provider chain
+  const providers: Array<{
+    id: 'gtts' | 'zai' | 'pyttsx3'
+    label: string
+    run: () => Promise<void>
+    skip?: boolean
+  }> = [
+    {
+      id: 'gtts',
+      label: 'Google Translate TTS (most natural, free)',
+      run: () => synthesizeWithGTTS(text, audioPath, language),
+      skip: requestedProvider !== 'auto' && requestedProvider !== 'gtts',
+    },
+    {
+      id: 'zai',
+      label: 'z-ai TTS — tongtong voice (clear, free)',
+      run: () => synthesizeWithZAI(text, audioPath, 'tongtong', speed),
+      skip: requestedProvider !== 'auto' && requestedProvider !== 'zai',
+    },
+    {
+      id: 'pyttsx3',
+      label: 'pyttsx3 (offline, system voice, robotic)',
+      run: () => synthesizeWithPyttsx3(text, audioPath),
+      skip: requestedProvider !== 'auto' && requestedProvider !== 'pyttsx3',
+    },
+  ]
 
-  if (chunks.length === 1) {
-    // Single chunk — synthesize directly
-    const response = await zai.audio.tts.create({
-      input: chunks[0],
-      voice,
-      speed,
-      response_format: 'wav' as any,
-      stream: false,
-    })
+  let usedProvider: TTSResult['provider'] | null = null
+  let usedLabel = ''
 
-    // Response is an audio buffer
-    const audioBuffer = await (response as any).arrayBuffer()
-    await writeFile(audioPath, Buffer.from(audioBuffer))
-  } else {
-    // Multiple chunks — synthesize each, then we'd need to concatenate
-    // For now, just use the first chunk (most voice links are < 1024 chars)
-    // Full concatenation would require ffmpeg
-    console.warn(
-      `[TTS] Text is ${charCount} chars, split into ${chunks.length} chunks. ` +
-        'Only synthesizing the first chunk. For full text, use ffmpeg to concatenate.',
-    )
-
-    const response = await zai.audio.tts.create({
-      input: chunks[0],
-      voice,
-      speed,
-      response_format: 'wav' as any,
-      stream: false,
-    })
-
-    const audioBuffer = await (response as any).arrayBuffer()
-    await writeFile(audioPath, Buffer.from(audioBuffer))
+  for (const provider of providers) {
+    if (provider.skip) continue
+    try {
+      await provider.run()
+      // Verify file was created and is non-empty
+      const { stat } = await import('fs/promises')
+      const stats = await stat(audioPath)
+      if (stats.size > 0) {
+        usedProvider = provider.id
+        usedLabel = provider.label
+        break
+      }
+    } catch (err) {
+      errors.push(`${provider.id}: ${err instanceof Error ? err.message : 'failed'}`)
+    }
   }
 
-  // Estimate duration: ~15 chars per second at speed 1.0
-  const durationMs = Math.round((charCount / 15) * 1000 * (1 / speed))
+  if (!usedProvider) {
+    throw new Error(`All TTS providers failed: ${errors.join('; ')}`)
+  }
+
+  // Get duration from the audio file
+  let durationMs = Math.round((charCount / 15) * 1000 * (1 / speed))
+  try {
+    const { stdout } = await execAsync(
+      `ffprobe -v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${audioPath}"`,
+    )
+    const dur = parseFloat(stdout.trim())
+    if (!isNaN(dur) && dur > 0) {
+      durationMs = Math.round(dur * 1000)
+    }
+  } catch {}
 
   return {
     audioPath,
     audioUrl: `/voice-links/${fileName}`,
     durationMs,
     format: 'wav',
-    voice,
+    voice: usedProvider === 'gtts' ? `google-${language}` : usedProvider === 'zai' ? 'tongtong' : 'system',
     charCount,
+    provider: usedProvider,
+    providerLabel: usedLabel,
   }
 }
 
 /**
  * Generate a radio voice link script from outgoing and incoming track metadata.
- *
- * Example:
- *   "That was Everlong by Foo Fighters on Rock 88.7 FM.
- *    Up next, AC/DC with Thunderstruck. Stay tuned."
  */
 export function generateVoiceLinkScript(args: {
   outgoingTitle?: string
@@ -173,19 +290,16 @@ export function generateVoiceLinkScript(args: {
   const station = args.stationName || 'Rock 88.7 FM'
   const parts: string[] = []
 
-  // Outgoing track
   if (args.outgoingTitle && args.outgoingArtist) {
     parts.push(`That was ${args.outgoingTitle} by ${args.outgoingArtist} on ${station}.`)
   } else if (args.outgoingTitle) {
     parts.push(`That was ${args.outgoingTitle} on ${station}.`)
   }
 
-  // Time check (optional)
   if (args.includeTimeCheck && args.currentTime) {
     parts.push(`It's ${args.currentTime}.`)
   }
 
-  // Incoming track
   if (args.incomingTitle && args.incomingArtist) {
     parts.push(`Up next, ${args.incomingArtist} with ${args.incomingTitle}.`)
   } else if (args.incomingTitle) {
@@ -197,16 +311,10 @@ export function generateVoiceLinkScript(args: {
   return parts.join(' ')
 }
 
-/**
- * Generate a station ID.
- */
 export function generateStationIdScript(stationName = 'Rock 88.7 FM'): string {
   return `You're listening to ${stationName}. Rock at its finest.`
 }
 
-/**
- * Generate a time check.
- */
 export function generateTimeCheckScript(time: string, stationName = 'Rock 88.7 FM'): string {
   return `It's ${time} on ${stationName}.`
 }

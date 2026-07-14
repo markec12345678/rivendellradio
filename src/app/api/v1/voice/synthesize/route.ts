@@ -91,8 +91,10 @@ export async function POST(req: Request) {
 
   try {
     const result = await synthesizeSpeech(text, {
-      voice: body.voice || 'tongtong',
+      voice: body.voice,
       speed: body.speed ?? 1.0,
+      language: body.language || 'en',
+      provider: body.provider || 'auto',
     })
 
     return NextResponse.json({
@@ -105,15 +107,16 @@ export async function POST(req: Request) {
       format: result.format,
       voice: result.voice,
       charCount: result.charCount,
+      provider: result.provider,
+      providerLabel: result.providerLabel,
 
       // Player URL — can be opened directly in a browser
       playableUrl: `/api/v1/voice/play?file=${encodeURIComponent(result.audioUrl.split('/').pop() || '')}`,
 
       _note:
-        'FREE TTS via z-ai-web-dev-sdk. No API key cost. ' +
-        'Voice: "tongtong" (clear radio voice). ' +
-        'For production-grade natural voice, consider ElevenLabs ($5/mo). ' +
-        'For pilot, this is sufficient.',
+        `FREE TTS via ${result.providerLabel}. No API key cost. ` +
+        'Provider chain: gTTS (most natural) → z-ai TTS (clear) → pyttsx3 (offline). ' +
+        'The system automatically uses the best available provider.',
     })
   } catch (err) {
     return NextResponse.json(
@@ -133,16 +136,49 @@ export async function POST(req: Request) {
 export async function GET() {
   return NextResponse.json({
     _disclaimer:
-      'Voice Synthesis API. FREE TTS via z-ai-web-dev-sdk. No API key cost. ' +
-      'Generates WAV audio files (24kHz, 16-bit PCM).',
+      'Voice Synthesis API. Multi-provider FREE TTS. No API key, no cost. ' +
+      'Automatically uses the best available provider.',
+
+    providers: {
+      gtts: {
+        name: 'Google Translate TTS (gTTS)',
+        quality: 'HIGH — most natural, neural voice',
+        cost: 'FREE — no API key',
+        internet: 'required',
+        languages: 'en, de, fr, es, it, pt, ru, ja, ko, zh, and 50+ more',
+        voice: 'single voice per language (Google neural)',
+        format: 'MP3 → converted to WAV (44.1kHz, 16-bit)',
+      },
+      zai: {
+        name: 'z-ai TTS (tongtong)',
+        quality: 'MEDIUM — clear but slightly robotic',
+        cost: 'FREE — no API key',
+        internet: 'required (SDK API)',
+        voice: 'tongtong (single voice)',
+        format: 'WAV (24kHz, 16-bit)',
+      },
+      pyttsx3: {
+        name: 'pyttsx3 (offline system voice)',
+        quality: 'LOW — robotic (espeak engine)',
+        cost: 'FREE — no API key',
+        internet: 'NOT required — fully offline',
+        voice: 'system default (espeak)',
+        format: 'WAV (22kHz, 16-bit)',
+      },
+    },
+
+    providerChain: [
+      '1. gTTS (most natural, tries first)',
+      '2. z-ai TTS (fallback if gTTS fails)',
+      '3. pyttsx3 (last resort, offline)',
+    ],
 
     capabilities: {
-      cost: 'FREE — no API key, no per-request charge',
-      voice: 'tongtong (default, clear radio voice)',
-      speed: '0.5 to 2.0 (1.0 = normal)',
-      format: 'WAV (24kHz, 16-bit, mono)',
+      cost: 'FREE — no API key, no per-request charge, no subscription',
+      speed: '0.5 to 2.0 (1.0 = normal) — gTTS only supports slow=false/true',
+      format: 'WAV (44.1kHz for gTTS, 24kHz for z-ai, 22kHz for pyttsx3)',
       maxCharsPerRequest: 1024,
-      sampleRate: 24000,
+      languages: 'en (default), de, fr, es, it, pt, ru, ja, ko, zh, +50 more (gTTS)',
     },
 
     modes: {
@@ -165,17 +201,17 @@ export async function GET() {
       },
     },
 
-    limitations: [
-      'Single voice (tongtong) — no voice cloning',
-      'WAV format only (not MP3)',
-      '24kHz sample rate (not studio-grade 48kHz)',
-      '1024 chars per request (longer text is truncated)',
-      'Good enough for pilot; for production consider ElevenLabs',
-    ],
+    advancedOptions: {
+      provider: 'Force a specific provider: gtts | zai | pyttsx3 | auto (default)',
+      language: 'ISO 639-1 language code: en (default), de, fr, es, ...',
+    },
 
-    upgrade_path:
-      'For natural human-like voice, set ELEVENLABS_API_KEY env var ' +
-      'and the system will use ElevenLabs instead of z-ai TTS. ' +
-      'Cost: ~$5/month for 30,000 characters.',
+    limitations: [
+      'gTTS: single voice per language (no voice cloning)',
+      'gTTS: requires internet (calls Google Translate endpoint)',
+      'pyttsx3: robotic quality (espeak engine)',
+      '1024 chars per request (longer text is truncated)',
+      'For voice cloning / multiple voices, consider ElevenLabs ($5/mo)',
+    ],
   })
 }
