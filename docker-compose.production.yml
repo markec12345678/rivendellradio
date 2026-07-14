@@ -1,21 +1,22 @@
 # ============================================================================
-# docker-compose.production.yml — Rock 88.7 Production Deployment
+# docker-compose.production.yml — Rock 88.7 Full Production Stack
 #
-# One command to run Rock 88.7 in production:
+# One command to run the ENTIRE radio station:
 #   docker compose -f docker-compose.production.yml up -d
 #
 # Includes:
-#   - Rock 88.7 web application
+#   - Rock 88.7 web application (dashboard + AI + governance)
 #   - Broadcast feed WebSocket service
+#   - Icecast2 streaming server
+#   - Liquidsoap audio playout engine
 #   - SQLite database (persistent volume)
 #   - Automatic backups (daily)
-#   - Log rotation
-#   - Health monitoring
+#   - Log rotation + health monitoring
 #
 # Prerequisites:
 #   - Docker + Docker Compose installed
-#   - .env file created (copy from .env.example)
-#   - Ports 3000 (web) and 3003 (websocket) available
+#   - .env file with LISTENER_HASH_SALT
+#   - MP3 files in /music/ directory
 #
 # See: docs/INSTALL-IN-15-MINUTES.md
 # ============================================================================
@@ -24,7 +25,7 @@ name: rock887-production
 
 services:
   # ============================================================================
-  # Rock 88.7 Web Application (Next.js)
+  # Rock 88.7 Web Application (Next.js — the "brain")
   # ============================================================================
   web:
     build:
@@ -40,6 +41,7 @@ services:
       - LISTENER_HASH_SALT=${LISTENER_HASH_SALT}
       - INTERNAL_API_BASE=http://localhost:3000
       - BROADCAST_FEED_URL=http://feed:3003
+      - ICECAST_URL=http://icecast:8000
       - NEXT_TELEMETRY_DISABLED=1
     volumes:
       - rock887-db:/app/db
@@ -57,6 +59,7 @@ services:
         max-file: "5"
     depends_on:
       - feed
+      - icecast
 
   # ============================================================================
   # Broadcast Feed WebSocket Service
@@ -81,6 +84,91 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+
+  # ============================================================================
+  # Icecast2 — Streaming Server (listeners connect here)
+  # ============================================================================
+  icecast:
+    build:
+      context: .
+      dockerfile: deploy/icecast2/Dockerfile
+    container_name: rock887-icecast
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - icecast-logs:/var/log/icecast2
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8000/status-json.xsl"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+  # ============================================================================
+  # Liquidsoap — Audio Playout Engine (reads from Media Library, streams to Icecast2)
+  # ============================================================================
+  liquidsoap:
+    build:
+      context: .
+      dockerfile: deploy/liquidsoap/Dockerfile
+    container_name: rock887-liquidsoap
+    restart: unless-stopped
+    environment:
+      - ROCK887_URL=http://web:3000
+      - ICECAST_HOST=icecast
+      - ICECAST_PORT=8000
+      - ICECAST_PASSWORD=hackme
+    volumes:
+      - ${MUSIC_DIR:-./music}:/music:ro
+      - liquidsoap-logs:/var/log/liquidsoap
+    depends_on:
+      icecast:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "pgrep", "-x", "liquidsoap"]
+      interval: 60s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+
+  # ============================================================================
+  # Icecast2 Listener Adapter — polls Icecast2, POSTs sessions to Rock 88.7
+  # ============================================================================
+  adapter:
+    build:
+      context: .
+      dockerfile: deploy/adapter/Dockerfile
+    container_name: rock887-adapter
+    restart: unless-stopped
+    environment:
+      - ICECAST_URL=http://icecast:8000
+      - ICECAST_MOUNT=/rock-887.mp3
+      - ROCK887_URL=http://web:3000
+      - LISTENER_HASH_SALT=${LISTENER_HASH_SALT}
+      - POLL_INTERVAL=60
+    depends_on:
+      icecast:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
 
   # ============================================================================
   # Automatic Database Backup (daily at 03:00)
@@ -109,4 +197,8 @@ volumes:
   rock887-logs:
     driver: local
   rock887-backups:
+    driver: local
+  icecast-logs:
+    driver: local
+  liquidsoap-logs:
     driver: local

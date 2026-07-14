@@ -1,35 +1,31 @@
 #!/usr/bin/liquidsoap
 # ============================================================================
-# Rock 88.7 — Liquidsoap Production Config
+# Rock 88.7 — Liquidsoap Production Config (Docker-aware)
 #
-# This is the audio playback engine. Rock 88.7 does NOT play audio itself —
-# it tells Liquidsoap WHAT to play via the Media Library API.
+# Reads playlist from Rock 88.7 Media Library API, streams to Icecast2.
 #
-# Architecture:
-#   Rock 88.7 Media Library API → playlist → Liquidsoap → Icecast2 → Listeners
-#
-# Quick start:
-#   1. Install: sudo apt install liquidsoap icecast2
-#   2. Copy this file: sudo cp radio.liq /etc/liquidsoap/radio.liq
-#   3. Edit Icecast2 password below
-#   4. Start: sudo systemctl start liquidsoap
-#
-# See: docs/INSTALL-IN-15-MINUTES.md
+# Environment variables (set in docker-compose):
+#   ROCK887_URL     — http://web:3000 (Rock 88.7 API)
+#   ICECAST_HOST    — icecast (Icecast2 hostname)
+#   ICECAST_PORT    — 8000
+#   ICECAST_PASSWORD — hackme (must match icecast.xml)
 # ============================================================================
 
-# --- Configuration ---
 set("log.file.path", "/var/log/liquidsoap/radio.log")
 set("log.level", 3)
 
-# Icecast2 connection
-ICECAST_HOST = "localhost"
-ICECAST_PORT = 8000
-ICECAST_PASSWORD = "hackme"  # CHANGE THIS — must match icecast.xml
+# --- Configuration (from environment) ---
+def env_or(default, var) =
+  if getenv(var) != "" then getenv(var) else default end
+end
+
+ROCK887_URL = env_or("http://localhost:3000", "ROCK887_URL")
+ICECAST_HOST = env_or("localhost", "ICECAST_HOST")
+ICECAST_PORT = int_of_string(env_or("8000", "ICECAST_PORT"))
+ICECAST_PASSWORD = env_or("hackme", "ICECAST_PASSWORD")
 ICECAST_MOUNT = "/rock-887.mp3"
 
-# Media Library — Rock 88.7 tells us what to play
-# This endpoint returns a list of file paths
-MEDIA_LIBRARY_URL = "http://localhost:3000/api/v1/media-library?action=playlist&limit=100"
+MEDIA_LIBRARY_URL = "#{ROCK887_URL}/api/v1/media-library?action=playlist&limit=100"
 
 # --- Sources ---
 
@@ -41,22 +37,13 @@ music = playlist(
   MEDIA_LIBRARY_URL
 )
 
-# Jingles (every 4 tracks)
+# Jingles (every 4 tracks) — from local directory
 jingles = playlist(mode="random", "/music/jingles/")
-
-# Station IDs (every 30 minutes)
-station_ids = playlist(mode="random", "/music/station-ids/")
 
 # --- Processing ---
 
 # Rotate: 4 music tracks, 1 jingle
 radio = rotate(weights=[4,1], [music, jingles])
-
-# Insert station ID every 30 minutes
-radio = rotate(weights=[1,1], [
-  radio,
-  delay(1800., station_ids)
-])
 
 # Normalize loudness (EBU R128 target: -23 LUFS)
 radio = normalize(target=-23., radio)
@@ -80,5 +67,5 @@ output.icecast(
   radio
 )
 
-# Log that we're live
 log("Rock 88.7 — streaming to #{ICECAST_HOST}:#{ICECAST_PORT}#{ICECAST_MOUNT}")
+log("  Playlist source: #{MEDIA_LIBRARY_URL}")
