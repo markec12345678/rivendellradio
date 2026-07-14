@@ -43,7 +43,7 @@ export interface TTSResult {
   format: 'wav'
   voice: string
   charCount: number
-  provider: 'piper' | 'gtts' | 'zai' | 'pyttsx3'
+  provider: 'elevenlabs' | 'piper' | 'gtts' | 'zai' | 'pyttsx3'
   providerLabel: string
   language: {
     requested: string
@@ -61,7 +61,7 @@ export interface TTSOptions {
   outputDir?: string
   fileName?: string
   language?: string // ISO 639-1 (en, de, fr, hr, sr, ...)
-  provider?: 'piper' | 'gtts' | 'zai' | 'pyttsx3' | 'auto'
+  provider?: 'elevenlabs' | 'piper' | 'gtts' | 'zai' | 'pyttsx3' | 'auto'
   /** Run ffmpeg post-processing (noise reduction, compressor, EQ, loudnorm). Default: true */
   postProcess?: boolean
   /** Path to music bed file for voice-over-music mixing */
@@ -139,7 +139,95 @@ const PIPER_VOICE_MAP: Record<string, string> = {
 }
 
 /**
- * Provider 0: Piper TTS — BEST quality, fully offline, free, neural voice
+ * ElevenLabs voice mapping per language.
+ *
+ * ElevenLabs is the GOLD standard for TTS — indistinguishable from human.
+ * It supports Slovenian, Croatian, Serbian, and 29+ other languages.
+ *
+ * Cost: $5/month for 30,000 characters (enough for ~200 voice links/day)
+ * Free tier: 10,000 characters/month (enough for pilot testing)
+ *
+ * To enable: set ELEVENLABS_API_KEY in .env
+ * Without a key, the system falls back to Piper (free, offline).
+ */
+const ELEVENLABS_VOICE_MAP: Record<string, string> = {
+  en: '21m00Tcm4TlvDq8ikWAM', // Rachel — natural female English
+  sl: 'pNInz6obpgDQGcFmaJgB', // Adam — works well for Slovenian text
+  hr: 'pNInz6obpgDQGcFmaJgB', // Croatian
+  sr: 'pNInz6obpgDQGcFmaJgB', // Serbian
+}
+
+/**
+ * Provider -1: ElevenLabs — GOLD standard, human-quality voice.
+ *
+ * Activates ONLY when ELEVENLABS_API_KEY is set in environment.
+ * If no key, this provider is skipped entirely.
+ *
+ * - Most natural voice available (indistinguishable from human)
+ * - Supports Slovenian, Croatian, Serbian, +29 languages
+ * - Voice cloning (with professional tier)
+ * - Emotional control
+ * - Cost: $5/month for 30k chars (free tier: 10k chars)
+ *
+ * This is the only paid provider. All others are free.
+ */
+async function synthesizeWithElevenLabs(
+  text: string,
+  outputPath: string,
+  language: string = 'en',
+): Promise<void> {
+  const apiKey = process.env.ELEVENLABS_API_KEY
+  if (!apiKey) {
+    throw new Error('ELEVENLABS_API_KEY not set — ElevenLabs provider unavailable')
+  }
+
+  const voiceId = ELEVENLABS_VOICE_MAP[language] || ELEVENLABS_VOICE_MAP['en']
+
+  const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+    method: 'POST',
+    headers: {
+      'Accept': 'audio/mpeg',
+      'Content-Type': 'application/json',
+      'xi-api-key': apiKey,
+    },
+    body: JSON.stringify({
+      text,
+      model_id: 'eleven_multilingual_v2',
+      voice_settings: {
+        stability: 0.5,
+        similarity_boost: 0.75,
+        style: 0.0,
+        use_speaker_boost: true,
+      },
+    }),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`ElevenLabs API error ${response.status}: ${errorText.slice(0, 200)}`)
+  }
+
+  // ElevenLabs returns MP3 — save directly, ffmpeg conversion happens in post-processing
+  const mp3Path = outputPath.replace('.wav', '.mp3')
+  const arrayBuffer = await response.arrayBuffer()
+  await writeFile(mp3Path, Buffer.from(arrayBuffer))
+
+  // Convert MP3 to WAV using ffmpeg
+  await execAsync(`ffmpeg -y -i "${mp3Path}" -ar 44100 -ac 1 -acodec pcm_s16le "${outputPath}" 2>/dev/null`)
+
+  // Clean up MP3
+  try { await execAsync(`rm -f "${mp3Path}"`) } catch {}
+}
+
+/**
+ * Check if ElevenLabs is available (API key is set).
+ */
+export function isElevenLabsAvailable(): boolean {
+  return !!process.env.ELEVENLABS_API_KEY
+}
+
+/**
+ * Provider 0: Piper TTS — BEST free quality, fully offline, neural voice
  *
  * Piper is a fast, local neural TTS system. It produces the most natural-
  * sounding speech of all free TTS engines — comparable to commercial
@@ -333,14 +421,21 @@ export async function synthesizeSpeech(
 
   // Provider chain — best quality first
   const providers: Array<{
-    id: 'piper' | 'gtts' | 'zai' | 'pyttsx3'
+    id: 'elevenlabs' | 'piper' | 'gtts' | 'zai' | 'pyttsx3'
     label: string
     run: () => Promise<void>
     skip?: boolean
   }> = [
     {
+      id: 'elevenlabs',
+      label: 'ElevenLabs (GOLD — human-quality, multilingual, $5/mo)',
+      run: () => synthesizeWithElevenLabs(text, audioPath, language),
+      // Skip if: provider explicitly not elevenlabs, OR no API key set
+      skip: (requestedProvider !== 'auto' && requestedProvider !== 'elevenlabs') || !isElevenLabsAvailable(),
+    },
+    {
       id: 'piper',
-      label: 'Piper TTS (BEST — neural, offline, natural human voice)',
+      label: 'Piper TTS (BEST FREE — neural, offline, natural human voice)',
       run: () => synthesizeWithPiper(text, audioPath, language),
       skip: requestedProvider !== 'auto' && requestedProvider !== 'piper',
     },
@@ -436,6 +531,7 @@ export async function synthesizeSpeech(
     durationMs,
     format: 'wav',
     voice:
+      usedProvider === 'elevenlabs' ? `elevenlabs-${language}` :
       usedProvider === 'piper' ? `piper-${language}` :
       usedProvider === 'gtts' ? `google-${language}` :
       usedProvider === 'zai' ? 'tongtong' : 'system',
